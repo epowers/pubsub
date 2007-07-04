@@ -1,0 +1,15 @@
+bin\Debug\WspEvent.dll
+bin\Debug\WspEvent.pdb
+obj\Debug\ResolveAssemblyReference.cache
+obj\Debug\WspEvent.WspEvent.resources
+obj\Debug\Base.csproj.GenerateResource.Cache
+obj\Debug\WspEvent.dll
+obj\Debug\WspEvent.pdb
+bin\Release\WspEvent.dll
+bin\Release\WspEvent.pdb
+obj\Release\ResolveAssemblyReference.cache
+obj\Release\WspEvent.WspEvent.resources
+obj\Release\Base.csproj.GenerateResource.Cache
+obj\Release\WspEvent.dll
+obj\Release\WspEvent.pdb
+bin\Release\WspEvent.XML

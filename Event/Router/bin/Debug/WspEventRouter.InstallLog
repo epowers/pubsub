@@ -1,0 +1,8 @@
+﻿Uninstalling assembly 'C:\dev\src\WebSolutionsPlatform\Event\Router\bin\Debug\WspEventRouter.exe'.
+Affected parameters are:
+   logtoconsole = 
+   assemblypath = C:\dev\src\WebSolutionsPlatform\Event\Router\bin\Debug\WspEventRouter.exe
+   logfile = C:\dev\src\WebSolutionsPlatform\Event\Router\bin\Debug\WspEventRouter.InstallLog
+Removing EventLog source WspEventRouter.
+Service WspEventRouter is being removed from the system...
+Service WspEventRouter was successfully removed from the system.

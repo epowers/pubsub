@@ -1,0 +1,11 @@
+; SharedMemoryMgr.def : Declares the module parameters.
+
+LIBRARY      "SharedMemoryMgr.DLL"
+
+EXPORTS
+	InitMemoryMgr		PRIVATE
+	JoinMemoryMgr		PRIVATE
+	ReleaseMemoryMgr	PRIVATE
+	GetQueueSize		PRIVATE
+	PutBuffer			PRIVATE
+	GetBuffer			PRIVATE

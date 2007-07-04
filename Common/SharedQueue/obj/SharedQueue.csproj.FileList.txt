@@ -1,0 +1,16 @@
+bin\Debug\WspSharedQueue.dll
+bin\Debug\WspSharedQueue.pdb
+obj\Debug\ResolveAssemblyReference.cache
+obj\Debug\WspSharedQueue.WspSharedQueue.resources
+obj\Debug\SharedQueue.csproj.GenerateResource.Cache
+obj\Debug\WspSharedQueue.dll
+obj\Debug\WspSharedQueue.pdb
+bin\Release\WspSharedQueue.dll
+bin\Release\WspSharedQueue.pdb
+obj\Release\ResolveAssemblyReference.cache
+obj\Release\WspSharedQueue.WspSharedQueue.resources
+obj\Release\SharedQueue.csproj.GenerateResource.Cache
+obj\Release\WspSharedQueue.dll
+obj\Release\WspSharedQueue.pdb
+bin\Release\WspSharedQueue.XML
+bin\Debug\WspSharedQueue.XML
