@@ -5,6 +5,10 @@
 	Name="SharedMemoryMgr"
 	ProjectGUID="{7E26768D-A33E-40E9-B3E1-D83752B6EEB3}"
 	RootNamespace="SharedMemoryMgr"
+	SccProjectName="SAK"
+	SccAuxPath="SAK"
+	SccLocalPath="SAK"
+	SccProvider="SAK"
 	>
 	<Platforms>
 		<Platform
