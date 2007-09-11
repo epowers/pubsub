@@ -16,11 +16,11 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
         private PerformanceCounter performanceCounter;
 
-        private Mutex mut;
+        private Mutex mut = new Mutex(false);
 
-		private ManualResetEvent resetEvent;
+        private ManualResetEvent resetEvent = new ManualResetEvent(false);
 
-		private int timeout;
+        private int timeout = 10000;
 		/// <summary>
 		/// Timeout for blocking calls, default is 10000
 		/// </summary>
@@ -54,14 +54,19 @@ namespace Microsoft.WebSolutionsPlatform.Event
 		{
             if (mut.WaitOne(timeoutIn, false) == true)
 			{
-				base.Enqueue(item);
+                try
+                {
+                    base.Enqueue(item);
 
-				resetEvent.Set();
+                    resetEvent.Set();
 
-                if (performanceCounter != null)
-                    performanceCounter.Increment();
-
-				mut.ReleaseMutex();
+                    if (performanceCounter != null)
+                        performanceCounter.RawValue = (long)this.Count;
+                }
+                finally
+                {
+                    mut.ReleaseMutex();
+                }
 			}
 			else
 			{
@@ -85,28 +90,38 @@ namespace Microsoft.WebSolutionsPlatform.Event
 		{
 			T item;
 
-            if (base.Count > 0 || resetEvent.WaitOne(timeoutIn, false) == true)
+            if (this.Count > 0 || resetEvent.WaitOne(timeoutIn, false) == true)
 			{
                 if (mut.WaitOne(timeoutIn, false) == true)
 				{
-					try
-					{
-						item = base.Dequeue();
+                    try
+                    {
+                        item = base.Dequeue();
 
                         if (performanceCounter != null)
-                            performanceCounter.Decrement();
-					}
-					catch(InvalidOperationException)
-					{
-						resetEvent.Reset();
-						mut.ReleaseMutex();
-						throw;
-					}
+                            performanceCounter.RawValue = (long)this.Count;
 
-					resetEvent.Set();
+                        if (this.Count > 0)
+                        {
+                            resetEvent.Set();
+                        }
+                        else
+                        {
+                            resetEvent.Reset();
+                        }
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        resetEvent.Reset();
+                        mut.ReleaseMutex();
 
-					mut.ReleaseMutex();
-				}
+                        return default(T);
+                    }
+
+                    mut.ReleaseMutex();
+
+                    return item;
+                }
 				else
 				{
                     return default(T);
@@ -117,18 +132,14 @@ namespace Microsoft.WebSolutionsPlatform.Event
 			{
                 return default(T);
             }
-
-			return item;
 		}
 
 		/// <summary>
 		/// Default constructor
 		/// </summary>
 		public SynchronizationQueue()
-		{
-			mut = new Mutex(false);
-			resetEvent = new ManualResetEvent(false);
-			timeout = 10000;
+            : base()
+        {
 		}
 
 		/// <summary>
@@ -136,10 +147,8 @@ namespace Microsoft.WebSolutionsPlatform.Event
 		/// </summary>
         /// <param name="performanceCounter">Performance counter showing size of queue.</param>
 		public SynchronizationQueue( PerformanceCounter performanceCounter )
-		{
-			mut = new Mutex(false);
-			resetEvent = new ManualResetEvent(false);
-			timeout = 10000;
+            : base()
+        {
             this.performanceCounter = performanceCounter;
             this.performanceCounter.RawValue = 0;
 		}
@@ -151,9 +160,6 @@ namespace Microsoft.WebSolutionsPlatform.Event
         public SynchronizationQueue(int capacity)
             : base(capacity)
         {
-            mut = new Mutex(false);
-            resetEvent = new ManualResetEvent(false);
-            timeout = 10000;
         }
 
         /// <summary>
@@ -164,9 +170,6 @@ namespace Microsoft.WebSolutionsPlatform.Event
         public SynchronizationQueue(int capacity, PerformanceCounter performanceCounter)
             : base(capacity)
         {
-            mut = new Mutex(false);
-            resetEvent = new ManualResetEvent(false);
-            timeout = 10000;
             this.performanceCounter = performanceCounter;
             this.performanceCounter.RawValue = 0;
         }
@@ -178,9 +181,6 @@ namespace Microsoft.WebSolutionsPlatform.Event
 		public SynchronizationQueue( IEnumerable<T> collection )
 			: base(collection)
 		{
-			mut = new Mutex(false);
-			resetEvent = new ManualResetEvent(false);
-			timeout = 10000;
 		}
 
         /// <summary>
@@ -191,9 +191,6 @@ namespace Microsoft.WebSolutionsPlatform.Event
         public SynchronizationQueue(IEnumerable<T> collection, PerformanceCounter performanceCounter)
             : base(collection)
         {
-            mut = new Mutex(false);
-            resetEvent = new ManualResetEvent(false);
-            timeout = 10000;
             this.performanceCounter = performanceCounter;
             this.performanceCounter.RawValue = 0;
         }

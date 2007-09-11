@@ -32,7 +32,14 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                 try
                 {
-                    Thread.Sleep(1000);
+                    try
+                    {
+                        Manager.ThreadInitialize.Release();
+                    }
+                    catch
+                    {
+                        // If the thread is restarted, this could throw an exception but just ignore
+                    }
 
                     while (true)
                     {

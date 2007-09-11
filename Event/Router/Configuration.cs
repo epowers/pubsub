@@ -72,9 +72,17 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
 			if(iterator.MoveNext() == true)
 			{
-				configValueIn = iterator.Current.GetAttribute(@"port", String.Empty);
-                if (configValueIn.Length != 0)
-					thisPort = int.Parse(configValueIn);
+                thisNic = iterator.Current.GetAttribute(@"nic", String.Empty).Trim();
+
+                configValueIn = iterator.Current.GetAttribute(@"port", String.Empty).Trim();
+                if (configValueIn.Length == 0)
+                {
+                    thisPort = 0;
+                }
+                else
+                {
+                    thisPort = int.Parse(configValueIn);
+                }
 
 				configValueIn = iterator.Current.GetAttribute(@"bufferSize", String.Empty);
                 if (configValueIn.Length != 0)
@@ -89,7 +97,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
 			while(iterator.MoveNext() == true)
 			{
-                machineNameIn = iterator.Current.GetAttribute(@"name", String.Empty);
+                machineNameIn = iterator.Current.GetAttribute(@"name", String.Empty).Trim();
 
 				portIn = int.Parse(iterator.Current.GetAttribute(@"port", String.Empty));
 

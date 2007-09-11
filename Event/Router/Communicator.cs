@@ -175,7 +175,32 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
             public ReceiveServer()
             {
-                thisAddress = Dns.GetHostEntry(LocalRouterName).AddressList[Dns.GetHostEntry(LocalRouterName).AddressList.Length - 1];
+                if (thisNic == string.Empty)
+                {
+                    thisAddress = Dns.GetHostEntry(LocalRouterName).AddressList[Dns.GetHostEntry(LocalRouterName).AddressList.Length - 1];
+                }
+                else
+                {
+                    IPHostEntry iph = Dns.GetHostEntry(thisNic);
+
+                    thisAddress = null;
+
+                    for (int i = 0; i < iph.AddressList.Length; i++)
+                    {
+                        if (thisNic == iph.AddressList[i].ToString())
+                        {
+                            thisAddress = iph.AddressList[i];
+
+                            break;
+                        }
+                    }
+
+                    if (thisAddress == null)
+                    {
+                        thisAddress = iph.AddressList[iph.AddressList.Length - 1];
+                    }
+                }
+
                 thisEndPoint = new IPEndPoint(thisAddress, thisPort);
             }
 
@@ -606,17 +631,20 @@ namespace Microsoft.WebSolutionsPlatform.Event
                             eventType = new Guid(binReader.ReadString());
                         }
 
-                        Router.channelDictionary[originatingRouterName] = state.clientRouterName;
+                        if (String.Compare(originatingRouterName, Router.localRouterName, false) != 0)
+                        {
+                            Router.channelDictionary[originatingRouterName] = state.clientRouterName;
 
-                        QueueElement element = new QueueElement();
+                            QueueElement element = new QueueElement();
 
-                        element.SerializedEvent = ConcatArrayList(state.buffers);
-                        element.SerializedLength = state.totalBytesRead;
-                        element.EventType = eventType;
-                        element.OriginatingRouterName = originatingRouterName;
-                        element.InRouterName = state.clientRouterName;
+                            element.SerializedEvent = ConcatArrayList(state.buffers);
+                            element.SerializedLength = state.totalBytesRead;
+                            element.EventType = eventType;
+                            element.OriginatingRouterName = originatingRouterName;
+                            element.InRouterName = state.clientRouterName;
 
-                        rePublisherQueue.Enqueue(element);
+                            rePublisherQueue.Enqueue(element);
+                        }
 
                         state.Reset();
                     }
@@ -841,6 +869,15 @@ namespace Microsoft.WebSolutionsPlatform.Event
                 QueueElement newElement = new QueueElement();
                 bool elementRetrieved;
                 DoubleDictionary<Guid, Guid> eventDictionary;
+
+                try
+                {
+                    Manager.ThreadInitialize.Release();
+                }
+                catch
+                {
+                    // If the thread is restarted, this could throw an exception but just ignore
+                }
 
                 try
                 {

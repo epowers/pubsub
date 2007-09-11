@@ -20,6 +20,8 @@ namespace Microsoft.WebSolutionsPlatform.Event
 	{
 		internal class Manager : ServiceThread
 		{
+            public static Semaphore ThreadInitialize = new Semaphore(0, 1);
+
 			public override void Start()
 			{
 				try
@@ -38,6 +40,11 @@ namespace Microsoft.WebSolutionsPlatform.Event
                                 if (workerThread == null ||
                                     workerThread.ThreadState == System.Threading.ThreadState.Stopped)
                                 {
+                                    if (workerThread == null)
+                                    {
+                                        ThreadInitialize.WaitOne(5000, false);
+                                    }
+
                                     Object obj = Activator.CreateInstance(workerThreadType);
                                     workerThreads[workerThreadType] = new Thread(new ThreadStart(((ServiceThread)obj).Start));
 

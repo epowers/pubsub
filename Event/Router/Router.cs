@@ -134,7 +134,8 @@ namespace Microsoft.WebSolutionsPlatform.Event
         internal static uint subscriptionRefreshIncrement = 3; // in minutes
         internal static uint subscriptionExpirationIncrement = 10; // in minutes
 
-		internal static int thisPort;
+        internal static string thisNic;
+        internal static int thisPort;
 		internal static int thisBufferSize;
 		internal static int thisTimeout; //Timeout in milliseconds (1000 = 1 second)
 

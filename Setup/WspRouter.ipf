@@ -180,6 +180,11 @@ item: Set Variable
   Flags=10000000
 end
 item: Set Variable
+  Variable=WSPNIC
+  Value= 
+  Flags=10000000
+end
+item: Set Variable
   Variable=WSPPPORT
   Value=1300
   Flags=10000000
@@ -846,50 +851,50 @@ item: Custom Dialog Set
       Text Swedish=Markera en grupp i Programhanteraren
     end
     item: Editbox
-      Rectangle=169 42 241 57
+      Rectangle=169 39 241 54
       Variable=WSPQUEUESIZE
       Help Context=16711681
       Create Flags=01010000100000010000000000000000
       Text English=%WSPQUEUESIZE%
     end
     item: Static
-      Rectangle=85 43 160 58
+      Rectangle=85 40 160 55
       Create Flags=01010000000000000000000000000000
       Text English=Queue Size (bytes):
     end
     item: Static
-      Rectangle=85 70 160 85
+      Rectangle=85 61 160 76
       Create Flags=01010000000000000000000000000000
       Text English=Average Event Size (bytes):
     end
     item: Editbox
-      Rectangle=169 70 241 85
+      Rectangle=169 61 241 76
       Variable=WSPAVEEVNTSIZE
       Help Context=16711681
       Create Flags=01010000100000010000000000000000
       Text English=%WSPAVEEVNTSIZE%
     end
     item: Editbox
-      Rectangle=169 98 241 113
+      Rectangle=168 110 240 125
       Variable=WSPRPORT
       Help Context=16711681
       Create Flags=01010000100000010000000000000000
       Text English=%WSPRPORT%
     end
     item: Static
-      Rectangle=85 98 160 113
+      Rectangle=84 110 159 125
       Create Flags=01010000000000000000000000000000
-      Text English=TCP Port Number
+      Text English=Listen Port Number
     end
     item: Editbox
-      Rectangle=169 126 241 141
+      Rectangle=169 132 241 147
       Variable=WSPRBUFFERSIZE
       Help Context=16711681
       Create Flags=01010000100000010000000000000000
       Text English=%WSPRBUFFERSIZE%
     end
     item: Static
-      Rectangle=85 125 160 140
+      Rectangle=85 131 160 146
       Create Flags=01010000000000000000000000000000
       Text English=Buffer Size (bytes):
     end
@@ -904,6 +909,18 @@ item: Custom Dialog Set
       Rectangle=85 152 160 167
       Create Flags=01010000000000000000000000000000
       Text English=Timeout (ms):
+    end
+    item: Editbox
+      Rectangle=168 86 240 101
+      Variable=WSPNIC
+      Help Context=16711681
+      Create Flags=01010000100000010000000000000000
+      Text English=%WSPNIC%
+    end
+    item: Static
+      Rectangle=84 86 159 101
+      Create Flags=01010000000000000000000000000000
+      Text English=Listen IP Address         (Blank for default)
     end
   end
 end
@@ -1380,7 +1397,7 @@ item: Insert Line into Text File
 end
 item: Insert Line into Text File
   Pathname=%MAINDIR%\WspEventRouter.exe.config
-  New Text=    <thisRouter port="%WSPRPORT%" bufferSize="%WSPRBUFFERSIZE%" timeout="%WSPRTIMEOUT%"/>
+  New Text=    <thisRouter nic="%WSPNIC%" port="%WSPRPORT%" bufferSize="%WSPRBUFFERSIZE%" timeout="%WSPRTIMEOUT%"/>
   Line Number=0
 end
 item: If/While Statement

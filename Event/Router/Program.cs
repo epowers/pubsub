@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.ServiceProcess;
+using System.Diagnostics;
 using System.Text;
 
 namespace Microsoft.WebSolutionsPlatform.Event
@@ -11,7 +12,8 @@ namespace Microsoft.WebSolutionsPlatform.Event
 		/// </summary>
 		static void Main()
 		{
-            // ksh Uncomment the following lines to start manually
+            // ksh Un-comment the following lines to start manually
+
 			// Router eventsvc = new Router();
 			// eventsvc.Start();
 			// return;

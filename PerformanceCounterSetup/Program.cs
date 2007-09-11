@@ -54,11 +54,18 @@ namespace PerformanceCounterSetup
                 PerformanceCounterCategory.Delete(categoryName);
             }
 
+            if (EventLog.SourceExists("WspEventRouter") == true)
+            {
+                EventLog.DeleteEventSource("WspEventRouter");
+            }
+
             if (args.Length > 0)
             {
                 if (args[0] == @"/d" || args[0] == @"/D")
                     return;
             }
+
+            EventLog.CreateEventSource("WspEventRouter", "System");
 
             CCDC = new CounterCreationDataCollection();
 

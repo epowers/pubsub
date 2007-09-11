@@ -152,6 +152,15 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                 try
                 {
+                    Manager.ThreadInitialize.Release();
+                }
+                catch
+                {
+                    // If the thread is restarted, this could throw an exception but just ignore
+                }
+
+                try
+                {
                     while (true)
                     {
                         try
