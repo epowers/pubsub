@@ -499,11 +499,17 @@ namespace Microsoft.WebSolutionsPlatform.Event
             private static void InitialReceiveCallback(IAsyncResult ar)
             {
                 ReceiveStateObject receiveState = (ReceiveStateObject)ar.AsyncState;
-                Socket client = receiveState.client;
 
-                receiveState.totalBytesRead = client.EndReceive(ar);
+                try
+                {
+                    Socket client = receiveState.client;
 
-                receiveState.receiveDone.Set();
+                    receiveState.totalBytesRead = client.EndReceive(ar);
+                }
+                finally
+                {
+                    receiveState.receiveDone.Set();
+                }
             }
 
             private void InHandler(ReceiveStateObject state)
@@ -531,7 +537,9 @@ namespace Microsoft.WebSolutionsPlatform.Event
                 string originatingRouterName = string.Empty;
                 string inRouterName = string.Empty;
 
-                int bytesRead;
+                bool endThread = false;
+
+                int bytesRead = 0;
                 int bytesProcessed = 0;
                 int remainingLength = 0;
 
@@ -548,129 +556,150 @@ namespace Microsoft.WebSolutionsPlatform.Event
                             state.client.Shutdown(SocketShutdown.Both);
                             state.client.Close();
                         }
+                        catch (Exception e)
+                        {
+                            EventLog.WriteEntry("WspEventRouter", e.ToString(), EventLogEntryType.Warning);
+                        }
+                        finally
+                        {
+                            state.receiveDone.Set();
+                        }
+
+                        endThread = true;
+                    }
+                }
+                else
+                {
+                    try
+                    {
+                        state.client.Shutdown(SocketShutdown.Both);
+                        state.client.Close();
+                    }
+                    catch (Exception e)
+                    {
+                        EventLog.WriteEntry("WspEventRouter", e.ToString(), EventLogEntryType.Warning);
+                    }
+                    finally
+                    {
+                        state.receiveDone.Set();
+                    }
+
+                    endThread = true;
+                }
+
+                if (endThread == true)
+                {
+                    return;
+                }
+
+                try
+                {
+                    while (bytesProcessed < bytesRead)
+                    {
+                        if (state.currentReceiveLength == 0)
+                        {
+                            bytesProcessed += GetReceiveLength(state, bytesProcessed, bytesRead);
+                            continue;
+                        }
+
+                        remainingLength = state.currentReceiveLength - state.currentProcessedLength;
+
+                        if (bytesRead - bytesProcessed >= remainingLength)
+                        {
+                            byte[] inBuffer = new byte[remainingLength];
+
+                            Buffer.BlockCopy(state.buffer, bytesProcessed, inBuffer, 0, remainingLength);
+
+                            state.buffers.Add(inBuffer);
+
+                            state.totalBytesRead = state.totalBytesRead + remainingLength;
+
+                            bytesProcessed = bytesProcessed + remainingLength;
+                            state.currentProcessedLength = state.currentProcessedLength + remainingLength;
+                        }
+                        else
+                        {
+                            byte[] inBuffer = new byte[bytesRead - bytesProcessed];
+
+                            Buffer.BlockCopy(state.buffer, bytesProcessed, inBuffer, 0, bytesRead - bytesProcessed);
+
+                            state.buffers.Add(inBuffer);
+
+                            state.totalBytesRead = state.totalBytesRead + bytesRead - bytesProcessed;
+
+                            state.currentProcessedLength = state.currentProcessedLength + bytesRead - bytesProcessed;
+                            bytesProcessed = bytesRead;
+                        }
+
+                        if (state.currentProcessedLength == state.currentReceiveLength)
+                        {
+                            eventType = Guid.Empty;
+                            originatingRouterName = string.Empty;
+                            inRouterName = string.Empty;
+
+                            lock (prefixStream)
+                            {
+                                prefixStream.Position = 0;
+                                Buffer.BlockCopy((byte[])state.buffers[0], 0, prefixStream.prefixBuffer, 0,
+                                    ((byte[])state.buffers[0]).Length < prefixStream.prefixLength ? ((byte[])state.buffers[0]).Length : prefixStream.prefixLength);
+
+                                originatingRouterName = binReader.ReadString();
+                                inRouterName = binReader.ReadString(); // This is the old InRouterName
+                                eventType = new Guid(binReader.ReadString());
+                            }
+
+                            if (String.Compare(originatingRouterName, Router.localRouterName, false) != 0)
+                            {
+                                Router.channelDictionary[originatingRouterName] = state.clientRouterName;
+
+                                QueueElement element = new QueueElement();
+
+                                element.SerializedEvent = ConcatArrayList(state.buffers);
+                                element.SerializedLength = state.totalBytesRead;
+                                element.EventType = eventType;
+                                element.OriginatingRouterName = originatingRouterName;
+                                element.InRouterName = state.clientRouterName;
+
+                                rePublisherQueue.Enqueue(element);
+                            }
+
+                            state.Reset();
+                        }
+                    }
+
+                    if (bytesRead > 0)
+                    {
+                        client.BeginReceive(state.buffer, 0, averageEventSize, 0,
+                            new AsyncCallback(ReceiveCallback), state);
+                    }
+                    else
+                    {
+                        try
+                        {
+                            state.client.Shutdown(SocketShutdown.Both);
+                            state.client.Close();
+                        }
 
                         catch (Exception e)
                         {
                             EventLog.WriteEntry("WspEventRouter", e.ToString(), EventLogEntryType.Warning);
                         }
+                        finally
+                        {
+                            state.receiveDone.Set();
+                        }
 
-                        state.receiveDone.Set();
+                        endThread = true;
+                    }
 
+                    if (endThread == true)
+                    {
                         return;
                     }
                 }
-                else
+                catch
                 {
-                    try
-                    {
-                        state.client.Shutdown(SocketShutdown.Both);
-                        state.client.Close();
-                    }
-
-                    catch (Exception e)
-                    {
-                        EventLog.WriteEntry("WspEventRouter", e.ToString(), EventLogEntryType.Warning);
-                    }
-
                     state.receiveDone.Set();
-
-                    return;
-                }
-
-                while (bytesProcessed < bytesRead)
-                {
-                    if (state.currentReceiveLength == 0)
-                    {
-                        bytesProcessed += GetReceiveLength(state, bytesProcessed, bytesRead);
-                        continue;
-                    }
-
-                    remainingLength = state.currentReceiveLength - state.currentProcessedLength;
-
-                    if (bytesRead - bytesProcessed >= remainingLength)
-                    {
-                        byte[] inBuffer = new byte[remainingLength];
-
-                        Buffer.BlockCopy(state.buffer, bytesProcessed, inBuffer, 0, remainingLength);
-
-                        state.buffers.Add(inBuffer);
-
-                        state.totalBytesRead = state.totalBytesRead + remainingLength;
-
-                        bytesProcessed = bytesProcessed + remainingLength;
-                        state.currentProcessedLength = state.currentProcessedLength + remainingLength;
-                    }
-                    else
-                    {
-                        byte[] inBuffer = new byte[bytesRead - bytesProcessed];
-
-                        Buffer.BlockCopy(state.buffer, bytesProcessed, inBuffer, 0, bytesRead - bytesProcessed);
-
-                        state.buffers.Add(inBuffer);
-
-                        state.totalBytesRead = state.totalBytesRead + bytesRead - bytesProcessed;
-
-                        state.currentProcessedLength = state.currentProcessedLength + bytesRead - bytesProcessed;
-                        bytesProcessed = bytesRead;
-                    }
-
-                    if (state.currentProcessedLength == state.currentReceiveLength)
-                    {
-                        eventType = Guid.Empty;
-                        originatingRouterName = string.Empty;
-                        inRouterName = string.Empty;
-
-                        lock (prefixStream)
-                        {
-                            prefixStream.Position = 0;
-                            Buffer.BlockCopy((byte[])state.buffers[0], 0, prefixStream.prefixBuffer, 0,
-                                ((byte[])state.buffers[0]).Length < prefixStream.prefixLength ? ((byte[])state.buffers[0]).Length : prefixStream.prefixLength);
-
-                            originatingRouterName = binReader.ReadString();
-                            inRouterName = binReader.ReadString(); // This is the old InRouterName
-                            eventType = new Guid(binReader.ReadString());
-                        }
-
-                        if (String.Compare(originatingRouterName, Router.localRouterName, false) != 0)
-                        {
-                            Router.channelDictionary[originatingRouterName] = state.clientRouterName;
-
-                            QueueElement element = new QueueElement();
-
-                            element.SerializedEvent = ConcatArrayList(state.buffers);
-                            element.SerializedLength = state.totalBytesRead;
-                            element.EventType = eventType;
-                            element.OriginatingRouterName = originatingRouterName;
-                            element.InRouterName = state.clientRouterName;
-
-                            rePublisherQueue.Enqueue(element);
-                        }
-
-                        state.Reset();
-                    }
-                }
-
-                if (bytesRead > 0)
-                {
-                    client.BeginReceive(state.buffer, 0, averageEventSize, 0,
-                        new AsyncCallback(ReceiveCallback), state);
-                }
-                else
-                {
-                    try
-                    {
-                        state.client.Shutdown(SocketShutdown.Both);
-                        state.client.Close();
-                    }
-
-                    catch (Exception e)
-                    {
-                        EventLog.WriteEntry("WspEventRouter", e.ToString(), EventLogEntryType.Warning);
-                    }
-
-                    state.receiveDone.Set();
-
-                    return;
                 }
            }
 
