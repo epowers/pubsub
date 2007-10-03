@@ -171,7 +171,7 @@ item: Set Variable
 end
 item: Set Variable
   Variable=WSPRTIMEOUT
-  Value=100000
+  Value=20000
   Flags=10000000
 end
 item: Set Variable
@@ -196,7 +196,7 @@ item: Set Variable
 end
 item: Set Variable
   Variable=WSPPTIMEOUT
-  Value=10000
+  Value=20000
   Flags=10000000
 end
 item: Wizard Block

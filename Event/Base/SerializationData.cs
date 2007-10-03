@@ -445,7 +445,14 @@ namespace Microsoft.WebSolutionsPlatform.Event
                     throw new EventSerializationException(rm.GetString("InWriteState"));
                 }
 
-                current.Key = dataReader.ReadString();
+                if (dataReader.BaseStream.Position == dataReader.BaseStream.Length)
+                {
+                    return false;
+                }
+                else
+                {
+                    current.Key = dataReader.ReadString();
+                }
 
                 valueType = dataReader.ReadByte();
 
