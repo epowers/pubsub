@@ -19,7 +19,7 @@ item: Global
   Patch Flags=0000000000000001
   Patch Threshold=85
   Patch Memory=4000
-  EXE Filename=%_BINARIES_%\Setup.exe
+  EXE Filename=\\msspades\drops\mpt\EventPubSubSystem\Latest\x86\Setup.exe
   FTP Cluster Size=20
   Variable Name1=_SYS_
   Variable Default1=C:\WINDOWS\system32
@@ -1245,6 +1245,9 @@ end
 item: Add Text to INSTALL.LOG
   Text=Execute path: %MAINDIR%\PerformanceCounterSetup /d
 end
+item: Add Directory to Path
+  Directory=%MAINDIR%
+end
 item: Install File
   Source=%_BINARIES_%\PerformanceCounterSetup.exe
   Destination=%MAINDIR%\PerformanceCounterSetup.exe
@@ -1336,6 +1339,37 @@ item: Install File
   Source=%_BINARIES_%\Samples
   Destination=%MAINDIR%\Samples
   Flags=0000000100000010
+end
+item: Find File in Path
+  Variable=GACUTIL
+  Pathname List=gacutil.exe
+end
+item: Delete File
+  Pathname=%TEMP%\gacfiles.cmd
+end
+item: Insert Line into Text File
+  Pathname=%TEMP%\gacfiles.cmd
+  New Text="%GACUTIL%" /i "%MAINDIR%\WspEvent.dll"
+  Line Number=0
+end
+item: Insert Line into Text File
+  Pathname=%TEMP%\gacfiles.cmd
+  New Text="%GACUTIL%" /i "%MAINDIR%\PubSubMgr.dll"
+  Line Number=0
+end
+item: Insert Line into Text File
+  Pathname=%TEMP%\gacfiles.cmd
+  New Text="%GACUTIL%" /i "%MAINDIR%\WspSharedQueue.dll"
+  Line Number=0
+end
+item: Add Text to INSTALL.LOG
+  Text=Execute path: "%GACUTIL%" /u WspEvent
+end
+item: Add Text to INSTALL.LOG
+  Text=Execute path: "%GACUTIL%" /u PubSubMgr
+end
+item: Add Text to INSTALL.LOG
+  Text=Execute path: "%GACUTIL%" /u WspSharedQueue
 end
 item: Delete File
   Pathname=%MAINDIR%\WspEventRouter.exe.config
@@ -1431,12 +1465,12 @@ item: Insert Line into Text File
 end
 item: Insert Line into Text File
   Pathname=%MAINDIR%\WspEventRouter.exe.config
-  New Text=    <!-- <event type="*" localOnly="false" tempFileDirectory="c:\temp\AllEvents\" copyToFileDirectory="c:\temp\AllEvents\log\" />  -->
+  New Text=    <!-- <event type="*" localOnly="false" fieldTerminator="," rowTerminator="\n" tempFileDirectory="c:\temp\AllEvents\" copyToFileDirectory="c:\temp\AllEvents\log\" />  -->
   Line Number=0
 end
 item: Insert Line into Text File
   Pathname=%MAINDIR%\WspEventRouter.exe.config
-  New Text=    <!-- <event type="78422526-7B21-4559-8B9A-BC551B46AE34" localOnly="false" tempFileDirectory="c:\temp\WebEvents\" copyToFileDirectory="c:\temp\WebEvents\log\" /> -->
+  New Text=    <!-- <event type="78422526-7B21-4559-8B9A-BC551B46AE34" localOnly="false" fieldTerminator="," rowTerminator="\n" tempFileDirectory="c:\temp\WebEvents\" copyToFileDirectory="c:\temp\WebEvents\log\" /> -->
   Line Number=0
 end
 item: Insert Line into Text File
@@ -1549,6 +1583,10 @@ item: Create Service
 end
 item: Start/Stop Service
   Service Name=WspEventRouter
+end
+item: Execute Program
+  Pathname=%TEMP%\gacfiles.cmd
+  Flags=00000010
 end
 item: Wizard Block
   Direction Variable=DIRECTION

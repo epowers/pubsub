@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading;
+using System.Net;
 using System.Resources;
 using System.Reflection;
 using Microsoft.WebSolutionsPlatform.Common;
@@ -75,9 +76,9 @@ namespace Microsoft.WebSolutionsPlatform.Event.PubSubManager
             }
             set
             {
-                if(value == true)
+                if (value == true)
                 {
-                    if(listenForEvents == false)
+                    if (listenForEvents == false)
                     {
                         StartListening();
                     }
@@ -209,7 +210,7 @@ namespace Microsoft.WebSolutionsPlatform.Event.PubSubManager
         /// Dispose for SubscriptionManager
         /// </summary>
         /// <param name="disposing">True if disposing.</param>
-        protected virtual void Dispose(bool disposing) 
+        protected virtual void Dispose(bool disposing)
         {
             if (!disposed)
             {
@@ -362,15 +363,19 @@ namespace Microsoft.WebSolutionsPlatform.Event.PubSubManager
         {
             Guid eventType;
             string originatingRouterName;
+            string localRouterName;
             string inRouterName;
             bool elementRetrieved;
             DateTime nextPushSubscriptions = DateTime.UtcNow.AddMinutes(subscriptionRefreshIncrement);
+            Subscription subscription;
 
             try
             {
                 byte[] buffer = null;
 
-                while(true)
+                localRouterName = Dns.GetHostName();
+
+                while (true)
                 {
                     buffer = eventQueue.Dequeue(Timeout);
 
@@ -397,7 +402,7 @@ namespace Microsoft.WebSolutionsPlatform.Event.PubSubManager
                             eventType = new Guid(prefixStream.prefixReader.ReadString());
                         }
 
-                        if (subscribeAll == true || subscriptions.ContainsKey(eventType) == true)
+                        if (subscribeAll == true)
                         {
                             StateInfo stateInfo = new StateInfo();
 
@@ -406,6 +411,22 @@ namespace Microsoft.WebSolutionsPlatform.Event.PubSubManager
                             stateInfo.serializedEvent = buffer;
 
                             ThreadPool.QueueUserWorkItem(new WaitCallback(CallSubscriptionCallback), stateInfo);
+                        }
+                        else
+                        {
+                            if (subscriptions.TryGetValue(eventType, out subscription) == true)
+                            {
+                                if (subscription.LocalOnly == false || localRouterName == originatingRouterName)
+                                {
+                                    StateInfo stateInfo = new StateInfo();
+
+                                    stateInfo.callBack = callbackMethod;
+                                    stateInfo.eventType = eventType;
+                                    stateInfo.serializedEvent = buffer;
+
+                                    ThreadPool.QueueUserWorkItem(new WaitCallback(CallSubscriptionCallback), stateInfo);
+                                }
+                            }
                         }
                     }
 
@@ -428,7 +449,7 @@ namespace Microsoft.WebSolutionsPlatform.Event.PubSubManager
                     }
                 }
             }
-            catch(ThreadAbortException)
+            catch (ThreadAbortException)
             {
                 // Another thread has signalled that this worker
                 // thread must terminate.  Typically, this occurs when

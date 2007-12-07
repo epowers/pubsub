@@ -17,26 +17,26 @@ using System.Xml.XPath;
 
 namespace Microsoft.WebSolutionsPlatform.Event
 {
-	public partial class Router : ServiceBase
-	{
+    public partial class Router : ServiceBase
+    {
         internal static void LoadConfiguration()
-		{
-			string configValueIn;
+        {
+            string configValueIn;
             string machineNameIn;
-			int portIn;
-			int bufferSizeIn;
-			int timeoutIn;
-			Guid eventType;
+            int portIn;
+            int bufferSizeIn;
+            int timeoutIn;
+            Guid eventType;
 
-			string configFile = AppDomain.CurrentDomain.SetupInformation.ApplicationBase +
-				AppDomain.CurrentDomain.FriendlyName + ".config";
+            string configFile = AppDomain.CurrentDomain.SetupInformation.ApplicationBase +
+                AppDomain.CurrentDomain.FriendlyName + ".config";
 
             XPathDocument document = new XPathDocument(configFile);
             XPathNavigator navigator = document.CreateNavigator();
-			XPathNodeIterator iterator;
+            XPathNodeIterator iterator;
 
-			if(File.Exists(configFile) == false)
-				return;
+            if (File.Exists(configFile) == false)
+                return;
 
             iterator = navigator.Select(@"/configuration/eventRouterSettings/subscriptionManagement");
 
@@ -53,7 +53,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
             iterator = navigator.Select(@"/configuration/eventRouterSettings/localPublish");
 
-			if(iterator.MoveNext() == true)
+            if (iterator.MoveNext() == true)
             {
                 configValueIn = iterator.Current.GetAttribute(@"eventQueueName", String.Empty);
                 if (configValueIn.Length != 0)
@@ -66,12 +66,12 @@ namespace Microsoft.WebSolutionsPlatform.Event
                 configValueIn = iterator.Current.GetAttribute(@"averageEventSize", String.Empty);
                 if (configValueIn.Length != 0)
                     averageEventSize = Int32.Parse(configValueIn);
-			}
+            }
 
             iterator = navigator.Select(@"/configuration/eventRouterSettings/thisRouter");
 
-			if(iterator.MoveNext() == true)
-			{
+            if (iterator.MoveNext() == true)
+            {
                 thisNic = iterator.Current.GetAttribute(@"nic", String.Empty).Trim();
 
                 configValueIn = iterator.Current.GetAttribute(@"port", String.Empty).Trim();
@@ -84,66 +84,105 @@ namespace Microsoft.WebSolutionsPlatform.Event
                     thisPort = int.Parse(configValueIn);
                 }
 
-				configValueIn = iterator.Current.GetAttribute(@"bufferSize", String.Empty);
+                configValueIn = iterator.Current.GetAttribute(@"bufferSize", String.Empty);
                 if (configValueIn.Length != 0)
-					thisBufferSize = int.Parse(configValueIn);
+                    thisBufferSize = int.Parse(configValueIn);
 
-				configValueIn = iterator.Current.GetAttribute(@"timeout", String.Empty);
+                configValueIn = iterator.Current.GetAttribute(@"timeout", String.Empty);
                 if (configValueIn.Length != 0)
-					thisTimeout = int.Parse(configValueIn);
-			}
+                    thisTimeout = int.Parse(configValueIn);
+            }
 
             iterator = navigator.Select(@"/configuration/eventRouterSettings/parentRouter");
 
-			while(iterator.MoveNext() == true)
-			{
+            while (iterator.MoveNext() == true)
+            {
                 machineNameIn = iterator.Current.GetAttribute(@"name", String.Empty).Trim();
 
-				portIn = int.Parse(iterator.Current.GetAttribute(@"port", String.Empty));
+                portIn = int.Parse(iterator.Current.GetAttribute(@"port", String.Empty));
 
-				configValueIn = iterator.Current.GetAttribute(@"bufferSize", String.Empty);
+                configValueIn = iterator.Current.GetAttribute(@"bufferSize", String.Empty);
                 if (configValueIn.Length != 0)
-					bufferSizeIn = int.Parse(configValueIn);
-				else
-					bufferSizeIn = thisBufferSize;
+                    bufferSizeIn = int.Parse(configValueIn);
+                else
+                    bufferSizeIn = thisBufferSize;
 
-				configValueIn = iterator.Current.GetAttribute(@"timeout", String.Empty);
+                configValueIn = iterator.Current.GetAttribute(@"timeout", String.Empty);
                 if (configValueIn.Length != 0)
-					timeoutIn = int.Parse(configValueIn);
-				else
-					timeoutIn = thisTimeout;
+                    timeoutIn = int.Parse(configValueIn);
+                else
+                    timeoutIn = thisTimeout;
 
                 AddRoute(machineNameIn, portIn, bufferSizeIn, timeoutIn);
-			}
+            }
 
             iterator = navigator.Select(@"/configuration/eventPersistSettings/event");
 
-			while(iterator.MoveNext() == true)
-			{
+            while (iterator.MoveNext() == true)
+            {
                 PersistEventInfo eventInfo = new PersistEventInfo();
                 eventInfo.OutFileName = null;
                 eventInfo.OutStream = null;
 
                 configValueIn = iterator.Current.GetAttribute(@"type", String.Empty);
                 if (configValueIn == @"*" || configValueIn.Length == 0)
-				{
-					eventType = Guid.Empty;
+                {
+                    eventType = Guid.Empty;
                     Persister.persistAllEvents = true;
                 }
-				else
-				{
+                else
+                {
                     eventType = new Guid(configValueIn);
-				}
+                }
 
                 configValueIn = iterator.Current.GetAttribute(@"localOnly", String.Empty);
                 if (configValueIn.Length == 0)
-				{
+                {
                     eventInfo.LocalOnly = true;
-				}
-				else
-				{
+                }
+                else
+                {
                     eventInfo.LocalOnly = bool.Parse(configValueIn);
-				}
+                }
+
+                configValueIn = iterator.Current.GetAttribute(@"fieldTerminator", String.Empty);
+                if (configValueIn.Length == 0)
+                {
+                    eventInfo.FieldTerminator = ",";
+                }
+                else
+                {
+                    eventInfo.FieldTerminator = char.Parse(configValueIn).ToString();
+                }
+
+                configValueIn = iterator.Current.GetAttribute(@"rowTerminator", String.Empty);
+                if (configValueIn.Length == 0)
+                {
+                    eventInfo.RowTerminator = "\n";
+                }
+                else
+                {
+                    if (configValueIn == @"\n")
+                    {
+                        configValueIn = "\n";
+                    }
+                    else
+                    {
+                        if (configValueIn == @"\r")
+                        {
+                            configValueIn = "\r";
+                        }
+                        else
+                        {
+                            if (configValueIn == @"\t")
+                            {
+                                configValueIn = "\t";
+                            }
+                        }
+                    }
+
+                    eventInfo.RowTerminator = char.Parse(configValueIn).ToString();
+                }
 
                 configValueIn = iterator.Current.GetAttribute(@"tempFileDirectory", String.Empty);
                 if (configValueIn.Length == 0)
@@ -174,6 +213,6 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                 Persister.persistEvents[eventType] = eventInfo;
             }
-		}
-	}
+        }
+    }
 }

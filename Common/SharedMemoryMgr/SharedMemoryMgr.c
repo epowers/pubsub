@@ -23,6 +23,13 @@ INT32 CopyEventToBuffer(DWORD iOffset, PWSPEVENT pWspEvent, LPCSTR pEventBuffer,
 INT32 CopyEventFromBuffer(LPCSTR pEventBuffer, DWORD dwEventBufferLength, DWORD *pBytesRead, UINT64 *pEventNum, PCOMMBUFFER CommBuffer);
 LPCSTR GetWspEvent(PWSPEVENT pWspEvent, PCOMMBUFFER CommBuffer, DWORD dwStartOffset);
 
+BOOL bCriticalSectionInitialized = FALSE;
+CRITICAL_SECTION critSec;
+
+HANDLE ghMapFile = NULL;
+PSHAREDMEMORY gpBuf = NULL;
+INT32 iRefCount = 0;
+
 #define MUTEX_NAME "Global\\WSP_MUTEX"
 #define EVENT_NAME "Global\\WSP_EVENT"
 #define CHILDEVENT_NAME "Global\\WSP_CHILDEVENT"
@@ -51,25 +58,16 @@ extern INT32 InitMemoryMgr(LPCTSTR SharedMemoryNameIn, DWORD SharedMemorySize, P
 	SECURITY_DESCRIPTOR  sd;
 	SECURITY_ATTRIBUTES sa = { sizeof sa, &sd, FALSE };
 
-	DEBUGCODE( DebugOutputString("Entered InitMemoryMgr"); )
-
-	DEBUGCODE( DebugOutputString("Initializing and Setting Security Descriptor"); )
 	InitializeSecurityDescriptor(&sd, SECURITY_DESCRIPTOR_REVISION);
 	SetSecurityDescriptorDacl(&sd, TRUE, NULL, FALSE);
 
-	DEBUGCODE( DebugOutputString("Creating lpSharedMemoryName"); )
 	iSize = strlen(GLOBALPREPEND) + strlen(SharedMemoryNameIn) + 1;
 	lpSharedMemoryName = malloc(iSize);
 	strcpy_s((char*)lpSharedMemoryName, iSize, (char*)GLOBALPREPEND);
 	strcat_s((char*)lpSharedMemoryName, iSize, (char*)SharedMemoryNameIn);
-	DEBUGCODE( DebugOutputString("Done creating lpSharedMemoryName: "); )
-	DEBUGCODE( DebugOutputString(lpSharedMemoryName); )
-	DEBUGCODE( DebugOutputWithInteger("Size = %i", iSize); )
 
 	bFileExists = FALSE;
 
-	DEBUGCODE( DebugOutputString("Allocating memory to CommBuffer: "); )
-	DEBUGCODE( DebugOutputWithInteger("Size = %i", sizeof(COMMBUFFER)); )
 	CommBuffer = malloc(sizeof(COMMBUFFER));
 	*CommBufferIn = CommBuffer;
 
@@ -79,8 +77,6 @@ extern INT32 InitMemoryMgr(LPCTSTR SharedMemoryNameIn, DWORD SharedMemorySize, P
 	CommBuffer->bSharedMemoryOwner = TRUE;
 	CommBuffer->dwNextReadOffset = 0;
 
-	DEBUGCODE( DebugOutputString("Creating mutex:"); )
-	DEBUGCODE( DebugOutputString(MUTEX_NAME); )
 	CommBuffer->ghMutex = CreateMutex(&sa, FALSE, MUTEX_NAME);
 
 	errco = GetLastError();
@@ -90,16 +86,13 @@ extern INT32 InitMemoryMgr(LPCTSTR SharedMemoryNameIn, DWORD SharedMemorySize, P
 		if(errco == 0)
 			errco = GENERALERRORCODE;
 
-		DEBUGCODE( DebugOutputString("Freeing resources"); )
 		free((char*)lpSharedMemoryName);
 		free(CommBuffer);
 		*CommBufferIn = NULL;
-		DEBUGCODE( DebugOutputWithInteger("Error code = %i", errco); )
+
 		return errco;
 	}
 
-	DEBUGCODE( DebugOutputString("Creating event"); )
-	DEBUGCODE( DebugOutputString(EVENT_NAME); )
     CommBuffer->ghEvent = CreateEvent(&sa, TRUE, 0, EVENT_NAME); 
 
 	errco = GetLastError();
@@ -109,18 +102,14 @@ extern INT32 InitMemoryMgr(LPCTSTR SharedMemoryNameIn, DWORD SharedMemorySize, P
 		if(errco == 0)
 			errco = GENERALERRORCODE;
 
-		DEBUGCODE( DebugOutputString("Freeing resources"); )
 		free((char*)lpSharedMemoryName);
 		ReleaseMutex(CommBuffer->ghMutex);
 		free(CommBuffer);
 		*CommBufferIn = NULL;
-		DEBUGCODE( DebugOutputWithInteger("Error code = %i", (int)errco); )
+
 		return errco;
     }
 
-	DEBUGCODE( DebugOutputString("Creating file mapping:"); )
-	DEBUGCODE( DebugOutputString(lpSharedMemoryName); )
-	DEBUGCODE( DebugOutputWithInteger("Size = %i", SharedMemorySize); )
 	CommBuffer->ghMapFile = CreateFileMapping(
                  (HANDLE) INVALID_HANDLE_VALUE,		// use paging file
                  &sa,								// default security 
@@ -133,8 +122,6 @@ extern INT32 InitMemoryMgr(LPCTSTR SharedMemoryNameIn, DWORD SharedMemorySize, P
 
 	if(errco == ERROR_ALREADY_EXISTS)
 	{
-		DEBUGCODE( DebugOutputString("File mapping already exists"); )
-		DEBUGCODE( DebugOutputWithInteger("Error code = %i", errco); )
 		bFileExists = TRUE;
 	}
  
@@ -143,17 +130,15 @@ extern INT32 InitMemoryMgr(LPCTSTR SharedMemoryNameIn, DWORD SharedMemorySize, P
 		if(errco == 0)
 			errco = GENERALERRORCODE;
 
-		DEBUGCODE( DebugOutputString("Freeing resources"); )
 		free((char*)lpSharedMemoryName);
 		ReleaseMutex(CommBuffer->ghMutex);
 		CloseHandle(CommBuffer->ghEvent);
 		free(CommBuffer);
 		*CommBufferIn = NULL;
-		DEBUGCODE( DebugOutputWithInteger("Error code = %i", errco); )
+
 		return errco;
 	}
 
-	DEBUGCODE( DebugOutputString("Mapping view of file"); )
 	CommBuffer->gpBuf = (PSHAREDMEMORY) MapViewOfFile(
 						CommBuffer->ghMapFile,	// handle to map object
 						FILE_MAP_ALL_ACCESS,	// read/write permission
@@ -168,23 +153,18 @@ extern INT32 InitMemoryMgr(LPCTSTR SharedMemoryNameIn, DWORD SharedMemorySize, P
 		if(errco == 0)
 			errco = GENERALERRORCODE;
 
-		DEBUGCODE( DebugOutputString("Freeing resources"); )
 		free((char*)lpSharedMemoryName);
 		ReleaseMutex(CommBuffer->ghMutex);
 		CloseHandle(CommBuffer->ghEvent);
 		CloseHandle(CommBuffer->ghMapFile);
 		free(CommBuffer);
 		*CommBufferIn = NULL;
-		DEBUGCODE( DebugOutputWithInteger("Error code = %i", errco); )
+
 		return errco;
    }
 
    if(bFileExists == FALSE)
    {
-		DEBUGCODE( DebugOutputString("Setting gpBuf defaults"); )
-		DEBUGCODE( DebugOutputWithInteger("iSharedMemSize = %i", SharedMemorySize); )
-		DEBUGCODE( DebugOutputWithInteger("iEventBufferSize = %i", SharedMemorySize - 
-			(DWORD)((BYTE *)&(CommBuffer->gpBuf->bEventBuffer) - (BYTE *)CommBuffer->gpBuf)); )
 	   CommBuffer->gpBuf->dwNextReadOffset = 0;
 	   CommBuffer->gpBuf->dwNextWriteOffset = 0;
 	   CommBuffer->gpBuf->iLastEventNumWritten = 0;
@@ -195,13 +175,10 @@ extern INT32 InitMemoryMgr(LPCTSTR SharedMemoryNameIn, DWORD SharedMemorySize, P
 	   InitNewEvent(CommBuffer);
    }
 
-   DEBUGCODE( DebugOutputString("Releasing mutex"); )
    ReleaseMutex(CommBuffer->ghMutex);
 
-   DEBUGCODE( DebugOutputString("Freeing lpSharedMemoryName"); )
    free((char*)lpSharedMemoryName);
 
-   DEBUGCODE( DebugOutputString("Exiting InitMemoryMgr succesfully"); )
    return SUCCESS;
 }
 
@@ -213,19 +190,17 @@ extern INT32 JoinMemoryMgr(LPCTSTR SharedMemoryNameIn, PCOMMBUFFER *CommBufferIn
 	LPCTSTR lpSharedMemoryName;
 	DWORD errco;
 
-	DEBUGCODE( DebugOutputString("Entered JoinMemoryMgr"); )
+	if(bCriticalSectionInitialized == FALSE)
+	{
+	   InitializeCriticalSection(&critSec);
+	   bCriticalSectionInitialized = TRUE;
+	}
 
-	DEBUGCODE( DebugOutputString("Creating lpSharedMemoryName"); )
 	iSize = strlen(GLOBALPREPEND) + strlen(SharedMemoryNameIn) + 1;
 	lpSharedMemoryName = malloc(iSize);
 	strcpy_s((char*)lpSharedMemoryName, iSize, GLOBALPREPEND);
 	strcat_s((char*)lpSharedMemoryName, iSize, SharedMemoryNameIn);
-	DEBUGCODE( DebugOutputString("Done creating lpSharedMemoryName: "); )
-	DEBUGCODE( DebugOutputString(lpSharedMemoryName); )
-	DEBUGCODE( DebugOutputWithInteger("Size = %i", iSize); )
 
-	DEBUGCODE( DebugOutputString("Allocating memory to CommBuffer: "); )
-	DEBUGCODE( DebugOutputWithInteger("Size = %i", sizeof(COMMBUFFER)); )
 	CommBuffer = malloc(sizeof(COMMBUFFER));
 	*CommBufferIn = CommBuffer;
 
@@ -234,8 +209,6 @@ extern INT32 JoinMemoryMgr(LPCTSTR SharedMemoryNameIn, PCOMMBUFFER *CommBufferIn
 	CommBuffer->iLastEventNumRead = 0;
 	CommBuffer->bSharedMemoryOwner = FALSE;
 
-	DEBUGCODE( DebugOutputString("Opening mutex:"); )
-	DEBUGCODE( DebugOutputString(MUTEX_NAME); )
 	CommBuffer->ghMutex = OpenMutex(MUTEX_ALL_ACCESS, TRUE, MUTEX_NAME);
 
 	errco = GetLastError();
@@ -245,16 +218,13 @@ extern INT32 JoinMemoryMgr(LPCTSTR SharedMemoryNameIn, PCOMMBUFFER *CommBufferIn
 		if(errco == 0)
 			errco = GENERALERRORCODE;
 
-		DEBUGCODE( DebugOutputString("Freeing resources"); )
 		free((char*)lpSharedMemoryName);
 		free(CommBuffer);
 		*CommBufferIn = NULL;
-		DEBUGCODE( DebugOutputWithInteger("Error code = %i", errco); )
+
 		return errco;
 	}
 
-	DEBUGCODE( DebugOutputString("Opening event"); )
-	DEBUGCODE( DebugOutputString(EVENT_NAME); )
     CommBuffer->ghEvent = OpenEvent(EVENT_ALL_ACCESS, TRUE, EVENT_NAME); 
 
 	errco = GetLastError();
@@ -264,79 +234,101 @@ extern INT32 JoinMemoryMgr(LPCTSTR SharedMemoryNameIn, PCOMMBUFFER *CommBufferIn
 		if(errco == 0)
 			errco = GENERALERRORCODE;
 
-		DEBUGCODE( DebugOutputString("Freeing resources"); )
 		free((char*)lpSharedMemoryName);
 		ReleaseMutex(CommBuffer->ghMutex);
 		free(CommBuffer);
 		*CommBufferIn = NULL;
-		DEBUGCODE( DebugOutputWithInteger("Error code = %i", errco); )
+
 		return errco;
     }
 
-	DEBUGCODE( DebugOutputString("Opening file mapping:"); )
-	DEBUGCODE( DebugOutputString(lpSharedMemoryName); )
-   CommBuffer->ghMapFile = OpenFileMapping(
-                 FILE_MAP_ALL_ACCESS,				// desired access
-                 TRUE,								// inherit handle 
-                 lpSharedMemoryName);				// name of mapping object
+	EnterCriticalSection(&critSec);
 
-	errco = GetLastError();
+	if(ghMapFile == NULL)
+	{
+		CommBuffer->ghMapFile = OpenFileMapping(
+					 FILE_MAP_ALL_ACCESS,				// desired access
+					 TRUE,								// inherit handle 
+					 lpSharedMemoryName);				// name of mapping object
 
-   if(CommBuffer->ghMapFile == NULL) 
-   { 
-		if(errco == 0)
-			errco = GENERALERRORCODE;
+		errco = GetLastError();
 
-		DEBUGCODE( DebugOutputString("Freeing resources"); )
-		free((char*)lpSharedMemoryName);
-		ReleaseMutex(CommBuffer->ghMutex);
-		CloseHandle(CommBuffer->ghEvent);
-		CloseHandle(CommBuffer->ghMapFile);
-		free(CommBuffer);
-		*CommBufferIn = NULL;
-		DEBUGCODE( DebugOutputWithInteger("Error code = %i", errco); )
-		return errco;
-   }
+	   if(CommBuffer->ghMapFile == NULL) 
+	   { 
+			if(errco == 0)
+				errco = GENERALERRORCODE;
 
-   DEBUGCODE( DebugOutputString("Mapping view of file"); )
-   CommBuffer->gpBuf = (PSHAREDMEMORY) MapViewOfFile(
-						CommBuffer->ghMapFile,				// handle to map object
-                        FILE_MAP_ALL_ACCESS,	// read/write permission
-                        0,                   
-                        0,                   
-                        0);           
+			free((char*)lpSharedMemoryName);
+			ReleaseMutex(CommBuffer->ghMutex);
+			CloseHandle(CommBuffer->ghEvent);
+			CloseHandle(CommBuffer->ghMapFile);
+			free(CommBuffer);
+			*CommBufferIn = NULL;
 
-	errco = GetLastError();
- 
-   if (CommBuffer->gpBuf == NULL) 
-   { 
-		if(errco == 0)
-			errco = GENERALERRORCODE;
+			LeaveCriticalSection(&critSec);
 
-		DEBUGCODE( DebugOutputString("Freeing resources"); )
-		free((char*)lpSharedMemoryName);
-		ReleaseMutex(CommBuffer->ghMutex);
-		CloseHandle(CommBuffer->ghEvent);
-		CloseHandle(CommBuffer->ghMapFile);
-		free(CommBuffer);
-		*CommBufferIn = NULL;
-		DEBUGCODE( DebugOutputWithInteger("Error code = %i", errco); )
-		return errco;
-   }
+			return errco;
+	   }
 
-   CommBuffer->dwNextReadOffset = CommBuffer->gpBuf->dwNextReadOffset;
+		ghMapFile = CommBuffer->ghMapFile;
+	}
+	else
+	{
+		CommBuffer->ghMapFile = ghMapFile;
+		errco = SUCCESS;
+	}
 
-	DEBUGCODE( DebugOutputString("Freeing lpSharedMemoryName"); )
-   free((char*)lpSharedMemoryName);
+	if(gpBuf == NULL)
+	{
+		CommBuffer->gpBuf = (PSHAREDMEMORY) MapViewOfFile(
+							CommBuffer->ghMapFile,				// handle to map object
+							FILE_MAP_ALL_ACCESS,	// read/write permission
+							0,                   
+							0,                   
+							0);           
 
-	DEBUGCODE( DebugOutputString("Exiting JoinMemoryMgr successfully"); )
-   return SUCCESS;
+		errco = GetLastError();
+
+		if (CommBuffer->gpBuf == NULL) 
+		{ 
+			if(errco == 0)
+				errco = GENERALERRORCODE;
+
+			free((char*)lpSharedMemoryName);
+			ReleaseMutex(CommBuffer->ghMutex);
+			CloseHandle(CommBuffer->ghEvent);
+			CloseHandle(CommBuffer->ghMapFile);
+			free(CommBuffer);
+			*CommBufferIn = NULL;
+
+			LeaveCriticalSection(&critSec);
+
+			return errco;
+		}
+
+		gpBuf = CommBuffer->gpBuf;
+	}
+	else
+	{
+		CommBuffer->gpBuf = gpBuf;
+		errco = SUCCESS;
+	}
+
+	iRefCount = iRefCount + 1;
+
+	LeaveCriticalSection(&critSec);
+
+	CommBuffer->dwNextReadOffset = CommBuffer->gpBuf->dwNextReadOffset;
+
+	free((char*)lpSharedMemoryName);
+
+	return SUCCESS;
 }
 
 extern INT32 ReleaseMemoryMgr(PCOMMBUFFER *CommBufferIn)
 {
-	BOOL rc1;
-	BOOL rc2;
+	BOOL rc1 = SUCCESS;
+	BOOL rc2 = SUCCESS;
 	PCOMMBUFFER CommBuffer = *CommBufferIn;
 
 	if(CommBuffer == NULL)
@@ -344,30 +336,42 @@ extern INT32 ReleaseMemoryMgr(PCOMMBUFFER *CommBufferIn)
 		return SUCCESS;
 	}
 
-	DEBUGCODE( DebugOutputString("Entered ReleaseMemoryMgr"); )
-
-	DEBUGCODE( DebugOutputString("Releasing Mutex: CommBuffer->ghMutex"); )
 	ReleaseMutex(CommBuffer->ghMutex);
-	DEBUGCODE( DebugOutputString("Closing Handle: CommBuffer->ghEvent"); )
 	CloseHandle(CommBuffer->ghEvent);
 
-	DEBUGCODE( DebugOutputString("Unmapping view of file: CommBuffer->gpBuf"); )
-	rc1 = UnmapViewOfFile(CommBuffer->gpBuf);
+	EnterCriticalSection(&critSec);
 
-	DEBUGCODE( DebugOutputString("Closing Handle: CommBuffer->ghMapFile"); )
-	rc2 = CloseHandle(CommBuffer->ghMapFile);
+	if(gpBuf == CommBuffer->gpBuf)
+	{
+		iRefCount = iRefCount - 1;
 
-	DEBUGCODE( DebugOutputString("Freeing Memory: CommBuffer"); )
+		if(iRefCount <= 0)
+		{
+			rc1 = UnmapViewOfFile(CommBuffer->gpBuf);
+
+			rc2 = CloseHandle(CommBuffer->ghMapFile);
+
+			gpBuf = NULL;
+			ghMapFile = NULL;
+		}
+	}
+	else
+	{
+		rc1 = UnmapViewOfFile(CommBuffer->gpBuf);
+
+		rc2 = CloseHandle(CommBuffer->ghMapFile);
+	}
+
+	LeaveCriticalSection(&critSec);
+
 	free(CommBuffer);
 	*CommBufferIn = NULL;
 
 	if(rc1 == FALSE || rc2 == FALSE)
 	{
-		DEBUGCODE( DebugOutputString("Exiting ReleaseMemoryMgr with error: Could not either unmap file or close handle"); )
 		return GENERALERRORCODE;
 	}
 
-	DEBUGCODE( DebugOutputString("Exiting ReleaseMemoryMgr successfully"); )
 	return SUCCESS;
 }
 
@@ -390,58 +394,38 @@ extern INT32 PutBuffer(LPCSTR pEventBuffer, DWORD dwEventLength, DWORD dwTimeOut
 	INT32 rc;
 	PCOMMBUFFER CommBuffer = *CommBufferIn;
 
-	DEBUGCODE( DebugOutputString("Entered PutBuffer"); )
-
-	DEBUGCODE( DebugOutputString("Waiting for Mutex: CommBuffer->ghMutex"); )
-	DEBUGCODE( DebugOutputWithInteger("Timeout = %i", dwTimeOut); )
     dwWaitResult = WaitForSingleObject(CommBuffer->ghMutex, dwTimeOut);
  
     if(dwWaitResult == WAIT_OBJECT_0 || dwWaitResult == WAIT_ABANDONED) 
     {
-		DEBUGCODE( DebugOutputString("Preparing to read event"); )
 		wspEvent.bReadyToRead = PREPARETOREAD;
 		wspEvent.iEventNum = CommBuffer->gpBuf->iLastEventNumWritten + 1;
-		DEBUGCODE( DebugOutputWithInteger("Event Number = %i", (int) wspEvent.iEventNum); )
 		wspEvent.iEventSize1 = sizeof(WSPEVENT) - 1 + dwEventLength;
-		DEBUGCODE( DebugOutputWithInteger("Event Size 1 = %i", wspEvent.iEventSize1); )
 		wspEvent.iEventSize2 = wspEvent.iEventSize1;
-		DEBUGCODE( DebugOutputWithInteger("Event Size 2 = %i", wspEvent.iEventSize2); )
 
-		DEBUGCODE( DebugOutputString("Copying event to buffer"); )
-		DEBUGCODE( DebugOutputWithInteger("Write offset = %i", CommBuffer->gpBuf->dwNextWriteOffset); )
-		DEBUGCODE( DebugOutputWithInteger("Event length = %i", dwEventLength); )
 		rc = CopyEventToBuffer(CommBuffer->gpBuf->dwNextWriteOffset, &wspEvent, 
 								pEventBuffer, dwEventLength, CommBuffer);
 
 		if(rc == SUCCESS)
 		{
-			DEBUGCODE( DebugOutputString("Successfully copied event to buffer"); )
 			CommBuffer->gpBuf->dwNextWriteOffset = (CommBuffer->gpBuf->dwNextWriteOffset + 
 				wspEvent.iEventSize1) % CommBuffer->gpBuf->iEventBufferSize;
-			DEBUGCODE( DebugOutputWithInteger("Next write offset = %i", CommBuffer->gpBuf->dwNextWriteOffset); )
 
-			DEBUGCODE( DebugOutputString("Incrementing last event number written by one"); )
 			CommBuffer->gpBuf->iLastEventNumWritten++;
 
-			DEBUGCODE( DebugOutputString("Releasing mutex: CommBuffer->ghMutex"); )
 			ReleaseMutex(CommBuffer->ghMutex);
 
-			DEBUGCODE( DebugOutputString("Pulsing event: CommBuffer->ghEvent"); )
 			PulseEvent(CommBuffer->ghEvent);
 
-			DEBUGCODE( DebugOutputString("Exiting PutBuffer successfully"); )
 			return SUCCESS;
 		}
 
-		DEBUGCODE( DebugOutputString("Releasing mutex: CommBuffer->ghMutex"); )
 		ReleaseMutex(CommBuffer->ghMutex);
 
-		DEBUGCODE( DebugOutputString("Exiting PutBuffer with error: Could not copy event to buffer"); )
 		return GENERALERRORCODE;
 	}
 	else
 	{
-		DEBUGCODE( DebugOutputString("Exiting PutBuffer due to timeout: Did not copy event to buffer"); )
 		return TIMEOUT;
 	}
 }
@@ -455,60 +439,41 @@ extern INT32 GetBuffer(LPCSTR pEventBuffer, DWORD dwEventBufferLength, DWORD dwT
 	UINT64 iEventNum;
 	PCOMMBUFFER CommBuffer = *CommBufferIn;
 
-	DEBUGCODE( DebugOutputString("Entered GetBuffer"); )
-
-	DEBUGCODE( DebugOutputString("Calculating event start location"); )
 	pEventStartLocation = &(CommBuffer->gpBuf->bEventBuffer) + CommBuffer->dwNextReadOffset;
 
 	if(CommBuffer->gpBuf->iLastEventNumWritten > CommBuffer->iLastEventNumRead)
 	{
-		DEBUGCODE( DebugOutputString("There are events to be read"); )
 		if(*pEventStartLocation == READYTOREAD || *pEventStartLocation == ALREADYREAD)
 		{
-			DEBUGCODE( DebugOutputString("Attempting to copy event from buffer"); )
 			rc = CopyEventFromBuffer(pEventBuffer, dwEventBufferLength, pBytesRead, &iEventNum, CommBuffer);
 
 			if(rc == SUCCESS)
 			{
-				DEBUGCODE( DebugOutputString("Successfully copied event from buffer"); )
-
-				DEBUGCODE( DebugOutputWithInteger("Setting last event read to %i", (int)iEventNum); )
 				CommBuffer->iLastEventNumRead = iEventNum;
 
 				if(CommBuffer->bSharedMemoryOwner == TRUE)
 				{
-					DEBUGCODE( DebugOutputString("Thread is shared memory owner"); )
-
-					DEBUGCODE( DebugOutputWithInteger("Setting next read offset to %i", CommBuffer->dwNextReadOffset); )
 					CommBuffer->gpBuf->dwNextReadOffset = CommBuffer->dwNextReadOffset;
 
-					DEBUGCODE( DebugOutputString("Setting event start location as ALREADYREAD"); )
 					*pEventStartLocation = ALREADYREAD;
 				}
 
-				DEBUGCODE( DebugOutputString("Exiting GetBuffer successfully"); )
 				return SUCCESS;
 			}
 			else
 			{
-				DEBUGCODE( DebugOutputString("Error: Could not copy event from buffer"); )
-				DEBUGCODE( DebugOutputWithInteger("Error code = %i", rc); )
 				if(rc != ENDOFDATA)
 				{
-					DEBUGCODE( DebugOutputString("Exiting GetBuffer with error"); )
 					return rc;
 				}
 			}
 		}
 		else
 		{
-			DEBUGCODE( DebugOutputWithInteger("Setting next read offset to %i", CommBuffer->dwNextReadOffset); )
 			CommBuffer->dwNextReadOffset = CommBuffer->gpBuf->dwNextReadOffset;
 		}
 	}
 
-	DEBUGCODE( DebugOutputString("Waiting for Event: CommBuffer->ghEvent"); )
-	DEBUGCODE( DebugOutputWithInteger("Timeout = %i", dwTimeOut); )
     dwWaitResult = WaitForSingleObject(CommBuffer->ghEvent, dwTimeOut);
  
     if(dwWaitResult == WAIT_OBJECT_0) 
@@ -516,38 +481,25 @@ extern INT32 GetBuffer(LPCSTR pEventBuffer, DWORD dwEventBufferLength, DWORD dwT
 		if(CommBuffer->gpBuf->iLastEventNumWritten > CommBuffer->iLastEventNumRead &&
 			(*pEventStartLocation == READYTOREAD || *pEventStartLocation == ALREADYREAD))
 		{
-			DEBUGCODE( DebugOutputString("Attempting to copy event from buffer"); )
-			DEBUGCODE( DebugOutputWithInteger("Event number = %i", (int)iEventNum); )
 			rc = CopyEventFromBuffer(pEventBuffer, dwEventBufferLength, pBytesRead, &iEventNum, CommBuffer);
 
 			if(rc == SUCCESS)
 			{
-				DEBUGCODE( DebugOutputString("Successfully copied event from buffer"); )
-
-				DEBUGCODE( DebugOutputWithInteger("Setting last event read to %i", (int)iEventNum); )
 				CommBuffer->iLastEventNumRead = iEventNum;
 
 				if(CommBuffer->bSharedMemoryOwner == TRUE)
 				{
-					DEBUGCODE( DebugOutputString("Thread is shared memory owner"); )
-
-					DEBUGCODE( DebugOutputWithInteger("Setting next read offset to %i", CommBuffer->dwNextReadOffset); )
 					CommBuffer->gpBuf->dwNextReadOffset = CommBuffer->dwNextReadOffset;
 
-					DEBUGCODE( DebugOutputString("Setting event start location as ALREADYREAD"); )
 					*pEventStartLocation = ALREADYREAD;
 				}
 
-				DEBUGCODE( DebugOutputString("Exiting GetBuffer successfully"); )
 				return SUCCESS;
 			}
 			else
 			{
-				DEBUGCODE( DebugOutputString("Error: Could not copy event from buffer"); )
-				DEBUGCODE( DebugOutputWithInteger("Error code = %i", rc); )
 				if(rc != ENDOFDATA)
 				{
-					DEBUGCODE( DebugOutputString("Exiting GetBuffer with error"); )
 					return rc;
 				}
 			}
@@ -557,7 +509,6 @@ extern INT32 GetBuffer(LPCSTR pEventBuffer, DWORD dwEventBufferLength, DWORD dwT
 	iEventNum = 0;
 	*pBytesRead = 0;
 
-	DEBUGCODE( DebugOutputString("Exiting GetBuffer with timeout error"); )
 	return TIMEOUT;
 }
 
