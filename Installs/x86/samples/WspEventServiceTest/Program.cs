@@ -148,8 +148,9 @@ namespace WspEventServiceTest
                         {
                             pubMgr.Publish(localEvent.Serialize());
                         }
-                        catch
+                        catch (Exception e)
                         {
+                            Console.WriteLine("Item: " + i.ToString() + @"    Exception: " + e.Message);
                             i--;
                         }
                     }
