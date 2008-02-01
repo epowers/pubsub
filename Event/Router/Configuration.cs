@@ -17,26 +17,25 @@ using System.Xml.XPath;
 
 namespace Microsoft.WebSolutionsPlatform.Event
 {
-    public partial class Router : ServiceBase
-    {
+	public partial class Router : ServiceBase
+	{
         internal static void LoadConfiguration()
-        {
-            string configValueIn;
+		{
+			string configValueIn;
             string machineNameIn;
-            int portIn;
-            int bufferSizeIn;
-            int timeoutIn;
-            Guid eventType;
+			int portIn;
+			int bufferSizeIn;
+			int timeoutIn;
 
-            string configFile = AppDomain.CurrentDomain.SetupInformation.ApplicationBase +
-                AppDomain.CurrentDomain.FriendlyName + ".config";
+			string configFile = AppDomain.CurrentDomain.SetupInformation.ApplicationBase +
+				AppDomain.CurrentDomain.FriendlyName + ".config";
 
             XPathDocument document = new XPathDocument(configFile);
             XPathNavigator navigator = document.CreateNavigator();
-            XPathNodeIterator iterator;
+			XPathNodeIterator iterator;
 
-            if (File.Exists(configFile) == false)
-                return;
+			if(File.Exists(configFile) == false)
+				return;
 
             iterator = navigator.Select(@"/configuration/eventRouterSettings/subscriptionManagement");
 
@@ -53,7 +52,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
             iterator = navigator.Select(@"/configuration/eventRouterSettings/localPublish");
 
-            if (iterator.MoveNext() == true)
+			if(iterator.MoveNext() == true)
             {
                 configValueIn = iterator.Current.GetAttribute(@"eventQueueName", String.Empty);
                 if (configValueIn.Length != 0)
@@ -66,12 +65,25 @@ namespace Microsoft.WebSolutionsPlatform.Event
                 configValueIn = iterator.Current.GetAttribute(@"averageEventSize", String.Empty);
                 if (configValueIn.Length != 0)
                     averageEventSize = Int32.Parse(configValueIn);
+			}
+
+            iterator = navigator.Select(@"/configuration/eventRouterSettings/outputCommunicationQueues");
+
+            if (iterator.MoveNext() == true)
+            {
+                configValueIn = iterator.Current.GetAttribute(@"maxQueueSize", String.Empty);
+                if (configValueIn.Length != 0)
+                    thisOutQueueMaxSize = Int32.Parse(configValueIn);
+
+                configValueIn = iterator.Current.GetAttribute(@"maxTimeout", String.Empty);
+                if (configValueIn.Length != 0)
+                    thisOutQueueMaxTimeout = Int32.Parse(configValueIn);
             }
 
             iterator = navigator.Select(@"/configuration/eventRouterSettings/thisRouter");
 
-            if (iterator.MoveNext() == true)
-            {
+			if(iterator.MoveNext() == true)
+			{
                 thisNic = iterator.Current.GetAttribute(@"nic", String.Empty).Trim();
 
                 configValueIn = iterator.Current.GetAttribute(@"port", String.Empty).Trim();
@@ -84,56 +96,85 @@ namespace Microsoft.WebSolutionsPlatform.Event
                     thisPort = int.Parse(configValueIn);
                 }
 
-                configValueIn = iterator.Current.GetAttribute(@"bufferSize", String.Empty);
+				configValueIn = iterator.Current.GetAttribute(@"bufferSize", String.Empty);
                 if (configValueIn.Length != 0)
-                    thisBufferSize = int.Parse(configValueIn);
+					thisBufferSize = int.Parse(configValueIn);
 
-                configValueIn = iterator.Current.GetAttribute(@"timeout", String.Empty);
+				configValueIn = iterator.Current.GetAttribute(@"timeout", String.Empty);
                 if (configValueIn.Length != 0)
-                    thisTimeout = int.Parse(configValueIn);
-            }
+					thisTimeout = int.Parse(configValueIn);
+			}
 
             iterator = navigator.Select(@"/configuration/eventRouterSettings/parentRouter");
 
-            while (iterator.MoveNext() == true)
-            {
+			while(iterator.MoveNext() == true)
+			{
                 machineNameIn = iterator.Current.GetAttribute(@"name", String.Empty).Trim();
 
-                portIn = int.Parse(iterator.Current.GetAttribute(@"port", String.Empty));
+				portIn = int.Parse(iterator.Current.GetAttribute(@"port", String.Empty));
 
-                configValueIn = iterator.Current.GetAttribute(@"bufferSize", String.Empty);
+				configValueIn = iterator.Current.GetAttribute(@"bufferSize", String.Empty);
                 if (configValueIn.Length != 0)
-                    bufferSizeIn = int.Parse(configValueIn);
-                else
-                    bufferSizeIn = thisBufferSize;
+					bufferSizeIn = int.Parse(configValueIn);
+				else
+					bufferSizeIn = thisBufferSize;
 
-                configValueIn = iterator.Current.GetAttribute(@"timeout", String.Empty);
+				configValueIn = iterator.Current.GetAttribute(@"timeout", String.Empty);
                 if (configValueIn.Length != 0)
-                    timeoutIn = int.Parse(configValueIn);
-                else
-                    timeoutIn = thisTimeout;
+					timeoutIn = int.Parse(configValueIn);
+				else
+					timeoutIn = thisTimeout;
 
                 AddRoute(machineNameIn, portIn, bufferSizeIn, timeoutIn);
-            }
+			}
+
+            LoadPersistConfig();
+		}
+
+        internal static long GetConfigFileTick()
+        {
+            string configFile = AppDomain.CurrentDomain.SetupInformation.ApplicationBase +
+                AppDomain.CurrentDomain.FriendlyName + ".config";
+
+            return (new FileInfo(configFile)).LastWriteTimeUtc.Ticks;
+        }
+
+        internal static void LoadPersistConfig()
+        {
+            string configValueIn;
+            Guid eventType;
+
+            string configFile = AppDomain.CurrentDomain.SetupInformation.ApplicationBase +
+                AppDomain.CurrentDomain.FriendlyName + ".config";
+
+            XPathDocument document = new XPathDocument(configFile);
+            XPathNavigator navigator = document.CreateNavigator();
+            XPathNodeIterator iterator;
+
+            Persister.lastConfigFileTick = GetConfigFileTick();
 
             iterator = navigator.Select(@"/configuration/eventPersistSettings/event");
 
             while (iterator.MoveNext() == true)
             {
-                PersistEventInfo eventInfo = new PersistEventInfo();
-                eventInfo.OutFileName = null;
-                eventInfo.OutStream = null;
+                PersistEventInfo eventInfo;
 
                 configValueIn = iterator.Current.GetAttribute(@"type", String.Empty);
-                if (configValueIn == @"*" || configValueIn.Length == 0)
+
+                eventType = new Guid(configValueIn);
+
+                if (Persister.persistEvents.TryGetValue(eventType, out eventInfo) == false)
                 {
-                    eventType = Guid.Empty;
-                    Persister.persistAllEvents = true;
+                    eventInfo = new PersistEventInfo();
+
+                    eventInfo.OutFileName = null;
+                    eventInfo.OutStream = null;
                 }
-                else
-                {
-                    eventType = new Guid(configValueIn);
-                }
+
+                eventInfo.InUse = true;
+                eventInfo.Loaded = true;
+
+                eventInfo.PersistEventType = eventType;
 
                 configValueIn = iterator.Current.GetAttribute(@"localOnly", String.Empty);
                 if (configValueIn.Length == 0)
@@ -144,6 +185,13 @@ namespace Microsoft.WebSolutionsPlatform.Event
                 {
                     eventInfo.LocalOnly = bool.Parse(configValueIn);
                 }
+                configValueIn = iterator.Current.GetAttribute(@"maxFileSize", String.Empty);
+                if (configValueIn.Length != 0)
+                    eventInfo.MaxFileSize = long.Parse(configValueIn);
+
+                configValueIn = iterator.Current.GetAttribute(@"maxCopyInterval", String.Empty);
+                if (configValueIn.Length != 0)
+                    eventInfo.CopyIntervalTicks = long.Parse(configValueIn) * 10000000;
 
                 configValueIn = iterator.Current.GetAttribute(@"fieldTerminator", String.Empty);
                 if (configValueIn.Length == 0)
@@ -214,5 +262,5 @@ namespace Microsoft.WebSolutionsPlatform.Event
                 Persister.persistEvents[eventType] = eventInfo;
             }
         }
-    }
+	}
 }

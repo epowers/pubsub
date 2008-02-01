@@ -28,11 +28,16 @@ namespace Microsoft.WebSolutionsPlatform.Event
             internal static Thread parentOutConnection;
             internal static Thread distributeThread;
 
+            internal static object threadQueuesLock = new object();
+            internal static object deadThreadQueuesLock = new object();
+
             internal static Dictionary<string, Thread> receiveThreads = new Dictionary<string, Thread>();
             internal static Dictionary<string, Thread> forwardThreads = new Dictionary<string, Thread>();
 
             internal static Dictionary<string, SynchronizationQueue<QueueElement>> threadQueues =
                 new Dictionary<string, SynchronizationQueue<QueueElement>>();
+
+            internal static List<string> deadThreadQueues = new List<string>();
 
             public Communicator()
             {
@@ -42,6 +47,8 @@ namespace Microsoft.WebSolutionsPlatform.Event
             {
                 int i;
                 List<string> removeItems = new List<string>();
+                long currentTickTimeout;
+                PerformanceCounter threadQueueCounter;
 
                 while (true)
                 {
@@ -163,6 +170,58 @@ namespace Microsoft.WebSolutionsPlatform.Event
                             }
                         }
 
+                        if (deadThreadQueues.Count > 0)
+                        {
+                            currentTickTimeout = DateTime.Now.Ticks - (((long)thisOutQueueMaxTimeout) * 10000000);
+
+                            lock (deadThreadQueuesLock)
+                            {
+                                removeItems.Clear();
+
+                                foreach (string threadQueueName in deadThreadQueues)
+                                {
+                                    try
+                                    {
+                                        if (threadQueues[threadQueueName].LastUsedTick < currentTickTimeout ||
+                                            threadQueues[threadQueueName].Size > thisOutQueueMaxSize)
+                                        {
+                                            removeItems.Add(threadQueueName);
+                                        }
+                                    }
+                                    catch
+                                    {
+                                        removeItems.Add(threadQueueName);
+                                    }
+                                }
+
+                                if (removeItems.Count > 0)
+                                {
+                                    lock (threadQueuesLock)
+                                    {
+                                        for (i = 0; i < removeItems.Count; i++)
+                                        {
+                                            try
+                                            {
+                                                threadQueueCounter = new PerformanceCounter(communicationCategoryName,
+                                                    forwarderQueueSizeName, removeItems[i], false);
+
+                                                threadQueueCounter.RemoveInstance();
+
+                                                Communicator.threadQueues[removeItems[i]].Clear();
+                                                Communicator.threadQueues.Remove(removeItems[i]);
+                                            }
+                                            finally
+                                            {
+                                                deadThreadQueues.Remove(removeItems[i]);
+                                            }
+                                        }
+                                    }
+
+                                    removeItems.Clear();
+                                }
+                            }
+                        }
+
                         Thread.Sleep(10000);
                     }
 
@@ -188,7 +247,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
             {
                 if (thisNic == string.Empty)
                 {
-                    thisAddress = Dns.GetHostEntry(LocalRouterName).AddressList[Dns.GetHostEntry(LocalRouterName).AddressList.Length - 1];
+                    thisAddress = IPAddress.Any;
                 }
                 else
                 {
@@ -436,7 +495,11 @@ namespace Microsoft.WebSolutionsPlatform.Event
                                 forwarderQueueSizeName, clientRouterName, false);
 
                             threadQueue = new SynchronizationQueue<QueueElement>(threadQueueCounter);
-                            Communicator.threadQueues[clientRouterName] = threadQueue;
+
+                            lock (Communicator.threadQueuesLock)
+                            {
+                                Communicator.threadQueues[clientRouterName] = threadQueue;
+                            }
                         }
                     }
 
@@ -465,7 +528,30 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                     SubscriptionMgr.ResendSubscriptions();
 
-                    OutHandler();
+                    try
+                    {
+                        lock (Communicator.deadThreadQueuesLock)
+                        {
+                            if (Communicator.deadThreadQueues.Contains(clientRouterName) == true)
+                            {
+                                Communicator.deadThreadQueues.Remove(clientRouterName);
+                            }
+                        }
+
+                        threadQueue.InUse = true;
+
+                        OutHandler();
+                    }
+                    finally
+                    {
+                        lock (Communicator.deadThreadQueuesLock)
+                        {
+                            threadQueue.InUse = false;
+                            threadQueue.LastUsedTick = DateTime.Now.Ticks;
+
+                            Communicator.deadThreadQueues.Add(clientRouterName);
+                        }
+                    }
                 }
                 catch
                 {
@@ -560,13 +646,40 @@ namespace Microsoft.WebSolutionsPlatform.Event
                                     forwarderQueueSizeName, clientRouterName, false);
 
                                 threadQueue = new SynchronizationQueue<QueueElement>(threadQueueCounter);
-                                Communicator.threadQueues[clientRouterName] = threadQueue;
+
+                                lock (Communicator.threadQueuesLock)
+                                {
+                                    Communicator.threadQueues[clientRouterName] = threadQueue;
+                                }
                             }
                         }
 
                         SubscriptionMgr.ResendSubscriptions();
 
-                        OutHandler();
+                        try
+                        {
+                            lock (Communicator.deadThreadQueuesLock)
+                            {
+                                if (Communicator.deadThreadQueues.Contains(clientRouterName) == true)
+                                {
+                                    Communicator.deadThreadQueues.Remove(clientRouterName);
+                                }
+                            }
+
+                            threadQueue.InUse = true;
+
+                            OutHandler();
+                        }
+                        finally
+                        {
+                            lock (Communicator.deadThreadQueuesLock)
+                            {
+                                threadQueue.InUse = false;
+                                threadQueue.LastUsedTick = DateTime.Now.Ticks;
+
+                                Communicator.deadThreadQueues.Add(clientRouterName);
+                            }
+                        }
                     }
                 }
                 catch
@@ -914,7 +1027,14 @@ namespace Microsoft.WebSolutionsPlatform.Event
             {
                  try
                  {
-                     ((Socket)ar.AsyncState).EndSend(ar);
+                     if (((Socket)ar.AsyncState).Connected == true)
+                     {
+                         ((Socket)ar.AsyncState).EndSend(ar);
+                     }
+                     else
+                     {
+                         ((Socket)ar.AsyncState).Close();
+                     }
                  }
                  catch
                  {
@@ -938,42 +1058,37 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
             private static Socket ConnectSocket(string server, int port)
             {
-                Socket s = null;
+                Socket s;
                 IPHostEntry hostEntry = null;
 
-                try
-                {
-                    // Get host related information.
-                    hostEntry = Dns.GetHostEntry(server);
+                // Get host related information.
+                hostEntry = Dns.GetHostEntry(server);
 
-                    // Loop through the AddressList to obtain the supported AddressFamily. This is to avoid
-                    // an exception that occurs when the host IP Address is not compatible with the address family
-                    // (typical in the IPv6 case).
-                    foreach (IPAddress address in hostEntry.AddressList)
+                // Loop through the AddressList to obtain the supported AddressFamily. This is to avoid
+                // an exception that occurs when the host IP Address is not compatible with the address family
+                // (typical in the IPv6 case).
+                foreach (IPAddress address in hostEntry.AddressList)
+                {
+                    try
                     {
                         IPEndPoint ipe = new IPEndPoint(address, port);
-                        Socket tempSocket =
-                            new Socket(ipe.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
 
-                        tempSocket.Connect(ipe);
+                        s = new Socket(ipe.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
 
-                        if (tempSocket.Connected)
+                        s.Connect(ipe);
+
+                        if (s.Connected)
                         {
-                            s = tempSocket;
-                            break;
-                        }
-                        else
-                        {
-                            continue;
+                            return s;
                         }
                     }
-                }
-                catch
-                {
-                    s = null;
+                    catch
+                    {
+                        // Intentionally left empty, just loop to next.
+                    }
                 }
 
-                return s;
+                return null;
             }
         }
 
@@ -1081,22 +1196,24 @@ namespace Microsoft.WebSolutionsPlatform.Event
                                 outRouterName = string.Empty;
                             }
 
-                            foreach (string routerName in Communicator.threadQueues.Keys)
+                            lock (Communicator.threadQueuesLock)
                             {
-                                if (string.Compare(outRouterName, routerName, false) != 0)
+                                foreach (string routerName in Communicator.threadQueues.Keys)
                                 {
-                                    if (element.EventType == Event.SubscriptionEvent)
+                                    if (string.Compare(outRouterName, routerName, false) != 0)
                                     {
-                                        Communicator.threadQueues[routerName].Enqueue(element);
-                                    }
-                                    else
-                                    {
-                                        if (Router.routerDictionary.TryGetValue(routerName, out eventDictionary) == true)
+                                        if (element.EventType == Event.SubscriptionEvent)
                                         {
-                                            if (eventDictionary.Dictionary1.ContainsKey(Guid.Empty) == true ||
-                                                eventDictionary.Dictionary1.ContainsKey(element.EventType) == true)
+                                            Communicator.threadQueues[routerName].Enqueue(element);
+                                        }
+                                        else
+                                        {
+                                            if (Router.routerDictionary.TryGetValue(routerName, out eventDictionary) == true)
                                             {
-                                                Communicator.threadQueues[routerName].Enqueue(element);
+                                                if (eventDictionary.Dictionary1.ContainsKey(element.EventType) == true)
+                                                {
+                                                    Communicator.threadQueues[routerName].Enqueue(element);
+                                                }
                                             }
                                         }
                                     }

@@ -13,6 +13,8 @@ using System.Text;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Xml.XPath;
+using Microsoft.WebSolutionsPlatform.Event;
+using Microsoft.WebSolutionsPlatform.Event.PubSubManager;
 
 namespace Microsoft.WebSolutionsPlatform.Event
 {
@@ -20,8 +22,14 @@ namespace Microsoft.WebSolutionsPlatform.Event
     {
         internal class PersistEventInfo
         {
+            internal bool InUse;
+            internal bool Loaded;
+            internal Guid PersistEventType;
             internal string CopyToFileDirectory;
             internal string TempFileDirectory;
+            internal long MaxFileSize;
+            internal long CopyIntervalTicks;
+            internal long NextCopyTick;
             internal bool LocalOnly;
             internal string OutFileName;
             internal StreamWriter OutStream;
@@ -31,21 +39,29 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
             internal PersistEventInfo()
             {
+                InUse = false;
+                Loaded = false;
                 HeaderRow = null;
+                CopyIntervalTicks = 600000000;
+                MaxFileSize = long.MaxValue - 1;
             }
         }
 
         internal class Persister : ServiceThread
         {
-            internal static bool persistAllEvents;
+            internal static bool copyInProcess = false;
             internal static bool localOnly = true;
+
+            internal static long lastConfigFileTick;
+            internal static long nextConfigFileCheckTick = 0;
+
+            internal static PublishManager  pubMgr = null;
 
             internal static Dictionary<Guid, PersistEventInfo> persistEvents = new Dictionary<Guid, PersistEventInfo>();
 
-            private int samplingIncrementPerHour; // Number of sampling increments per hour
-            private long samplingTicks;
-            private long currSampleTicks;
-            private long nextSampleTicks;
+            private Stack<PersistFileEvent> persistFileEvents;
+
+            private long nextCopyTick = 0;
 
             private string fileNameBase = string.Empty;
             private string fileNameSuffix = string.Empty;
@@ -58,19 +74,18 @@ namespace Microsoft.WebSolutionsPlatform.Event
                 fileNameBase = Dns.GetHostName() + @".Events.";
                 fileNameSuffix = @".evt";
 
-                samplingIncrementPerHour = 60; // Number of sampling increments per hour
-                samplingTicks = CalcTimeInterval(samplingIncrementPerHour);
-                currSampleTicks = StartTicks(samplingTicks);
-                nextSampleTicks = currSampleTicks + samplingTicks;
+                persistFileEvents = new Stack<PersistFileEvent>();
             }
 
             public override void Start()
             {
                 bool elementRetrieved;
+                long currentTick;
+                long fileTick;
                 SerializationData serializationData;
                 PersistEventInfo eventInfo;
-                string allFieldTerminator = @",";
                 string eventFieldTerminator = @",";
+                StreamWriter eventStream;
 
                 try
                 {
@@ -83,21 +98,42 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                 try
                 {
-                    while (true)
-                    {
-                        if (persistEvents.Count == 0)
-                        {
-                            Thread.Sleep(1000);
-                            continue;
-                        }
-                        else
-                        {
-                            break;
-                        }
-                    }
+                    pubMgr = new PublishManager();
 
                     while (true)
                     {
+                        currentTick = DateTime.UtcNow.Ticks;
+
+                        if (currentTick > nextConfigFileCheckTick)
+                        {
+                            nextConfigFileCheckTick = currentTick + 300000000;
+
+                            fileTick = Router.GetConfigFileTick();
+
+                            if (fileTick != lastConfigFileTick)
+                            {
+                                nextCopyTick = 0;
+
+                                foreach(PersistEventInfo eInfo in persistEvents.Values)
+                                {
+                                    eInfo.Loaded = false;
+                                }
+
+                                Router.LoadPersistConfig();
+
+                                foreach (PersistEventInfo eInfo in persistEvents.Values)
+                                {
+                                    if (eInfo.Loaded == false)
+                                    {
+                                        eInfo.InUse = false;
+                                        eInfo.NextCopyTick = currentTick - 1;
+                                    }
+                                }
+
+                                lastConfigFileTick = fileTick;
+                            }
+                        }
+
                         try
                         {
                             element = persisterQueue.Dequeue();
@@ -116,74 +152,66 @@ namespace Microsoft.WebSolutionsPlatform.Event
                             elementRetrieved = false;
                         }
 
-                        if (DateTime.UtcNow.Ticks > nextSampleTicks)
+                        currentTick = DateTime.UtcNow.Ticks;
+
+                        if (currentTick > nextCopyTick)
                         {
-                            currSampleTicks = nextSampleTicks;
-                            nextSampleTicks = nextSampleTicks + samplingTicks;
+                            nextCopyTick = long.MaxValue;
 
-                            foreach (Guid eventType in persistEvents.Keys)
+                            foreach (PersistEventInfo persistEventInfo in persistEvents.Values)
                             {
-                                eventInfo = persistEvents[eventType];
-
-                                if (eventInfo.OutFileName != null)
+                                if (currentTick > persistEventInfo.NextCopyTick)
                                 {
-                                    eventInfo.OutStream.Close();
+                                    persistEventInfo.NextCopyTick = currentTick + persistEventInfo.CopyIntervalTicks;
+
+                                    if (persistEventInfo.OutFileName != null)
+                                    {
+                                        persistEventInfo.OutStream.Close();
+
+                                        SendPersistEvent(PersistFileState.Close, persistEventInfo, persistEventInfo.OutFileName);
+
+                                        persistEventInfo.OutFileName = null;
+                                    }
+
+                                    if (persistEventInfo.InUse == true)
+                                    {
+                                        persistEventInfo.OutFileName = persistEventInfo.TempFileDirectory + fileNameBase + persistEventInfo.NextCopyTick.ToString() + fileNameSuffix;
+
+                                        if (File.Exists(persistEventInfo.OutFileName) == true)
+                                            persistEventInfo.OutStream = new StreamWriter(File.Open(persistEventInfo.OutFileName, FileMode.Append, FileAccess.Write, FileShare.None), Encoding.Unicode);
+                                        else
+                                            persistEventInfo.OutStream = new StreamWriter(File.Open(persistEventInfo.OutFileName, FileMode.Create, FileAccess.Write, FileShare.None), Encoding.Unicode);
+
+                                        SendPersistEvent(PersistFileState.Open, persistEventInfo, persistEventInfo.OutFileName);
+
+                                        if (persistEventInfo.HeaderRow != null)
+                                        {
+                                            persistEventInfo.OutStream.Write(persistEventInfo.HeaderRow);
+                                        }
+                                    }
                                 }
 
-                                eventInfo.OutFileName = eventInfo.TempFileDirectory + fileNameBase + currSampleTicks.ToString() + fileNameSuffix;
-
-                                if (File.Exists(eventInfo.OutFileName) == true)
-                                    eventInfo.OutStream = new StreamWriter(File.Open(eventInfo.OutFileName, FileMode.Append, FileAccess.Write, FileShare.None), Encoding.Unicode);
-                                else
-                                    eventInfo.OutStream = new StreamWriter(File.Open(eventInfo.OutFileName, FileMode.Create, FileAccess.Write, FileShare.None), Encoding.Unicode);
-
-                                if (eventInfo.HeaderRow != null)
+                                if (persistEventInfo.NextCopyTick < nextCopyTick)
                                 {
-                                    eventInfo.OutStream.Write(eventInfo.HeaderRow);
+                                    nextCopyTick = persistEventInfo.NextCopyTick;
                                 }
                             }
 
-                            Thread copyThread = new Thread(new ThreadStart(CopyFile));
-                            copyThread.Start();
+                            if (copyInProcess == false)
+                            {
+                                Thread copyThread = new Thread(new ThreadStart(CopyFile));
+
+                                copyInProcess = true;
+
+                                copyThread.Start();
+                            }
                         }
 
                         if (elementRetrieved == true)
                         {
-                            StreamWriter eventStream = null;
-                            StreamWriter allEventStream = null;
+                            eventInfo = persistEvents[element.EventType];
 
-                            if (persistAllEvents == true)
-                            {
-                                allFieldTerminator = persistEvents[Guid.Empty].FieldTerminator;
-
-                                allEventStream = persistEvents[Guid.Empty].OutStream;
-
-                                if (allEventStream == null)
-                                {
-                                    eventInfo = persistEvents[Guid.Empty];
-
-                                    eventInfo.OutFileName = eventInfo.TempFileDirectory + fileNameBase + currSampleTicks.ToString() + fileNameSuffix;
-
-                                    if (File.Exists(eventInfo.OutFileName) == true)
-                                        eventInfo.OutStream = new StreamWriter(File.Open(eventInfo.OutFileName, FileMode.Append, FileAccess.Write, FileShare.None), Encoding.Unicode);
-                                    else
-                                        eventInfo.OutStream = new StreamWriter(File.Open(eventInfo.OutFileName, FileMode.Create, FileAccess.Write, FileShare.None), Encoding.Unicode);
-
-                                    allEventStream = persistEvents[Guid.Empty].OutStream;
-                                }
-
-                                if (persistEvents[Guid.Empty].HeaderRow == null)
-                                {
-                                    persistEvents[Guid.Empty].HeaderRow = @"$" + persistEvents[Guid.Empty].RowTerminator;
-                                    allEventStream.Write(persistEvents[Guid.Empty].HeaderRow);
-                                }
-
-                                allEventStream.Write(element.EventType.ToString() + allFieldTerminator);
-                                allEventStream.Write(element.OriginatingRouterName + allFieldTerminator);
-                                allEventStream.Write(element.InRouterName);
-                            }
-
-                            if (persistEvents.TryGetValue(element.EventType, out eventInfo) == true)
+                            if (eventInfo.InUse == true)
                             {
                                 eventFieldTerminator = eventInfo.FieldTerminator;
 
@@ -191,7 +219,9 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                                 if (eventStream == null)
                                 {
-                                    eventInfo.OutFileName = eventInfo.TempFileDirectory + fileNameBase + currSampleTicks.ToString() + fileNameSuffix;
+                                    eventInfo.NextCopyTick = DateTime.UtcNow.Ticks + eventInfo.CopyIntervalTicks;
+
+                                    eventInfo.OutFileName = eventInfo.TempFileDirectory + fileNameBase + eventInfo.NextCopyTick.ToString() + fileNameSuffix;
 
                                     if (File.Exists(eventInfo.OutFileName) == true)
                                         eventInfo.OutStream = new StreamWriter(File.Open(eventInfo.OutFileName, FileMode.Append, FileAccess.Write, FileShare.None), Encoding.Unicode);
@@ -199,6 +229,13 @@ namespace Microsoft.WebSolutionsPlatform.Event
                                         eventInfo.OutStream = new StreamWriter(File.Open(eventInfo.OutFileName, FileMode.Create, FileAccess.Write, FileShare.None), Encoding.Unicode);
 
                                     eventStream = eventInfo.OutStream;
+
+                                    if (eventInfo.NextCopyTick < nextCopyTick)
+                                    {
+                                        nextCopyTick = eventInfo.NextCopyTick;
+                                    }
+
+                                    SendPersistEvent(PersistFileState.Open, eventInfo, eventInfo.OutFileName);
                                 }
 
                                 if (eventInfo.HeaderRow == null)
@@ -240,37 +277,26 @@ namespace Microsoft.WebSolutionsPlatform.Event
                                 eventStream.Write(element.EventType.ToString() + eventFieldTerminator);
                                 eventStream.Write(element.OriginatingRouterName + eventFieldTerminator);
                                 eventStream.Write(element.InRouterName);
-                            }
 
-                            serializationData = new SerializationData(element.SerializedEvent);
+                                serializationData = new SerializationData(element.SerializedEvent);
 
-                            serializationData.GetOriginatingRouterName();
-                            serializationData.GetInRouterName();
-                            serializationData.GetEventType();
+                                serializationData.GetOriginatingRouterName();
+                                serializationData.GetInRouterName();
+                                serializationData.GetEventType();
 
-                            foreach (WspKeyValuePair<string, object> kv in serializationData)
-                            {
-                                if (allEventStream != null)
-                                {
-                                    allEventStream.Write(allFieldTerminator);
-                                    allEventStream.Write(kv.ValueIn.ToString());
-                                }
-
-                                if (eventStream != null)
+                                foreach (WspKeyValuePair<string, object> kv in serializationData)
                                 {
                                     eventStream.Write(eventFieldTerminator);
                                     eventStream.Write(kv.ValueIn.ToString());
                                 }
-                            }
 
-                            if (allEventStream != null)
-                            {
-                                allEventStream.Write(persistEvents[Guid.Empty].RowTerminator);
-                            }
-
-                            if (eventStream != null)
-                            {
                                 eventStream.Write(eventInfo.RowTerminator);
+
+                                if (eventStream.BaseStream.Length >= eventInfo.MaxFileSize)
+                                {
+                                    eventInfo.NextCopyTick = currentTick - 1;
+                                    nextCopyTick = eventInfo.NextCopyTick;
+                                }
                             }
                         }
                     }
@@ -297,14 +323,17 @@ namespace Microsoft.WebSolutionsPlatform.Event
             private void CopyFile()
             {
                 PersistEventInfo eventInfo;
+                bool inCopy = true;
 
                 string[] files;
 
                 FileInfo currentFileInfo;
-                FileInfo listFileInfo;
+                FileInfo listFileInfo = null;
 
                 try
                 {
+                    copyInProcess = true;
+
                     foreach (Guid eventType in persistEvents.Keys)
                     {
                         eventInfo = persistEvents[eventType];
@@ -322,14 +351,24 @@ namespace Microsoft.WebSolutionsPlatform.Event
                                 {
                                     try
                                     {
+                                        inCopy = true;
+
                                         File.Copy(files[i], eventInfo.CopyToFileDirectory + @"temp\" + listFileInfo.Name, true);
+
+                                        inCopy = false;
+
+                                        SendPersistEvent(PersistFileState.Copy, eventInfo, files[i]);
 
                                         try
                                         {
                                             File.Move(eventInfo.CopyToFileDirectory + @"temp\" + listFileInfo.Name, eventInfo.CopyToFileDirectory + listFileInfo.Name);
+
+                                            SendPersistEvent(PersistFileState.Move, eventInfo, eventInfo.CopyToFileDirectory + listFileInfo.Name);
                                         }
                                         catch (IOException)
                                         {
+                                            SendPersistEvent(PersistFileState.MoveFailed, eventInfo, eventInfo.CopyToFileDirectory + @"temp\" + listFileInfo.Name);
+
                                             if (File.Exists(eventInfo.CopyToFileDirectory + listFileInfo.Name) == true &&
                                                 new FileInfo(eventInfo.CopyToFileDirectory + listFileInfo.Name).Length ==
                                                 new FileInfo(eventInfo.CopyToFileDirectory + @"temp\" + listFileInfo.Name).Length)
@@ -341,6 +380,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                                                 File.Delete(eventInfo.CopyToFileDirectory + listFileInfo.Name);
                                                 File.Move(eventInfo.CopyToFileDirectory + @"temp\" + listFileInfo.Name, eventInfo.CopyToFileDirectory + listFileInfo.Name);
 
+                                                SendPersistEvent(PersistFileState.Move, eventInfo, eventInfo.CopyToFileDirectory + listFileInfo.Name);
                                             }
                                         }
 
@@ -348,17 +388,51 @@ namespace Microsoft.WebSolutionsPlatform.Event
                                     }
                                     catch
                                     {
+                                        if (inCopy == true)
+                                        {
+                                            SendPersistEvent(PersistFileState.CopyFailed, eventInfo, files[i]);
+                                        }
+                                        else
+                                        {
+                                            SendPersistEvent(PersistFileState.MoveFailed, eventInfo, eventInfo.CopyToFileDirectory + @"temp\" + listFileInfo.Name);
+                                        }
+
                                         Directory.CreateDirectory(eventInfo.CopyToFileDirectory);
                                         Directory.CreateDirectory(eventInfo.CopyToFileDirectory + @"temp\");
+
+                                        inCopy = true;
+
                                         File.Copy(files[i], eventInfo.CopyToFileDirectory + @"temp\" + listFileInfo.Name, true);
+
+                                        inCopy = false;
+
+                                        SendPersistEvent(PersistFileState.Copy, eventInfo, files[i]);
+
                                         File.Move(eventInfo.CopyToFileDirectory + @"temp\" + listFileInfo.Name, eventInfo.CopyToFileDirectory + listFileInfo.Name);
+
+                                        SendPersistEvent(PersistFileState.Move, eventInfo, eventInfo.CopyToFileDirectory + listFileInfo.Name);
+
                                         File.Delete(files[i]);
                                     }
                                 }
                             }
                             catch
                             {
-                                // left blank to try all files
+                                if (inCopy == true)
+                                {
+                                    SendPersistEvent(PersistFileState.CopyFailed, eventInfo, files[i]);
+                                }
+                                else
+                                {
+                                    if (listFileInfo == null)
+                                    {
+                                        SendPersistEvent(PersistFileState.MoveFailed, eventInfo, null);
+                                    }
+                                    else
+                                    {
+                                        SendPersistEvent(PersistFileState.MoveFailed, eventInfo, eventInfo.CopyToFileDirectory + @"temp\" + listFileInfo.Name);
+                                    }
+                                }
                             }
                         }
                     }
@@ -373,24 +447,58 @@ namespace Microsoft.WebSolutionsPlatform.Event
                 {
                     EventLog.WriteEntry("WspEventRouter", e.ToString(), EventLogEntryType.Warning);
                 }
+
+                finally
+                {
+                    copyInProcess = false;
+                }
             }
 
-            private static long CalcTimeInterval(int samplingIncrementPerHour)
+            private void SendPersistEvent(PersistFileState fileState, PersistEventInfo eventInfo, string outFileName)
             {
-                DateTime timeHourOne = new DateTime(2005, 1, 1, 1, 0, 0);
-                DateTime timeHourTwo = new DateTime(2005, 1, 1, 2, 0, 0);
+                PersistFileEvent persistFileEvent;
 
-                long hourTicks = timeHourTwo.Ticks - timeHourOne.Ticks;
+                try
+                {
+                    persistFileEvent = persistFileEvents.Pop();
+                }
+                catch
+                {
+                    persistFileEvent = new PersistFileEvent();
+                }
 
-                return hourTicks / (long)samplingIncrementPerHour;
-            }
+                persistFileEvent.PersistEventType = eventInfo.PersistEventType;
+                persistFileEvent.FileState = fileState;
+                persistFileEvent.FileName = outFileName;
+                persistFileEvent.SettingFieldTerminator = eventInfo.FieldTerminator;
+                persistFileEvent.SettingLocalOnly = eventInfo.LocalOnly;
+                persistFileEvent.SettingMaxCopyInterval = (int)(eventInfo.CopyIntervalTicks / 10000000);
+                persistFileEvent.SettingMaxFileSize = eventInfo.MaxFileSize;
+                persistFileEvent.SettingRowTerminator = eventInfo.RowTerminator;
+                persistFileEvent.FileNameBase = fileNameBase;
 
-            private static long StartTicks(long samplingTicks)
-            {
-                DateTime timeNow = new DateTime(DateTime.UtcNow.Ticks);
-                DateTime timeStart = new DateTime(timeNow.Year, timeNow.Month, timeNow.Day, timeNow.Hour, 0, 0);
+                if (fileState == PersistFileState.Open || outFileName == null)
+                {
+                    persistFileEvent.FileSize = 0;
+                }
+                else
+                {
+                    persistFileEvent.FileSize = (new FileInfo(outFileName)).Length;
+                }
 
-                return timeStart.Ticks + (((timeNow.Ticks - timeStart.Ticks) / samplingTicks) * samplingTicks);
+                for (int i = 0; i < 20; i++)
+                {
+                    try
+                    {
+                        pubMgr.Publish(persistFileEvent.Serialize());
+                    }
+                    catch
+                    {
+                        break;
+                    }
+                }
+
+                persistFileEvents.Push(persistFileEvent);
             }
         }
     }

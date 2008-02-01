@@ -13,8 +13,8 @@ namespace Microsoft.WebSolutionsPlatform.Event
     /// <summary>
     /// Defines the property types supported by the base event class.
     /// </summary>
-    public enum PropertyType : byte
-    {
+	public enum PropertyType : byte
+	{
         /// <summary>
         /// This property type will be ignored.
         /// </summary>
@@ -22,11 +22,11 @@ namespace Microsoft.WebSolutionsPlatform.Event
         /// <summary>
         /// Boolean type
         /// </summary>
-        Boolean = 1,
+		Boolean = 1,
         /// <summary>
         /// byte type
         /// </summary>
-        Byte = 2,
+		Byte = 2,
         /// <summary>
         /// byte[] type
         /// </summary>
@@ -107,176 +107,176 @@ namespace Microsoft.WebSolutionsPlatform.Event
         /// Generic Dictionary type
         /// </summary>
         Dictionary = 22
-    }
+	}
 
     /// <summary>
     /// This class is used to create and enumerate a serialized event object.
     /// </summary>
     public class SerializationData : IEnumerable<WspKeyValuePair<string, object>>, IEnumerator<WspKeyValuePair<string, object>>
-    {
+	{
         private bool disposed;
 
         private MemoryStream dataStream;
-        private BinaryReader dataReader;
-        private BinaryWriter dataWriter;
-        private static Dictionary<string, byte> objectType;
+		private BinaryReader dataReader;
+		private BinaryWriter dataWriter;
+		private static Dictionary<string, byte> objectType;
         private static object objectTypeAccess = new object();
 
-        private WspKeyValuePair<string, object> current;
-        /// <summary>
-        /// Current element in the SerializationData object.
-        /// </summary>
-        public WspKeyValuePair<string, object> Current
-        {
-            get
-            {
-                return current;
-            }
+		private WspKeyValuePair<string, object> current;
+		/// <summary>
+		/// Current element in the SerializationData object.
+		/// </summary>
+		public WspKeyValuePair<string, object> Current
+		{
+			get
+			{
+				return current;
+			}
         }
 
-        object System.Collections.IEnumerator.Current
-        {
-            get
-            {
-                return (object)current;
-            }
-        }
+		object System.Collections.IEnumerator.Current
+		{
+			get
+			{
+				return (object) current;
+			}
+		}
 
-        private bool readMode;
-        /// <summary>
-        /// Identifies if object can be read.  When state changes to true, the position
-        /// of the stream is reset.
-        /// </summary>
-        public bool ReadMode
-        {
-            get
-            {
-                return readMode;
-            }
-            set
-            {
-                readMode = value;
+		private bool readMode;
+		/// <summary>
+		/// Identifies if object can be read.  When state changes to true, the position
+		/// of the stream is reset.
+		/// </summary>
+		public bool ReadMode
+		{
+			get
+			{
+				return readMode;
+			}
+			set
+			{
+				readMode = value;
 
-                if (readMode == true)
-                {
-                    writeMode = false;
+				if(readMode == true)
+				{
+					writeMode = false;
 
-                    this.Reset();
-                }
-                else
-                {
-                    WriteMode = true;
-                }
-            }
-        }
+					this.Reset();
+				}
+				else
+				{
+					WriteMode = true;
+				}
+			}
+		}
 
-        private bool writeMode;
-        /// <summary>
-        /// Identifies if object can be written.  When state changes to true, the position
-        /// of the stream is set to the end.
-        /// </summary>
-        public bool WriteMode
-        {
-            get
-            {
-                return writeMode;
-            }
-            set
-            {
-                writeMode = value;
+		private bool writeMode;
+		/// <summary>
+		/// Identifies if object can be written.  When state changes to true, the position
+		/// of the stream is set to the end.
+		/// </summary>
+		public bool WriteMode
+		{
+			get
+			{
+				return writeMode;
+			}
+			set
+			{
+				writeMode = value;
 
-                if (writeMode == true)
-                {
-                    readMode = false;
+				if(writeMode == true)
+				{
+					readMode = false;
 
-                    dataReader.BaseStream.Seek(0, SeekOrigin.End);
-                }
-                else
-                {
-                    ReadMode = true;
-                }
-            }
-        }
+					dataReader.BaseStream.Seek(0, SeekOrigin.End);
+				}
+				else
+				{
+					ReadMode = true;
+				}
+			}
+		}
 
-        /// <summary>
-        /// Length of the SerializationData object
-        /// </summary>
-        public long Length
-        {
-            get
-            {
-                return dataStream.Length;
-            }
-        }
+		/// <summary>
+		/// Length of the SerializationData object
+		/// </summary>
+		public long Length
+		{
+			get
+			{
+				return dataStream.Length;
+			}
+		}
 
         /// <summary>
         /// Constructor
         /// </summary>
-        public SerializationData()
-        {
-            LoadObjectType();
+		public SerializationData()
+		{
+			LoadObjectType();
 
-            current = new WspKeyValuePair<string, object>();
+			current = new WspKeyValuePair<string, object>();
 
-            dataStream = new MemoryStream();
+			dataStream = new MemoryStream();
 
-            writeMode = true;
+			writeMode = true;
 
-            dataWriter = new BinaryWriter(dataStream, Encoding.UTF8);
+			dataWriter = new BinaryWriter(dataStream, Encoding.UTF8);
 
-            dataReader = new BinaryReader(dataStream, Encoding.UTF8);
-        }
+			dataReader = new BinaryReader(dataStream, Encoding.UTF8);
+		}
 
         /// <summary>
         /// Constructor which can load and parse a serialized event object. The properties can 
         /// then be enumerated with a foreach statement.
         /// </summary>
         /// <param name="inData">Serialized event object.</param>
-        public SerializationData(byte[] inData)
-        {
-            LoadObjectType();
+		public SerializationData( byte[] inData )
+		{
+			LoadObjectType();
 
-            current = new WspKeyValuePair<string, object>();
+			current = new WspKeyValuePair<string, object>();
 
             dataStream = new MemoryStream();
+            
+			writeMode = true;
 
-            writeMode = true;
-
-            dataWriter = new BinaryWriter(dataStream, Encoding.UTF8);
-            dataWriter.Write(inData);
+			dataWriter = new BinaryWriter(dataStream, Encoding.UTF8);
+			dataWriter.Write(inData);
 
             dataReader = new BinaryReader(dataStream, Encoding.UTF8);
 
             dataReader.BaseStream.Position = 0;
 
-            ReadMode = true;
-        }
+			ReadMode = true;
+		}
 
-        /// <summary>
-        /// Adds a prefix to the SerializationData object.
-        /// </summary>
-        /// <param name="value">Value of the element being added</param>
-        internal void AddPrefix(Guid value)
-        {
-            dataWriter.Write(value.ToString());
-        }
+		/// <summary>
+		/// Adds a prefix to the SerializationData object.
+		/// </summary>
+		/// <param name="value">Value of the element being added</param>
+		internal void AddPrefix( Guid value )
+		{
+			dataWriter.Write(value.ToString());
+		}
 
-        /// <summary>
-        /// Adds a prefix to the SerializationData object.
-        /// </summary>
-        /// <param name="value">Value of the element being added</param>
-        internal void AddPrefix(string value)
-        {
-            dataWriter.Write(value);
-        }
+		/// <summary>
+		/// Adds a prefix to the SerializationData object.
+		/// </summary>
+		/// <param name="value">Value of the element being added</param>
+		internal void AddPrefix( string value )
+		{
+			dataWriter.Write(value);
+		}
 
-        /// <summary>
-        /// Method to add element data to the SerializationData object.
-        /// </summary>
-        /// <param name="key">Key of the element being added</param>
-        /// <param name="value">Value of the element being added</param>
-        public void AddElement(string key, object value)
-        {
+		/// <summary>
+		/// Method to add element data to the SerializationData object.
+		/// </summary>
+		/// <param name="key">Key of the element being added</param>
+		/// <param name="value">Value of the element being added</param>
+		public void AddElement( string key, object value )
+		{
             if (WriteMode == false)
             {
                 ResourceManager rm = new ResourceManager("WspEvent.WspEvent", Assembly.GetExecutingAssembly());
@@ -284,15 +284,55 @@ namespace Microsoft.WebSolutionsPlatform.Event
                 throw new EventSerializationException(rm.GetString("InReadState"));
             }
 
-            dataWriter.Write(key);
+			dataWriter.Write(key);
 
-            byte valueType = GetObjectType(value);
+			byte valueType = GetObjectType(value);
 
-            dataWriter.Write(valueType);
+			dataWriter.Write(valueType);
 
-            switch (valueType)
-            {
-                case (byte)PropertyType.String:
+			switch(valueType)
+			{
+				case (byte)PropertyType.String:
+                    if (value == null)
+                    {
+                        dataWriter.Write(string.Empty);
+                    }
+                    else
+                    {
+                        dataWriter.Write(value.ToString());
+                    }
+
+					break;
+
+				case (byte)PropertyType.Boolean:
+					dataWriter.Write((bool)value);
+					break;
+
+				case (byte)PropertyType.Int32:
+					dataWriter.Write((Int32)value);
+					break;
+
+				case (byte)PropertyType.Int64:
+					dataWriter.Write((Int64)value);
+					break;
+
+				case (byte)PropertyType.Double:
+					dataWriter.Write((Double)value);
+					break;
+
+				case (byte)PropertyType.Decimal:
+					dataWriter.Write((Decimal)value);
+					break;
+
+				case (byte)PropertyType.Byte:
+					dataWriter.Write((Byte)value);
+					break;
+
+				case (byte)PropertyType.Char:
+					dataWriter.Write((Char)value);
+					break;
+
+				case (byte)PropertyType.Version:
                     if (value == null)
                     {
                         dataWriter.Write(string.Empty);
@@ -304,47 +344,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                     break;
 
-                case (byte)PropertyType.Boolean:
-                    dataWriter.Write((bool)value);
-                    break;
-
-                case (byte)PropertyType.Int32:
-                    dataWriter.Write((Int32)value);
-                    break;
-
-                case (byte)PropertyType.Int64:
-                    dataWriter.Write((Int64)value);
-                    break;
-
-                case (byte)PropertyType.Double:
-                    dataWriter.Write((Double)value);
-                    break;
-
-                case (byte)PropertyType.Decimal:
-                    dataWriter.Write((Decimal)value);
-                    break;
-
-                case (byte)PropertyType.Byte:
-                    dataWriter.Write((Byte)value);
-                    break;
-
-                case (byte)PropertyType.Char:
-                    dataWriter.Write((Char)value);
-                    break;
-
-                case (byte)PropertyType.Version:
-                    if (value == null)
-                    {
-                        dataWriter.Write(string.Empty);
-                    }
-                    else
-                    {
-                        dataWriter.Write(value.ToString());
-                    }
-
-                    break;
-
-                case (byte)PropertyType.DateTime:
+				case (byte)PropertyType.DateTime:
                     if (value == null)
                     {
                         dataWriter.Write(((long)0).ToString());
@@ -356,7 +356,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                     break;
 
-                case (byte)PropertyType.Guid:
+				case (byte)PropertyType.Guid:
                     if (value == null)
                     {
                         dataWriter.Write(Guid.Empty.ToString());
@@ -368,7 +368,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                     break;
 
-                case (byte)PropertyType.Uri:
+				case (byte)PropertyType.Uri:
                     if (value == null)
                     {
                         dataWriter.Write(@"http://EmptyUri");
@@ -380,31 +380,31 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                     break;
 
-                case (byte)PropertyType.Int16:
-                    dataWriter.Write((Int16)value);
-                    break;
+				case (byte)PropertyType.Int16:
+					dataWriter.Write((Int16)value);
+					break;
 
-                case (byte)PropertyType.SByte:
-                    dataWriter.Write((SByte)value);
-                    break;
+				case (byte)PropertyType.SByte:
+					dataWriter.Write((SByte)value);
+					break;
 
-                case (byte)PropertyType.Single:
-                    dataWriter.Write((Single)value);
-                    break;
+				case (byte)PropertyType.Single:
+					dataWriter.Write((Single)value);
+					break;
 
-                case (byte)PropertyType.UInt16:
-                    dataWriter.Write((UInt16)value);
-                    break;
+				case (byte)PropertyType.UInt16:
+					dataWriter.Write((UInt16)value);
+					break;
 
-                case (byte)PropertyType.UInt32:
-                    dataWriter.Write((UInt32)value);
-                    break;
+				case (byte)PropertyType.UInt32:
+					dataWriter.Write((UInt32)value);
+					break;
 
-                case (byte)PropertyType.UInt64:
-                    dataWriter.Write((UInt64)value);
-                    break;
+				case (byte)PropertyType.UInt64:
+					dataWriter.Write((UInt64)value);
+					break;
 
-                case (byte)PropertyType.IPAddress:
+				case (byte)PropertyType.IPAddress:
                     if (value == null)
                     {
                         dataWriter.Write(@"0.0.0.0");
@@ -416,7 +416,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                     break;
 
-                case (byte)PropertyType.ByteArray:
+				case (byte)PropertyType.ByteArray:
                     if (value == null)
                     {
                         Byte[] emptyByteArray = new byte[] { };
@@ -431,7 +431,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                     break;
 
-                case (byte)PropertyType.CharArray:
+				case (byte)PropertyType.CharArray:
                     if (value == null)
                     {
                         dataWriter.Write(0);
@@ -445,7 +445,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                     break;
 
-                case (byte)PropertyType.Dictionary:
+				case (byte)PropertyType.Dictionary:
                     if (value == null)
                     {
                         dataWriter.Write(0);
@@ -462,12 +462,12 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                     break;
 
-                default:
+				default:
                     ResourceManager rm = new ResourceManager("WspEvent.WspEvent", Assembly.GetExecutingAssembly());
 
                     throw new EventTypeNotSupportedException(rm.GetString("CannotSerialize"));
-            }
-        }
+			}
+		}
 
         /// <summary>
         /// Resets the underlying memory stream.
@@ -478,12 +478,12 @@ namespace Microsoft.WebSolutionsPlatform.Event
             dataStream.SetLength(0);
         }
 
-        /// <summary>
-        /// Method to set the enumerator to its initial position, before the first key/value pair 
-        /// data in the SerializationData object.
-        /// </summary>
-        public void Reset()
-        {
+		/// <summary>
+		/// Method to set the enumerator to its initial position, before the first key/value pair 
+		/// data in the SerializationData object.
+		/// </summary>
+		public void Reset()
+		{
             if (ReadMode == false)
             {
                 ResourceManager rm = new ResourceManager("WspEvent.WspEvent", Assembly.GetExecutingAssembly());
@@ -491,22 +491,22 @@ namespace Microsoft.WebSolutionsPlatform.Event
                 throw new EventSerializationException(rm.GetString("MustBeInReadState"));
             }
 
-            dataReader.BaseStream.Seek(0, SeekOrigin.Begin);
+			dataReader.BaseStream.Seek(0, SeekOrigin.Begin);
             dataReader.BaseStream.Position = 0;
 
-            //if(dataReader.BaseStream.Length > 0)
-            //	dataReader.ReadInt32();
+			//if(dataReader.BaseStream.Length > 0)
+			//	dataReader.ReadInt32();
 
-            current.Key = null;
-            current.ValueIn = null;
-        }
+			current.Key = null;
+			current.ValueIn = null;
+		}
 
-        /// <summary>
-        /// Method to move to the next key/value pair data in the SerializationData object.
-        /// </summary>
-        public bool MoveNext()
-        {
-            byte valueType;
+		/// <summary>
+		/// Method to move to the next key/value pair data in the SerializationData object.
+		/// </summary>
+		public bool MoveNext()
+		{
+			byte valueType;
             try
             {
                 if (ReadMode == false)
@@ -631,7 +631,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
             {
                 return false;
             }
-        }
+		}
 
         /// <summary>
         /// Returns the OriginatingRouterName for the Event
@@ -658,34 +658,34 @@ namespace Microsoft.WebSolutionsPlatform.Event
             return new Guid(dataReader.ReadString());
         }
 
-        /// <summary>
-        /// Returns an enumerator for the object.
-        /// </summary>
-        public IEnumerator<WspKeyValuePair<string, object>> GetEnumerator()
-        {
-            return this;
-        }
+		/// <summary>
+		/// Returns an enumerator for the object.
+		/// </summary>
+		public IEnumerator<WspKeyValuePair<string, object>> GetEnumerator()
+		{
+			return this;
+		}
 
-        /// <summary>
-        /// Returns an enumerator for the object.
-        /// </summary>
-        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
-        {
-            return this;
-        }
+		/// <summary>
+		/// Returns an enumerator for the object.
+		/// </summary>
+		System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
+		{
+			return this;
+		}
 
-        /// <summary>
-        /// Disposes of the object.
-        /// </summary>
-        public void Dispose()
-        {
+		/// <summary>
+		/// Disposes of the object.
+		/// </summary>
+		public void Dispose()
+		{
             // Do nothing
         }
 
         /// <summary>
         /// Disposes of the object.
         /// </summary>
-        protected virtual void Dispose(bool disposing)
+        protected virtual void Dispose(bool disposing) 
         {
             if (!disposed)
             {
@@ -710,11 +710,11 @@ namespace Microsoft.WebSolutionsPlatform.Event
             Dispose(false);
         }
 
-        /// <summary>
-        /// Return the object as a string.
-        /// </summary>
-        public override string ToString()
-        {
+		/// <summary>
+		/// Return the object as a string.
+		/// </summary>
+		public override string ToString()
+		{
             if (ReadMode == false)
             {
                 ResourceManager rm = new ResourceManager("WspEvent.WspEvent", Assembly.GetExecutingAssembly());
@@ -722,16 +722,16 @@ namespace Microsoft.WebSolutionsPlatform.Event
                 throw new EventSerializationException(rm.GetString("MustBeInReadStateForToString"));
             }
 
-            dataReader.BaseStream.Seek(0, SeekOrigin.Begin);
+			dataReader.BaseStream.Seek(0, SeekOrigin.Begin);
 
-            return dataReader.ToString();
-        }
+			return dataReader.ToString();
+		}
 
-        /// <summary>
-        /// Return the object as a byte array in UTF-8 format.
-        /// </summary>
-        public byte[] ToBytes()
-        {
+		/// <summary>
+		/// Return the object as a byte array in UTF-8 format.
+		/// </summary>
+		public byte[] ToBytes()
+		{
             if (ReadMode == false)
             {
                 ResourceManager rm = new ResourceManager("WspEvent.WspEvent", Assembly.GetExecutingAssembly());
@@ -739,16 +739,16 @@ namespace Microsoft.WebSolutionsPlatform.Event
                 throw new EventSerializationException(rm.GetString("MustBeInReadStateForToBytes"));
             }
 
-            dataReader.BaseStream.Seek(0, SeekOrigin.Begin);
+			dataReader.BaseStream.Seek(0, SeekOrigin.Begin);
             dataReader.BaseStream.Position = 0;
 
-            return dataReader.ReadBytes((int)dataStream.Length);
-        }
+			return dataReader.ReadBytes((int)dataStream.Length);
+		}
 
-        private static void LoadObjectType()
-        {
-            if (objectType == null)
-            {
+		private static void LoadObjectType()
+		{
+			if(objectType == null)
+			{
                 lock (objectTypeAccess)
                 {
                     if (objectType == null)
@@ -783,34 +783,34 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         objectType = oType;
                     }
                 }
-            }
-        }
+			}
+		}
 
         private static byte GetObjectType(object o)
-        {
-            byte objType;
+		{
+			byte objType;
 
-            if (objectType.TryGetValue(o.GetType().FullName, out objType) == true)
-                return objType;
+			if(objectType.TryGetValue(o.GetType().FullName, out objType) == true)
+				return objType;
 
-            if (string.Compare(o.GetType().FullName, @"System.Array", true) == 0)
-            {
-                Type[] arrayTypes = Type.GetTypeArray((object[])o);
+			if(string.Compare(o.GetType().FullName, @"System.Array", true) == 0)
+			{
+				Type[] arrayTypes = Type.GetTypeArray((object[])o);
 
-                if (arrayTypes[0] == Type.GetType("System.Byte"))
-                {
-                    if (objectType.TryGetValue(@"System.ByteArray", out objType) == true)
-                        return objType;
-                }
-                else
-                {
-                    if (arrayTypes[0] == Type.GetType("System.Char"))
-                    {
-                        if (objectType.TryGetValue(@"System.CharArray", out objType) == true)
-                            return objType;
-                    }
-                }
-            }
+				if(arrayTypes[0] == Type.GetType("System.Byte"))
+				{
+					if(objectType.TryGetValue(@"System.ByteArray", out objType) == true)
+						return objType;
+				}
+				else
+				{
+					if(arrayTypes[0] == Type.GetType("System.Char"))
+					{
+						if(objectType.TryGetValue(@"System.CharArray", out objType) == true)
+							return objType;
+					}
+				}
+			}
 
             if (o.GetType().FullName.StartsWith(@"System.Collections.Generic.Dictionary") == true)
                 return objectType[@"System.Collections.Generic.Dictionary"];
@@ -818,6 +818,6 @@ namespace Microsoft.WebSolutionsPlatform.Event
             ResourceManager rm = new ResourceManager("WspEvent.WspEvent", Assembly.GetExecutingAssembly());
 
             throw new EventTypeNotSupportedException(rm.GetString("UnknownType"));
-        }
-    }
+		}
+	}
 }

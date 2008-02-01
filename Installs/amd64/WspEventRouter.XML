@@ -348,6 +348,21 @@
             Timeout for blocking calls, default is 10000
             </summary>
         </member>
+        <member name="P:Microsoft.WebSolutionsPlatform.Event.SynchronizationQueue`1.Size">
+            <summary>
+            Size in bytes of queue
+            </summary>
+        </member>
+        <member name="P:Microsoft.WebSolutionsPlatform.Event.SynchronizationQueue`1.InUse">
+            <summary>
+            Specifies if the queue object is or can be garbage collected
+            </summary>
+        </member>
+        <member name="P:Microsoft.WebSolutionsPlatform.Event.SynchronizationQueue`1.LastUsedTick">
+            <summary>
+            Specifies when the queue object quit being in use
+            </summary>
+        </member>
         <member name="T:Router.WspEventRouter">
             <summary>
               A strongly-typed resource class, for looking up localized strings, etc.

@@ -193,6 +193,108 @@
             <param name="info">The SerializationInfo that holds the serialized object data about the exception being thrown.</param>
             <param name="context">The StreamingContext that contains contextual information about the source or destination.</param>
         </member>
+        <member name="F:Microsoft.WebSolutionsPlatform.Event.PersistFileState.Open">
+            <summary>
+            File was opened
+            </summary>
+        </member>
+        <member name="F:Microsoft.WebSolutionsPlatform.Event.PersistFileState.Close">
+            <summary>
+            File was closed
+            </summary>
+        </member>
+        <member name="F:Microsoft.WebSolutionsPlatform.Event.PersistFileState.Copy">
+            <summary>
+            File was copied to destination's temp directory
+            </summary>
+        </member>
+        <member name="F:Microsoft.WebSolutionsPlatform.Event.PersistFileState.Move">
+            <summary>
+            File was moved from destination's temp directory to destination directory
+            </summary>
+        </member>
+        <member name="F:Microsoft.WebSolutionsPlatform.Event.PersistFileState.CopyFailed">
+            <summary>
+            File copy failed
+            </summary>
+        </member>
+        <member name="F:Microsoft.WebSolutionsPlatform.Event.PersistFileState.MoveFailed">
+            <summary>
+            File move failed
+            </summary>
+        </member>
+        <member name="T:Microsoft.WebSolutionsPlatform.Event.PersistFileEvent">
+            <summary>
+            This class is used to tract the state of the files for persisted events.
+            </summary>
+        </member>
+        <member name="M:Microsoft.WebSolutionsPlatform.Event.PersistFileEvent.#ctor">
+            <summary>
+            Base constructor to create a new persist file event
+            </summary>
+        </member>
+        <member name="M:Microsoft.WebSolutionsPlatform.Event.PersistFileEvent.#ctor(System.Byte[])">
+            <summary>
+            Base constructor to create a new persist file event from a serialized event
+            </summary>
+            <param name="serializationData">Serialized event data</param>
+        </member>
+        <member name="M:Microsoft.WebSolutionsPlatform.Event.PersistFileEvent.GetObjectData(Microsoft.WebSolutionsPlatform.Event.SerializationData)">
+            <summary>
+            Used for event serialization.
+            </summary>
+            <param name="data">SerializationData object passed to store serialized object</param>
+        </member>
+        <member name="P:Microsoft.WebSolutionsPlatform.Event.PersistFileEvent.FileState">
+            <summary>
+            File's state
+            </summary>
+        </member>
+        <member name="P:Microsoft.WebSolutionsPlatform.Event.PersistFileEvent.FileNameBase">
+            <summary>
+            Base name of the file
+            </summary>
+        </member>
+        <member name="P:Microsoft.WebSolutionsPlatform.Event.PersistFileEvent.FileName">
+            <summary>
+            Fully qualified name of the file
+            </summary>
+        </member>
+        <member name="P:Microsoft.WebSolutionsPlatform.Event.PersistFileEvent.PersistEventType">
+            <summary>
+            Event type which is persisted in file
+            </summary>
+        </member>
+        <member name="P:Microsoft.WebSolutionsPlatform.Event.PersistFileEvent.FileSize">
+            <summary>
+            Size in bytes of the file
+            </summary>
+        </member>
+        <member name="P:Microsoft.WebSolutionsPlatform.Event.PersistFileEvent.SettingMaxFileSize">
+            <summary>
+            Config setting for maximum size of the file
+            </summary>
+        </member>
+        <member name="P:Microsoft.WebSolutionsPlatform.Event.PersistFileEvent.SettingMaxCopyInterval">
+            <summary>
+            Config setting for maximum file copy interval in seconds
+            </summary>
+        </member>
+        <member name="P:Microsoft.WebSolutionsPlatform.Event.PersistFileEvent.SettingLocalOnly">
+            <summary>
+            Config setting for if the persistence subscription is for all events or only local events
+            </summary>
+        </member>
+        <member name="P:Microsoft.WebSolutionsPlatform.Event.PersistFileEvent.SettingFieldTerminator">
+            <summary>
+            Config setting for the field terminator
+            </summary>
+        </member>
+        <member name="P:Microsoft.WebSolutionsPlatform.Event.PersistFileEvent.SettingRowTerminator">
+            <summary>
+            Config setting for the row terminator
+            </summary>
+        </member>
         <member name="T:Microsoft.WebSolutionsPlatform.Event.PropertyType">
             <summary>
             Defines the property types supported by the base event class.

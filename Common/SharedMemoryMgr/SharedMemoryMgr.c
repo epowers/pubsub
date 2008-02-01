@@ -163,11 +163,17 @@ extern INT32 InitMemoryMgr(LPCTSTR SharedMemoryNameIn, DWORD SharedMemorySize, P
 		return errco;
    }
 
-   if(bFileExists == FALSE)
+   if(bFileExists == TRUE)
+   {
+	CommBuffer->iLastEventNumRead = CommBuffer->gpBuf->iLastEventNumRead;
+	CommBuffer->dwNextReadOffset = CommBuffer->gpBuf->dwNextReadOffset;
+   }
+   else
    {
 	   CommBuffer->gpBuf->dwNextReadOffset = 0;
 	   CommBuffer->gpBuf->dwNextWriteOffset = 0;
 	   CommBuffer->gpBuf->iLastEventNumWritten = 0;
+	   CommBuffer->gpBuf->iLastEventNumRead = 0;
 	   CommBuffer->gpBuf->iSharedMemSize = SharedMemorySize;
 	   CommBuffer->gpBuf->iEventBufferSize = SharedMemorySize - 
 		   (DWORD)((BYTE *)&(CommBuffer->gpBuf->bEventBuffer) - (BYTE *)CommBuffer->gpBuf);
@@ -400,8 +406,7 @@ extern INT32 PutBuffer(LPCSTR pEventBuffer, DWORD dwEventLength, DWORD dwTimeOut
     {
 		wspEvent.bReadyToRead = PREPARETOREAD;
 		wspEvent.iEventNum = CommBuffer->gpBuf->iLastEventNumWritten + 1;
-		wspEvent.iEventSize1 = sizeof(WSPEVENT) - 1 + dwEventLength;
-		wspEvent.iEventSize2 = wspEvent.iEventSize1;
+		wspEvent.iEventSize = sizeof(WSPEVENT) - 1 + dwEventLength;
 
 		rc = CopyEventToBuffer(CommBuffer->gpBuf->dwNextWriteOffset, &wspEvent, 
 								pEventBuffer, dwEventLength, CommBuffer);
@@ -409,7 +414,7 @@ extern INT32 PutBuffer(LPCSTR pEventBuffer, DWORD dwEventLength, DWORD dwTimeOut
 		if(rc == SUCCESS)
 		{
 			CommBuffer->gpBuf->dwNextWriteOffset = (CommBuffer->gpBuf->dwNextWriteOffset + 
-				wspEvent.iEventSize1) % CommBuffer->gpBuf->iEventBufferSize;
+				wspEvent.iEventSize) % CommBuffer->gpBuf->iEventBufferSize;
 
 			CommBuffer->gpBuf->iLastEventNumWritten++;
 
@@ -454,6 +459,7 @@ extern INT32 GetBuffer(LPCSTR pEventBuffer, DWORD dwEventBufferLength, DWORD dwT
 				if(CommBuffer->bSharedMemoryOwner == TRUE)
 				{
 					CommBuffer->gpBuf->dwNextReadOffset = CommBuffer->dwNextReadOffset;
+					CommBuffer->gpBuf->iLastEventNumRead = CommBuffer->iLastEventNumRead;
 
 					*pEventStartLocation = ALREADYREAD;
 				}
@@ -490,6 +496,7 @@ extern INT32 GetBuffer(LPCSTR pEventBuffer, DWORD dwEventBufferLength, DWORD dwT
 				if(CommBuffer->bSharedMemoryOwner == TRUE)
 				{
 					CommBuffer->gpBuf->dwNextReadOffset = CommBuffer->dwNextReadOffset;
+					CommBuffer->gpBuf->iLastEventNumRead = CommBuffer->iLastEventNumRead;
 
 					*pEventStartLocation = ALREADYREAD;
 				}
@@ -516,8 +523,7 @@ void InitEvent(PCOMMBUFFER CommBuffer)
 {
 	CommBuffer->gInitEvent.bReadyToRead = NOTREADYTOREAD;
 	CommBuffer->gInitEvent.iEventNum = 0;
-	CommBuffer->gInitEvent.iEventSize1 = sizeof(WSPEVENT) - 1;
-	CommBuffer->gInitEvent.iEventSize2 = sizeof(WSPEVENT) - 1;
+	CommBuffer->gInitEvent.iEventSize = sizeof(WSPEVENT) - 1;
 	CommBuffer->gInitEvent.bEvent = 0;
 }
 
@@ -528,7 +534,6 @@ void InitNewEvent(PCOMMBUFFER CommBuffer)
 	memcpy_s(&newEvent, sizeof(WSPEVENT), &(CommBuffer->gInitEvent), sizeof(WSPEVENT));
 
 	newEvent.iEventNum = CommBuffer->gpBuf->iLastEventNumWritten;
-	CommBuffer->gpBuf->iLastEventNumWritten++;
 
 	CopyEventToBuffer(0, &newEvent, NULL, sizeof(WSPEVENT), CommBuffer);
 }
@@ -560,41 +565,20 @@ INT32 CopyEventToBuffer(DWORD iOffset, PWSPEVENT pWspEvent, LPCSTR pEventBuffer,
 		}
 		else
 		{
-			if(iOffset == CommBuffer->gpBuf->dwNextReadOffset)
+			if(CommBuffer->gpBuf->dwNextReadOffset == iOffset)
 			{
-				if(*((BYTE *) (&(CommBuffer->gpBuf->bEventBuffer) + iOffset)) == READYTOREAD)
+				if(CommBuffer->gpBuf->iLastEventNumWritten > CommBuffer->gpBuf->iLastEventNumRead)
 				{
-					GetWspEvent(&wspEvent, CommBuffer, iOffset);
-
-					if(wspEvent.iEventSize1 == wspEvent.iEventSize2)
-					{
-						return GENERALERRORCODE;
-					}
+					return GENERALERRORCODE;
 				}
 			}
 			else
 			{
 				// Write will overtake next read
-				if((iOffset + dwEventLength + dwEventHeaderSize - CommBuffer->gpBuf->iEventBufferSize) > 
+				if((iOffset + dwEventLength + dwEventHeaderSize - CommBuffer->gpBuf->iEventBufferSize) >= 
 					CommBuffer->gpBuf->dwNextReadOffset)
 				{
 					return GENERALERRORCODE;
-				}
-				else
-				{
-					if((iOffset + dwEventLength + dwEventHeaderSize - CommBuffer->gpBuf->iEventBufferSize) == 
-						CommBuffer->gpBuf->dwNextReadOffset)
-					{
-						if(*((BYTE *) (&(CommBuffer->gpBuf->bEventBuffer) + CommBuffer->gpBuf->dwNextReadOffset)) == READYTOREAD)
-						{
-							GetWspEvent(&wspEvent, CommBuffer, CommBuffer->gpBuf->dwNextReadOffset);
-
-							if(wspEvent.iEventSize1 == wspEvent.iEventSize2)
-							{
-								return GENERALERRORCODE;
-							}
-						}
-					}
 				}
 			}
 		}
@@ -684,15 +668,10 @@ INT32 CopyEventToBuffer(DWORD iOffset, PWSPEVENT pWspEvent, LPCSTR pEventBuffer,
 		}
 
 		// Write offset is EQUAL to next read offset and write will overtake next read
-		if((iOffset == CommBuffer->gpBuf->dwNextReadOffset) &&
-			(*((BYTE *) (&(CommBuffer->gpBuf->bEventBuffer) + iOffset)) == READYTOREAD ))
+		if(iOffset == CommBuffer->gpBuf->dwNextReadOffset &&
+			CommBuffer->gpBuf->iLastEventNumWritten > CommBuffer->gpBuf->iLastEventNumRead)
 		{
-			GetWspEvent(&wspEvent, CommBuffer, iOffset);
-
-			if(wspEvent.iEventSize1 == wspEvent.iEventSize2)
-			{
-				return GENERALERRORCODE;
-			}
+			return GENERALERRORCODE;
 		}
 
 		// Copy event header
@@ -735,12 +714,7 @@ INT32 CopyEventFromBuffer(LPCSTR pEventBuffer, DWORD dwEventBufferLength, DWORD 
 
 	pStart = GetWspEvent(&wspEvent, CommBuffer, CommBuffer->dwNextReadOffset);
 
-	if(wspEvent.iEventSize1 != wspEvent.iEventSize2)
-	{
-		return ENDOFDATA;
-	}
-
-	dwEventLength = wspEvent.iEventSize1 - dwEventHeaderSize;
+	dwEventLength = wspEvent.iEventSize - dwEventHeaderSize;
 
 	*pBytesRead = dwEventLength;
 	*pEventNum = wspEvent.iEventNum;

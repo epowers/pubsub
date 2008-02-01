@@ -106,7 +106,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                             continue;
                         }
 
-                        eventDictionary.TryGetValue(Guid.Empty, out eventCheck);
+                        eventDictionary.TryGetValue(eventType, out eventCheck);
 
                         if (eventCheck.Dictionary1 != null)
                         {
@@ -134,64 +134,10 @@ namespace Microsoft.WebSolutionsPlatform.Event
                                 }
                             }
                         }
-                        else
-                        {
-                            eventDictionary.TryGetValue(eventType, out eventCheck);
-
-                            if (eventCheck.Dictionary1 != null)
-                            {
-                                if (eventCheck.Dictionary1.Count > 0)
-                                {
-                                    QueueElement element = new QueueElement();
-
-                                    element.SerializedEvent = buffer;
-                                    element.SerializedLength = buffer.Length;
-                                    element.EventType = eventType;
-                                    element.OriginatingRouterName = originatingRouterName;
-                                    element.InRouterName = inRouterName;
-
-                                    for (i = 0; i < 10; i++)
-                                    {
-                                        try
-                                        {
-                                            forwarderQueue.Enqueue(element);
-                                            break;
-                                        }
-                                        catch (System.TimeoutException)
-                                        {
-                                            continue;
-                                        }
-                                    }
-                                }
-                            }
-                        }
 
                         if (Persister.persistEvents.ContainsKey(eventType) == true)
                         {
-                            QueueElement element = new QueueElement();
-
-                            element.SerializedEvent = buffer;
-                            element.SerializedLength = buffer.Length;
-                            element.EventType = eventType;
-                            element.OriginatingRouterName = originatingRouterName;
-                            element.InRouterName = inRouterName;
-
-                            for (i = 0; i < 10; i++)
-                            {
-                                try
-                                {
-                                    persisterQueue.Enqueue(element);
-                                    break;
-                                }
-                                catch (System.TimeoutException)
-                                {
-                                    continue;
-                                }
-                            }
-                        }
-                        else
-                        {
-                            if (Persister.persistAllEvents == true)
+                            if (Persister.persistEvents[eventType].InUse == true)
                             {
                                 QueueElement element = new QueueElement();
 

@@ -36,11 +36,59 @@ namespace Microsoft.WebSolutionsPlatform.Event
 			}
 		}
 
+        private long size = 0;
+        /// <summary>
+        /// Size in bytes of queue
+        /// </summary>
+        public long Size
+        {
+            get
+            {
+                return size;
+            }
+            internal set
+            {
+                size = value;
+            }
+        }
+
+        private bool inUse = true;
+        /// <summary>
+        /// Specifies if the queue object is or can be garbage collected
+        /// </summary>
+        public bool InUse
+        {
+            get
+            {
+                return inUse;
+            }
+            internal set
+            {
+                inUse = value;
+            }
+        }
+
+        private long lastUsedTick = DateTime.Now.Ticks;
+        /// <summary>
+        /// Specifies when the queue object quit being in use
+        /// </summary>
+        public long LastUsedTick
+        {
+            get
+            {
+                return lastUsedTick;
+            }
+            internal set
+            {
+                lastUsedTick = value;
+            }
+        }
+
 		/// <summary>
 		/// Adds an object to the end of the Generic Queue
 		/// </summary>
 		/// <param name="item">The object to add to the queue</param>
-		public new void Enqueue( T item )
+        public new void Enqueue(T item)
 		{
 			Enqueue(item, timeout);
 		}
@@ -59,6 +107,8 @@ namespace Microsoft.WebSolutionsPlatform.Event
                     base.Enqueue(item);
 
                     resetEvent.Set();
+
+                    this.size = this.size + ((QueueElement)((object)item)).SerializedLength + 40;
 
                     if (performanceCounter != null)
                         performanceCounter.RawValue = (long)this.Count;
@@ -100,6 +150,8 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                         if (performanceCounter != null)
                             performanceCounter.RawValue = (long)this.Count;
+
+                        this.size = this.size - ((QueueElement)((object)item)).SerializedLength + 40;
 
                         if (this.Count > 0)
                         {

@@ -5,6 +5,7 @@ typedef struct _SHAREDMEMORY
 	DWORD   dwNextReadOffset;	// Offset of next event entry to read
 	DWORD   dwNextWriteOffset;	// Offset of next event entry to write
 	UINT64	iLastEventNumWritten;		// Sequential number assigned to each event
+	UINT64	iLastEventNumRead;	// Last event read by the Listener
 	DWORD	iEventBufferSize;	// Size of the event buffer
 	BYTE	bEventBuffer;		// Buffer for storing events
 } SHAREDMEMORY, *PSHAREDMEMORY;
@@ -13,9 +14,8 @@ typedef struct _SHAREDMEMORY
 typedef struct _WSPEVENT
 {
 	BYTE	bReadyToRead;		// 0xFA if event is ready to be read
-	UINT32	iEventSize1;		// Size of the event
+	UINT32	iEventSize;		// Size of the event
 	UINT64	iEventNum;			// Number assigned to this event
-	UINT32	iEventSize2;		// Size of the event. THIS AND THE PREVIOUS MUST MATCH
 	BYTE	bEvent;				// Event data
 } WSPEVENT, *PWSPEVENT;
 

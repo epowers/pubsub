@@ -19,7 +19,7 @@ item: Global
   Patch Flags=0000000000000001
   Patch Threshold=85
   Patch Memory=4000
-  EXE Filename=\\msspades\drops\mpt\EventPubSubSystem\Latest\x86\Setup.exe
+  EXE Filename=%_BINARIES_%\Setup.exe
   FTP Cluster Size=20
   Variable Name1=_SYS_
   Variable Default1=C:\WINDOWS\system32
@@ -199,6 +199,16 @@ item: Set Variable
   Value=20000
   Flags=10000000
 end
+item: Set Variable
+  Variable=WSPOUTQSIZE
+  Value=102400000
+  Flags=10000000
+end
+item: Set Variable
+  Variable=WSPOUTQTIMEOUT
+  Value=600
+  Flags=10000000
+end
 item: Wizard Block
   Direction Variable=DIRECTION
   Display Variable=DISPLAY
@@ -239,8 +249,8 @@ item: Custom Dialog Set
     Title Portuguese=Instalação de %APPTITLE%
     Title Spanish=Instalación de %APPTITLE%
     Title Swedish=Installation av %APPTITLE%
-    Width=271
-    Height=224
+    Width=280
+    Height=280
     Font Name=Helv
     Font Size=8
     item: Static
@@ -262,7 +272,7 @@ item: Custom Dialog Set
       Text Swedish=Välkommen!
     end
     item: Push Button
-      Rectangle=150 187 195 202
+      Rectangle=151 231 196 246
       Variable=DIRECTION
       Value=N
       Create Flags=01010000000000010000000000000001
@@ -279,7 +289,7 @@ item: Custom Dialog Set
       Text Swedish= &Nästa >
     end
     item: Push Button
-      Rectangle=105 187 150 202
+      Rectangle=106 231 151 246
       Variable=DISABLED
       Value=!
       Create Flags=01010000000000010000000000000000
@@ -296,7 +306,7 @@ item: Custom Dialog Set
       Text Swedish=< &Föregående
     end
     item: Push Button
-      Rectangle=211 187 256 202
+      Rectangle=212 231 257 246
       Action=3
       Create Flags=01010000000000010000000000000000
       Text Danish=Annuller
@@ -349,7 +359,7 @@ item: Custom Dialog Set
       Text Swedish=Klicka på Nästa för att påbörja installationen eller klicka på Bakåt för att skriva om installationsinformationen.
     end
     item: Static
-      Rectangle=8 180 256 181
+      Rectangle=9 224 257 225
       Action=3
       Create Flags=01010000000000000000000000000111
     end
@@ -370,12 +380,12 @@ item: Custom Dialog Set
     Title Portuguese=Instalação de %APPTITLE%
     Title Spanish=Instalación de %APPTITLE%
     Title Swedish=Installation av %APPTITLE%
-    Width=272
-    Height=224
+    Width=280
+    Height=280
     Font Name=Helv
     Font Size=8
     item: Push Button
-      Rectangle=150 187 195 202
+      Rectangle=150 233 195 248
       Variable=DIRECTION
       Value=N
       Create Flags=01010000000000010000000000000001
@@ -392,7 +402,7 @@ item: Custom Dialog Set
       Text Swedish= &Nästa >
     end
     item: Push Button
-      Rectangle=105 187 150 202
+      Rectangle=105 233 150 248
       Variable=DIRECTION
       Value=B
       Create Flags=01010000000000010000000000000000
@@ -410,7 +420,7 @@ item: Custom Dialog Set
       Text Swedish=< &Föregående
     end
     item: Push Button
-      Rectangle=211 187 256 202
+      Rectangle=211 233 256 248
       Action=3
       Create Flags=01010000000000010000000000000000
       Text Danish=Annuller
@@ -426,7 +436,7 @@ item: Custom Dialog Set
       Text Swedish= Avbryt
     end
     item: Static
-      Rectangle=8 180 256 181
+      Rectangle=8 226 256 227
       Action=3
       Create Flags=01010000000000000000000000000111
     end
@@ -655,12 +665,12 @@ item: Custom Dialog Set
     Title Portuguese=Instalação de %APPTITLE%
     Title Spanish=Instalación de %APPTITLE%
     Title Swedish=Installation av %APPTITLE%
-    Width=271
-    Height=224
+    Width=280
+    Height=280
     Font Name=Helv
     Font Size=8
     item: Push Button
-      Rectangle=150 188 195 203
+      Rectangle=151 230 196 245
       Variable=DIRECTION
       Value=N
       Create Flags=01010000000000010000000000000001
@@ -677,7 +687,7 @@ item: Custom Dialog Set
       Text Swedish= &Nästa >
     end
     item: Push Button
-      Rectangle=102 188 147 203
+      Rectangle=103 230 148 245
       Variable=DIRECTION
       Value=B
       Create Flags=01010000000000010000000000000000
@@ -695,7 +705,7 @@ item: Custom Dialog Set
       Text Swedish=< &Föregående
     end
     item: Push Button
-      Rectangle=209 188 254 203
+      Rectangle=210 230 255 245
       Action=3
       Create Flags=01010000000000010000000000000000
       Text Danish=Annuller
@@ -711,7 +721,7 @@ item: Custom Dialog Set
       Text Swedish= Avbryt
     end
     item: Static
-      Rectangle=8 180 256 181
+      Rectangle=9 222 257 223
       Action=3
       Create Flags=01010000000000000000000000000111
     end
@@ -772,12 +782,12 @@ item: Custom Dialog Set
   Display Variable=DISPLAY
   item: Dialog
     Title English=WSP Router Settings
-    Width=301
-    Height=237
+    Width=280
+    Height=280
     Font Name=Helv
     Font Size=8
     item: Push Button
-      Rectangle=152 185 197 200
+      Rectangle=151 238 196 253
       Variable=DIRECTION
       Value=N
       Create Flags=01010000000000010000000000000001
@@ -794,7 +804,7 @@ item: Custom Dialog Set
       Text Swedish= &Nästa >
     end
     item: Push Button
-      Rectangle=104 185 149 200
+      Rectangle=103 238 148 253
       Variable=DIRECTION
       Value=B
       Create Flags=01010000000000010000000000000000
@@ -812,7 +822,7 @@ item: Custom Dialog Set
       Text Swedish=< &Föregående
     end
     item: Push Button
-      Rectangle=211 185 256 200
+      Rectangle=210 238 255 253
       Action=3
       Create Flags=01010000000000010000000000000000
       Text Danish=Annuller
@@ -828,7 +838,7 @@ item: Custom Dialog Set
       Text Swedish= Avbryt
     end
     item: Static
-      Rectangle=8 178 256 179
+      Rectangle=7 225 255 226
       Action=3
       Create Flags=01010000000000000000000000000111
     end
@@ -858,12 +868,12 @@ item: Custom Dialog Set
       Text English=%WSPQUEUESIZE%
     end
     item: Static
-      Rectangle=85 40 160 55
+      Rectangle=83 40 165 55
       Create Flags=01010000000000000000000000000000
-      Text English=Queue Size (bytes):
+      Text English=Shared Memory Size (bytes):
     end
     item: Static
-      Rectangle=85 61 160 76
+      Rectangle=83 61 158 76
       Create Flags=01010000000000000000000000000000
       Text English=Average Event Size (bytes):
     end
@@ -882,9 +892,9 @@ item: Custom Dialog Set
       Text English=%WSPRPORT%
     end
     item: Static
-      Rectangle=84 110 159 125
+      Rectangle=83 110 138 125
       Create Flags=01010000000000000000000000000000
-      Text English=Listen Port Number
+      Text English=Listen Port Number    (0 to not listen)
     end
     item: Editbox
       Rectangle=169 132 241 147
@@ -894,7 +904,7 @@ item: Custom Dialog Set
       Text English=%WSPRBUFFERSIZE%
     end
     item: Static
-      Rectangle=85 131 160 146
+      Rectangle=83 134 158 149
       Create Flags=01010000000000000000000000000000
       Text English=Buffer Size (bytes):
     end
@@ -906,7 +916,7 @@ item: Custom Dialog Set
       Text English=%WSPRTIMEOUT%
     end
     item: Static
-      Rectangle=85 152 160 167
+      Rectangle=83 152 158 167
       Create Flags=01010000000000000000000000000000
       Text English=Timeout (ms):
     end
@@ -918,9 +928,33 @@ item: Custom Dialog Set
       Text English=%WSPNIC%
     end
     item: Static
-      Rectangle=84 86 159 101
+      Rectangle=83 85 158 100
       Create Flags=01010000000000000000000000000000
       Text English=Listen IP Address         (Blank for default)
+    end
+    item: Static
+      Rectangle=83 174 161 193
+      Create Flags=01010000000000000000000000000000
+      Text English=Max Out Communication Queue Size (bytes)
+    end
+    item: Static
+      Rectangle=83 196 161 215
+      Create Flags=01010000000000000000000000000000
+      Text English=Max Out Communication Timeout (seconds)
+    end
+    item: Editbox
+      Rectangle=168 176 240 191
+      Variable=WSPOUTQSIZE
+      Help Context=16711681
+      Create Flags=01010000100000010000000000000000
+      Text English=%WSPOUTQSIZE%
+    end
+    item: Editbox
+      Rectangle=169 199 241 214
+      Variable=WSPOUTQTIMEOUT
+      Help Context=16711681
+      Create Flags=01010000100000010000000000000000
+      Text English=%WSPOUTQTIMEOUT%
     end
   end
 end
@@ -929,12 +963,12 @@ item: Custom Dialog Set
   Display Variable=DISPLAY
   item: Dialog
     Title English=WSP Parent Router
-    Width=278
-    Height=228
+    Width=280
+    Height=280
     Font Name=Helv
     Font Size=8
     item: Push Button
-      Rectangle=151 183 196 198
+      Rectangle=154 231 199 246
       Variable=DIRECTION
       Value=N
       Create Flags=01010000000000010000000000000001
@@ -951,7 +985,7 @@ item: Custom Dialog Set
       Text Swedish= &Nästa >
     end
     item: Push Button
-      Rectangle=103 183 148 198
+      Rectangle=106 231 151 246
       Variable=DIRECTION
       Value=B
       Create Flags=01010000000000010000000000000000
@@ -969,7 +1003,7 @@ item: Custom Dialog Set
       Text Swedish=< &Föregående
     end
     item: Push Button
-      Rectangle=210 183 255 198
+      Rectangle=213 231 258 246
       Action=3
       Create Flags=01010000000000010000000000000000
       Text Danish=Annuller
@@ -985,7 +1019,7 @@ item: Custom Dialog Set
       Text Swedish= Avbryt
     end
     item: Static
-      Rectangle=7 176 255 177
+      Rectangle=10 224 258 225
       Action=3
       Create Flags=01010000000000000000000000000111
     end
@@ -1077,12 +1111,12 @@ item: Custom Dialog Set
     Title Portuguese=Instalação de %APPTITLE%
     Title Spanish=Instalación de %APPTITLE%
     Title Swedish=Installation av %APPTITLE%
-    Width=271
-    Height=224
+    Width=280
+    Height=280
     Font Name=Helv
     Font Size=8
     item: Push Button
-      Rectangle=150 187 195 202
+      Rectangle=150 227 195 242
       Variable=DIRECTION
       Value=N
       Create Flags=01010000000000010000000000000001
@@ -1099,7 +1133,7 @@ item: Custom Dialog Set
       Text Swedish= &Nästa >
     end
     item: Push Button
-      Rectangle=105 187 150 202
+      Rectangle=105 227 150 242
       Variable=DIRECTION
       Value=B
       Create Flags=01010000000000010000000000000000
@@ -1116,7 +1150,7 @@ item: Custom Dialog Set
       Text Swedish=< &Föregående
     end
     item: Push Button
-      Rectangle=211 187 256 202
+      Rectangle=211 227 256 242
       Action=3
       Create Flags=01010000000000010000000000000000
       Text Danish=Annuller
@@ -1132,7 +1166,7 @@ item: Custom Dialog Set
       Text Swedish= Avbryt
     end
     item: Static
-      Rectangle=8 180 256 181
+      Rectangle=8 220 256 221
       Action=3
       Create Flags=01010000000000000000000000000111
     end
@@ -1406,6 +1440,10 @@ item: Insert Line into Text File
 end
 item: Insert Line into Text File
   Pathname=%MAINDIR%\WspEventRouter.exe.config
+  Line Number=0
+end
+item: Insert Line into Text File
+  Pathname=%MAINDIR%\WspEventRouter.exe.config
   New Text=  <eventRouterSettings>
   Line Number=0
 end
@@ -1426,7 +1464,49 @@ item: Insert Line into Text File
 end
 item: Insert Line into Text File
   Pathname=%MAINDIR%\WspEventRouter.exe.config
+  Line Number=0
+end
+item: Insert Line into Text File
+  Pathname=%MAINDIR%\WspEventRouter.exe.config
   New Text=    <localPublish eventQueueName="WspEventQueue" eventQueueSize="%WSPQUEUESIZE%" averageEventSize="%WSPAVEEVNTSIZE%"/>
+  Line Number=0
+end
+item: Insert Line into Text File
+  Pathname=%MAINDIR%\WspEventRouter.exe.config
+  Line Number=0
+end
+item: Insert Line into Text File
+  Pathname=%MAINDIR%\WspEventRouter.exe.config
+  New Text=    <!-- These settings control what should happen to an output queue when communications is lost to a parent or child.-->
+  Line Number=0
+end
+item: Insert Line into Text File
+  Pathname=%MAINDIR%\WspEventRouter.exe.config
+  New Text=    <!-- maxQueueSize is in bytes and maxTimeout is in seconds.-->
+  Line Number=0
+end
+item: Insert Line into Text File
+  Pathname=%MAINDIR%\WspEventRouter.exe.config
+  New Text=    <!-- When the maxQueueSize is reached or the maxTimeout is reached for a communication that has been lost, the queue is deleted.-->
+  Line Number=0
+end
+item: Insert Line into Text File
+  Pathname=%MAINDIR%\WspEventRouter.exe.config
+  New Text=    <outputCommunicationQueues maxQueueSize="%WSPOUTQSIZE%" maxTimeout="%WSPOUTQTIMEOUT%"/>
+  Line Number=0
+end
+item: Insert Line into Text File
+  Pathname=%MAINDIR%\WspEventRouter.exe.config
+  Line Number=0
+end
+item: Insert Line into Text File
+  Pathname=%MAINDIR%\WspEventRouter.exe.config
+  New Text=    <!-- nic can be an alias which specifies a specific IP address or an IP address. -->
+  Line Number=0
+end
+item: Insert Line into Text File
+  Pathname=%MAINDIR%\WspEventRouter.exe.config
+  New Text=    <!-- port can be 0 if you don't want to have the router open a listening port to be a parent to other routers. -->
   Line Number=0
 end
 item: Insert Line into Text File
@@ -1465,12 +1545,59 @@ item: Insert Line into Text File
 end
 item: Insert Line into Text File
   Pathname=%MAINDIR%\WspEventRouter.exe.config
-  New Text=    <!-- <event type="*" localOnly="false" fieldTerminator="," rowTerminator="\n" tempFileDirectory="c:\temp\AllEvents\" copyToFileDirectory="c:\temp\AllEvents\log\" />  -->
   Line Number=0
 end
 item: Insert Line into Text File
   Pathname=%MAINDIR%\WspEventRouter.exe.config
-  New Text=    <!-- <event type="78422526-7B21-4559-8B9A-BC551B46AE34" localOnly="false" fieldTerminator="," rowTerminator="\n" tempFileDirectory="c:\temp\WebEvents\" copyToFileDirectory="c:\temp\WebEvents\log\" /> -->
+  New Text=    <!-- type specifies the EventType to be persisted.-->
+  Line Number=0
+end
+item: Insert Line into Text File
+  Pathname=%MAINDIR%\WspEventRouter.exe.config
+  New Text=    <!-- localOnly is a boolean which specifies whether only events published on this machine are persisted or if events from the entire network are persisted.-->
+  Line Number=0
+end
+item: Insert Line into Text File
+  Pathname=%MAINDIR%\WspEventRouter.exe.config
+  New Text=    <!-- maxFileSize specifies the maximum size in bytes that the persisted file should be before it is copied.-->
+  Line Number=0
+end
+item: Insert Line into Text File
+  Pathname=%MAINDIR%\WspEventRouter.exe.config
+  New Text=    <!-- maxCopyInterval specifies in seconds the longest time interval before the persisted file is copied.-->
+  Line Number=0
+end
+item: Insert Line into Text File
+  Pathname=%MAINDIR%\WspEventRouter.exe.config
+  New Text=    <!-- fieldTerminator specifies the character used between fields.-->
+  Line Number=0
+end
+item: Insert Line into Text File
+  Pathname=%MAINDIR%\WspEventRouter.exe.config
+  New Text=    <!-- rowTerminator specifies the character used at the end of each row written.-->
+  Line Number=0
+end
+item: Insert Line into Text File
+  Pathname=%MAINDIR%\WspEventRouter.exe.config
+  New Text=    <!-- tempFileDirectory is the local directory used for writing out the persisted event data.-->
+  Line Number=0
+end
+item: Insert Line into Text File
+  Pathname=%MAINDIR%\WspEventRouter.exe.config
+  New Text=    <!-- copyToFileDirectory is the final destination of the persisted data file. It can be local or remote using a UNC.-->
+  Line Number=0
+end
+item: Insert Line into Text File
+  Pathname=%MAINDIR%\WspEventRouter.exe.config
+  Line Number=0
+end
+item: Insert Line into Text File
+  Pathname=%MAINDIR%\WspEventRouter.exe.config
+  New Text=    <!-- <event type="78422526-7B21-4559-8B9A-BC551B46AE34" localOnly="true" maxFileSize="2000000000" maxCopyInterval="60" fieldTerminator="," rowTerminator="\n" tempFileDirectory="c:\temp\WebEvents\" copyToFileDirectory="c:\temp\WebEvents\log\" /> -->
+  Line Number=0
+end
+item: Insert Line into Text File
+  Pathname=%MAINDIR%\WspEventRouter.exe.config
   Line Number=0
 end
 item: Insert Line into Text File

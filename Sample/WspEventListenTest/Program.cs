@@ -64,13 +64,14 @@ namespace WspEventListenTest
         {
             int input;
             char ch;
+            WebpageEvent webPageEvent = new WebpageEvent();
 
             try
             {
                 subCallback = new SubscriptionManager.Callback(SubscriptionCallback);
 
                 subMgr = new SubscriptionManager(subCallback);
-                subMgr.AddSubscription(Guid.Empty, false);
+                subMgr.AddSubscription(webPageEvent.EventType, true);
 
                 while (true)
                 {
@@ -90,7 +91,7 @@ namespace WspEventListenTest
             }
             finally
             {
-                subMgr.RemoveSubscription(Guid.Empty);
+                subMgr.RemoveSubscription(webPageEvent.EventType);
 
                 subMgr.ListenForEvents = false;
 

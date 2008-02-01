@@ -139,6 +139,9 @@ namespace Microsoft.WebSolutionsPlatform.Event
 		internal static int thisBufferSize;
 		internal static int thisTimeout; //Timeout in milliseconds (1000 = 1 second)
 
+        internal static int thisOutQueueMaxSize = 102400000; // in bytes
+        internal static int thisOutQueueMaxTimeout = 600; // in seconds
+
         private static string localRouterName = string.Empty;
 		internal static string LocalRouterName
 		{

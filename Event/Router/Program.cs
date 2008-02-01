@@ -14,9 +14,9 @@ namespace Microsoft.WebSolutionsPlatform.Event
 		{
             // ksh Un-comment the following lines to start manually
 
-			// Router eventsvc = new Router();
-			// eventsvc.Start();
-			// return;
+            // Router eventsvc = new Router();
+            // eventsvc.Start();
+            // return;
 
 			ServiceBase[] ServicesToRun;
 

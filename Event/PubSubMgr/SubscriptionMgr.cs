@@ -62,8 +62,6 @@ namespace Microsoft.WebSolutionsPlatform.Event.PubSubManager
         /// <param name="serializedEvent">The serialized version of the event.</param>
         public delegate void Callback(Guid eventType, byte[] serializedEvent);
 
-        private bool subscribeAll;
-
         private bool listenForEvents;
         /// <summary>
         /// Starts and stops listening for events
@@ -76,9 +74,9 @@ namespace Microsoft.WebSolutionsPlatform.Event.PubSubManager
             }
             set
             {
-                if (value == true)
+                if(value == true)
                 {
-                    if (listenForEvents == false)
+                    if(listenForEvents == false)
                     {
                         StartListening();
                     }
@@ -210,7 +208,7 @@ namespace Microsoft.WebSolutionsPlatform.Event.PubSubManager
         /// Dispose for SubscriptionManager
         /// </summary>
         /// <param name="disposing">True if disposing.</param>
-        protected virtual void Dispose(bool disposing)
+        protected virtual void Dispose(bool disposing) 
         {
             if (!disposed)
             {
@@ -273,11 +271,6 @@ namespace Microsoft.WebSolutionsPlatform.Event.PubSubManager
         /// <param name="localOnly">Specifies if subscription is only for local machine or global</param>
         public void AddSubscription(Guid eventType, bool localOnly)
         {
-            if (eventType == Guid.Empty)
-            {
-                subscribeAll = true;
-            }
-
             Subscription subscription = new Subscription();
             subscription.SubscriptionEventType = eventType;
             subscription.SubscriptionId = Guid.NewGuid();
@@ -297,11 +290,6 @@ namespace Microsoft.WebSolutionsPlatform.Event.PubSubManager
         public bool RemoveSubscription(Guid eventType)
         {
             Subscription subscription = null;
-
-            if (eventType == Guid.Empty)
-            {
-                subscribeAll = false;
-            }
 
             if (subscriptions.TryGetValue(eventType, out subscription) == true)
             {
@@ -375,7 +363,7 @@ namespace Microsoft.WebSolutionsPlatform.Event.PubSubManager
 
                 localRouterName = Dns.GetHostName();
 
-                while (true)
+                while(true)
                 {
                     buffer = eventQueue.Dequeue(Timeout);
 
@@ -402,30 +390,17 @@ namespace Microsoft.WebSolutionsPlatform.Event.PubSubManager
                             eventType = new Guid(prefixStream.prefixReader.ReadString());
                         }
 
-                        if (subscribeAll == true)
+                        if (subscriptions.TryGetValue(eventType, out subscription) == true)
                         {
-                            StateInfo stateInfo = new StateInfo();
-
-                            stateInfo.callBack = callbackMethod;
-                            stateInfo.eventType = eventType;
-                            stateInfo.serializedEvent = buffer;
-
-                            ThreadPool.QueueUserWorkItem(new WaitCallback(CallSubscriptionCallback), stateInfo);
-                        }
-                        else
-                        {
-                            if (subscriptions.TryGetValue(eventType, out subscription) == true)
+                            if (subscription.LocalOnly == false || localRouterName == originatingRouterName)
                             {
-                                if (subscription.LocalOnly == false || localRouterName == originatingRouterName)
-                                {
-                                    StateInfo stateInfo = new StateInfo();
+                                StateInfo stateInfo = new StateInfo();
 
-                                    stateInfo.callBack = callbackMethod;
-                                    stateInfo.eventType = eventType;
-                                    stateInfo.serializedEvent = buffer;
+                                stateInfo.callBack = callbackMethod;
+                                stateInfo.eventType = eventType;
+                                stateInfo.serializedEvent = buffer;
 
-                                    ThreadPool.QueueUserWorkItem(new WaitCallback(CallSubscriptionCallback), stateInfo);
-                                }
+                                ThreadPool.QueueUserWorkItem(new WaitCallback(CallSubscriptionCallback), stateInfo);
                             }
                         }
                     }
@@ -449,7 +424,7 @@ namespace Microsoft.WebSolutionsPlatform.Event.PubSubManager
                     }
                 }
             }
-            catch (ThreadAbortException)
+            catch(ThreadAbortException)
             {
                 // Another thread has signalled that this worker
                 // thread must terminate.  Typically, this occurs when

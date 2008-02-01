@@ -70,7 +70,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
     /// Base class for events. All events must inherit from this class.
     /// </summary>
     abstract public class Event : IDisposable
-    {
+	{
         private bool disposed;
 
         private static string baseVersion = @"1.0.0.0";
@@ -137,66 +137,66 @@ namespace Microsoft.WebSolutionsPlatform.Event
         }
 
         private Guid eventType;
-        /// <summary>
-        /// Type of the event
-        /// </summary>
+		/// <summary>
+		/// Type of the event
+		/// </summary>
         public Guid EventType
-        {
-            get
-            {
-                return eventType;
-            }
+		{
+			get
+			{
+				return eventType;
+			}
 
-            set
-            {
-                eventType = value;
-            }
-        }
+			set
+			{
+				eventType = value;
+			}
+		}
 
-        private Version eventVersion;
-        /// <summary>
-        /// Version of the event
-        /// </summary>
-        public Version EventVersion
-        {
-            get
-            {
-                return eventVersion;
-            }
+		private Version eventVersion;
+		/// <summary>
+		/// Version of the event
+		/// </summary>
+		public Version EventVersion
+		{
+			get
+			{
+				return eventVersion;
+			}
 
-            set
-            {
-                eventVersion = value;
-            }
-        }
+			set
+			{
+				eventVersion = value;
+			}
+		}
 
-        private string eventName;
-        /// <summary>
-        /// Friendly name of the event
-        /// </summary>
-        public string EventName
-        {
-            get
-            {
-                return eventName;
-            }
+		private string eventName;
+		/// <summary>
+		/// Friendly name of the event
+		/// </summary>
+		public string EventName
+		{
+			get
+			{
+				return eventName;
+			}
 
-            set
-            {
-                eventName = value;
-            }
-        }
+			set
+			{
+				eventName = value;
+			}
+		}
 
-        private long eventTime;
-        /// <summary>
-        /// UTC time in ticks of when the event is published
-        /// </summary>
-        public long EventTime
-        {
-            get
-            {
-                return eventTime;
-            }
+		private long eventTime;
+		/// <summary>
+		/// UTC time in ticks of when the event is published
+		/// </summary>
+		public long EventTime
+		{
+			get
+			{
+				return eventTime;
+			}
 
             set
             {
@@ -204,33 +204,33 @@ namespace Microsoft.WebSolutionsPlatform.Event
             }
         }
 
-        private string eventPublisher;
-        /// <summary>
-        /// Friendly name of the event
-        /// </summary>
-        public string EventPublisher
-        {
-            get
-            {
-                return eventPublisher;
-            }
+		private string eventPublisher;
+		/// <summary>
+		/// Friendly name of the event
+		/// </summary>
+		public string EventPublisher
+		{
+			get
+			{
+				return eventPublisher;
+			}
 
-            set
-            {
-                eventPublisher = value;
-            }
-        }
+			set
+			{
+				eventPublisher = value;
+			}
+		}
 
-        private SerializationData serializedEvent;
-        /// <summary>
-        /// Serialized version of the event
-        /// </summary>
-        public SerializationData SerializedEvent
-        {
-            get
-            {
-                return serializedEvent;
-            }
+		private SerializationData serializedEvent;
+		/// <summary>
+		/// Serialized version of the event
+		/// </summary>
+		public SerializationData SerializedEvent
+		{
+			get
+			{
+				return serializedEvent;
+			}
 
             set
             {
@@ -238,44 +238,44 @@ namespace Microsoft.WebSolutionsPlatform.Event
             }
         }
 
-        /// <summary>
-        /// Base constructor to create a new event
-        /// </summary>
+		/// <summary>
+		/// Base constructor to create a new event
+		/// </summary>
         public Event()
-        {
+		{
             InitializeEvent();
-        }
+		}
 
-        /// <summary>
-        /// Base contructor to re-instantiate an existing event
-        /// </summary>
+		/// <summary>
+		/// Base contructor to re-instantiate an existing event
+		/// </summary>
         /// <param name="serializationData">Serialized event data</param>
         public Event(byte[] serializationData)
-        {
+		{
             InitializeEvent();
 
             Deserialize(serializationData);
-        }
+		}
 
-        /// <summary>
-        /// Initializes a new event object
-        /// </summary>
+		/// <summary>
+		/// Initializes a new event object
+		/// </summary>
         private void InitializeEvent()
-        {
+		{
             eventType = Guid.Empty;
-            eventVersion = new Version(baseVersion);
-            eventName = string.Empty;
-            eventTime = 0;
+			eventVersion = new Version(baseVersion);
+			eventName = string.Empty;
+			eventTime = 0;
 
-            serializedEvent = new SerializationData();
-        }
+			serializedEvent = new SerializationData();
+		}
 
-        /// <summary>
-        /// Serializes the event and puts it in the SerializedEvent property
-        /// </summary>
+		/// <summary>
+		/// Serializes the event and puts it in the SerializedEvent property
+		/// </summary>
         /// <returns>Serialized version of the event</returns>
-        public byte[] Serialize()
-        {
+		public byte[] Serialize()
+		{
             serializedEvent.ResetStream();
 
             serializedEvent.WriteMode = true;
@@ -283,32 +283,32 @@ namespace Microsoft.WebSolutionsPlatform.Event
             this.eventTime = DateTime.UtcNow.Ticks;
 
             GetObjectDataBase(serializedEvent);
-            GetObjectData(serializedEvent);
+			GetObjectData(serializedEvent);
 
-            serializedEvent.ReadMode = true;
+			serializedEvent.ReadMode = true;
 
             return serializedEvent.ToBytes();
-        }
+		}
 
-        /// <summary>
-        /// Deserializes the event
-        /// </summary>
-        public virtual void Deserialize(byte[] serializationData)
-        {
-            PropertyInfo prop;
+		/// <summary>
+		/// Deserializes the event
+		/// </summary>
+		public virtual void Deserialize( byte[] serializationData )
+		{
+			PropertyInfo prop;
             bool inDictionary = false;
             object dictionary = 0;
             int dictionaryCount = 0;
             object dictionaryKey = 0;
 
-            serializedEvent = new SerializationData(serializationData);
+			serializedEvent = new SerializationData(serializationData);
 
             originatingRouterName = serializedEvent.GetOriginatingRouterName();
             inRouterName = serializedEvent.GetInRouterName();
             eventType = serializedEvent.GetEventType();
 
             foreach (WspKeyValuePair<string, object> kv in serializedEvent)
-            {
+			{
                 if (inDictionary == false)
                 {
                     prop = this.GetType().GetProperty(kv.Key, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
@@ -349,44 +349,44 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         }
                     }
                 }
-            }
-        }
+			}
+		}
 
-        /// <summary>
-        /// Used for event serialization.
-        /// </summary>
-        /// <param name="data">SerializationData object passed to store serialized object</param>
-        private void GetObjectDataBase(SerializationData data)
-        {
-            data.AddPrefix(OriginatingRouterName);
+		/// <summary>
+		/// Used for event serialization.
+		/// </summary>
+		/// <param name="data">SerializationData object passed to store serialized object</param>
+		private void GetObjectDataBase( SerializationData data )
+		{
+			data.AddPrefix(OriginatingRouterName);
             data.AddPrefix(InRouterName);
             data.AddPrefix(EventType);
-            data.AddElement(@"EventBaseVersion", baseVersion);
-            data.AddElement(@"EventType", eventType);
-            data.AddElement(@"EventVersion", eventVersion);
-            data.AddElement(@"EventName", eventName);
-            data.AddElement(@"EventTime", eventTime);
-            data.AddElement(@"EventPublisher", System.AppDomain.CurrentDomain.FriendlyName);
-        }
+			data.AddElement(@"EventBaseVersion", baseVersion);
+			data.AddElement(@"EventType", eventType);
+			data.AddElement(@"EventVersion", eventVersion);
+			data.AddElement(@"EventName", eventName);
+			data.AddElement(@"EventTime", eventTime);
+			data.AddElement(@"EventPublisher", System.AppDomain.CurrentDomain.FriendlyName);
+		}
 
-        /// <summary>
-        /// Used for event serialization.
-        /// </summary>
-        /// <param name="data">SerializationData object passed to store serialized object</param>
-        abstract public void GetObjectData(SerializationData data);
+		/// <summary>
+		/// Used for event serialization.
+		/// </summary>
+		/// <param name="data">SerializationData object passed to store serialized object</param>
+		abstract public void GetObjectData( SerializationData data );
 
-        /// <summary>
-        /// Disposes of the object.
-        /// </summary>
-        public void Dispose()
-        {
+		/// <summary>
+		/// Disposes of the object.
+		/// </summary>
+		public void Dispose()
+		{
             Dispose(true);
         }
 
         /// <summary>
         /// Disposes of the object.
         /// </summary>
-        protected virtual void Dispose(bool disposing)
+        protected virtual void Dispose(bool disposing) 
         {
             if (!disposed)
             {
@@ -411,5 +411,5 @@ namespace Microsoft.WebSolutionsPlatform.Event
         {
             Dispose(false);
         }
-    }
+	}
 }
