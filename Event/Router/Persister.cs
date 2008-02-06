@@ -55,7 +55,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
             internal static long lastConfigFileTick;
             internal static long nextConfigFileCheckTick = 0;
 
-            internal static PublishManager  pubMgr = null;
+            internal static PublishManager pubMgr = null;
 
             internal static Dictionary<Guid, PersistEventInfo> persistEvents = new Dictionary<Guid, PersistEventInfo>();
 
@@ -114,7 +114,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                             {
                                 nextCopyTick = 0;
 
-                                foreach(PersistEventInfo eInfo in persistEvents.Values)
+                                foreach (PersistEventInfo eInfo in persistEvents.Values)
                                 {
                                     eInfo.Loaded = false;
                                 }
@@ -164,13 +164,13 @@ namespace Microsoft.WebSolutionsPlatform.Event
                                 {
                                     persistEventInfo.NextCopyTick = currentTick + persistEventInfo.CopyIntervalTicks;
 
-                                    if (persistEventInfo.OutFileName != null)
+                                    if (persistEventInfo.OutStream != null)
                                     {
                                         persistEventInfo.OutStream.Close();
 
                                         SendPersistEvent(PersistFileState.Close, persistEventInfo, persistEventInfo.OutFileName);
 
-                                        persistEventInfo.OutFileName = null;
+                                        persistEventInfo.OutStream = null;
                                     }
 
                                     if (persistEventInfo.InUse == true)
@@ -347,7 +347,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                             {
                                 listFileInfo = new FileInfo(files[i]);
 
-                                if (string.Compare(currentFileInfo.Name, listFileInfo.Name, true) != 0)
+                                if (eventInfo.InUse == false || string.Compare(currentFileInfo.Name, listFileInfo.Name, true) != 0)
                                 {
                                     try
                                     {
