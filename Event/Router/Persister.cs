@@ -24,18 +24,45 @@ namespace Microsoft.WebSolutionsPlatform.Event
         {
             internal bool InUse;
             internal bool Loaded;
-            internal Guid PersistEventType;
             internal string CopyToFileDirectory;
             internal string TempFileDirectory;
             internal long MaxFileSize;
             internal long CopyIntervalTicks;
             internal long NextCopyTick;
-            internal bool LocalOnly;
             internal string OutFileName;
             internal StreamWriter OutStream;
             internal string FieldTerminator;
             internal string RowTerminator;
             internal string HeaderRow;
+            internal Subscription subscription;
+
+            internal Guid persistEventType;
+            internal Guid PersistEventType
+            {
+                get
+                {
+                    return persistEventType;
+                }
+                set
+                {
+                    persistEventType = value;
+                    subscription.SubscriptionEventType = value;
+                }
+            }
+
+            internal bool localOnly;
+            internal bool LocalOnly
+            {
+                get
+                {
+                    return localOnly;
+                }
+                set
+                {
+                    localOnly = value;
+                    subscription.LocalOnly = value;
+                }
+            }
 
             internal PersistEventInfo()
             {
@@ -44,6 +71,10 @@ namespace Microsoft.WebSolutionsPlatform.Event
                 HeaderRow = null;
                 CopyIntervalTicks = 600000000;
                 MaxFileSize = long.MaxValue - 1;
+
+                subscription = new Subscription();
+                subscription.SubscriptionId = Guid.NewGuid();
+                subscription.Subscribe = true;
             }
         }
 
@@ -127,10 +158,22 @@ namespace Microsoft.WebSolutionsPlatform.Event
                                     {
                                         eInfo.InUse = false;
                                         eInfo.NextCopyTick = currentTick - 1;
+
+                                        eInfo.subscription.Subscribe = false;
+                                        pubMgr.Publish(eInfo.subscription.Serialize());
                                     }
                                 }
 
                                 lastConfigFileTick = fileTick;
+                            }
+
+                            foreach (PersistEventInfo eInfo in persistEvents.Values)
+                            {
+                                if (eInfo.InUse == true)
+                                {
+                                    eInfo.subscription.Subscribe = true;
+                                    pubMgr.Publish(eInfo.subscription.Serialize());
+                                }
                             }
                         }
 
