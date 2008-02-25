@@ -82,51 +82,45 @@ namespace Microsoft.WebSolutionsPlatform.Event
                             distributeThread.Start();
                         }
 
-                        if (Router.parentRoute != null && 
-                            (abortParentIn == true || 
-                            parentInConnection == null || 
-                            parentInConnection.ThreadState == System.Threading.ThreadState.Stopped))
+                        lock (threadQueuesLock)
                         {
-                            if (parentInConnection != null)
+                            if (Router.parentRoute != null &&
+                                (abortParentIn == true ||
+                                parentInConnection == null ||
+                                parentInConnection.ThreadState == System.Threading.ThreadState.Stopped))
                             {
-                                lock (receiveThreads)
+                                if (parentInConnection != null)
                                 {
                                     parentInConnection.Abort();
 
                                     receiveThreads.Remove(Router.parentRoute.RouterName);
                                 }
+
+                                abortParentIn = false;
+
+                                parentInConnection = new Thread(new ThreadStart(new CommunicationHandler(null).ParentInStart));
+
+                                parentInConnection.Start();
                             }
 
-                            abortParentIn = false;
-
-                            parentInConnection = new Thread(new ThreadStart(new CommunicationHandler(null).ParentInStart));
-
-                            parentInConnection.Start();
-                        }
-
-                        if (Router.parentRoute != null && 
-                            (abortParentOut == true || 
-                            parentOutConnection == null || 
-                            parentOutConnection.ThreadState == System.Threading.ThreadState.Stopped))
-                        {
-                            if (parentOutConnection != null)
+                            if (Router.parentRoute != null &&
+                                (abortParentOut == true ||
+                                parentOutConnection == null ||
+                                parentOutConnection.ThreadState == System.Threading.ThreadState.Stopped))
                             {
-                                lock (forwardThreads)
+                                if (parentOutConnection != null)
                                 {
                                     forwardThreads[Router.parentRoute.RouterName] = parentOutConnection;
                                 }
+
+                                abortParentOut = false;
+
+                                parentOutConnection = new Thread(new ThreadStart(new CommunicationHandler(null).ParentOutStart));
+
+                                parentOutConnection.Start();
                             }
 
-                            abortParentOut = false;
-
-                            parentOutConnection = new Thread(new ThreadStart(new CommunicationHandler(null).ParentOutStart));
-
-                            parentOutConnection.Start();
-                        }
-
-                        lock (receiveThreads)
-                        {
-                            foreach(string routerName in receiveThreads.Keys)
+                            foreach (string routerName in receiveThreads.Keys)
                             {
                                 if (receiveThreads[routerName].ThreadState == System.Threading.ThreadState.Stopped)
                                 {
@@ -145,10 +139,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                                 removeItems.Clear();
                             }
-                        }
 
-                        lock (forwardThreads)
-                        {
                             foreach (string routerName in forwardThreads.Keys)
                             {
                                 if (forwardThreads[routerName].ThreadState == System.Threading.ThreadState.Stopped)
@@ -168,35 +159,32 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                                 removeItems.Clear();
                             }
-                        }
 
-                        if (deadThreadQueues.Count > 0)
-                        {
-                            currentTickTimeout = DateTime.Now.Ticks - (((long)thisOutQueueMaxTimeout) * 10000000);
-
-                            lock (deadThreadQueuesLock)
+                            if (deadThreadQueues.Count > 0)
                             {
-                                removeItems.Clear();
+                                currentTickTimeout = DateTime.Now.Ticks - (((long)thisOutQueueMaxTimeout) * 10000000);
 
-                                foreach (string threadQueueName in deadThreadQueues)
+                                lock (deadThreadQueuesLock)
                                 {
-                                    try
+                                    removeItems.Clear();
+
+                                    foreach (string threadQueueName in deadThreadQueues)
                                     {
-                                        if (threadQueues[threadQueueName].LastUsedTick < currentTickTimeout ||
-                                            threadQueues[threadQueueName].Size > thisOutQueueMaxSize)
+                                        try
+                                        {
+                                            if (threadQueues[threadQueueName].LastUsedTick < currentTickTimeout ||
+                                                threadQueues[threadQueueName].Size > thisOutQueueMaxSize)
+                                            {
+                                                removeItems.Add(threadQueueName);
+                                            }
+                                        }
+                                        catch
                                         {
                                             removeItems.Add(threadQueueName);
                                         }
                                     }
-                                    catch
-                                    {
-                                        removeItems.Add(threadQueueName);
-                                    }
-                                }
 
-                                if (removeItems.Count > 0)
-                                {
-                                    lock (threadQueuesLock)
+                                    if (removeItems.Count > 0)
                                     {
                                         for (i = 0; i < removeItems.Count; i++)
                                         {
@@ -215,9 +203,9 @@ namespace Microsoft.WebSolutionsPlatform.Event
                                                 deadThreadQueues.Remove(removeItems[i]);
                                             }
                                         }
-                                    }
 
-                                    removeItems.Clear();
+                                        removeItems.Clear();
+                                    }
                                 }
                             }
                         }
@@ -408,7 +396,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                 {
                     clientRouterName = Router.parentRoute.RouterName;
 
-                    lock (Communicator.receiveThreads)
+                    lock (Communicator.threadQueuesLock)
                     {
                         Communicator.receiveThreads[clientRouterName] = Thread.CurrentThread;
                     }
@@ -481,7 +469,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                 {
                     clientRouterName = Router.parentRoute.RouterName;
 
-                    lock (Communicator.forwardThreads)
+                    lock (Communicator.threadQueuesLock)
                     {
                         Communicator.forwardThreads[clientRouterName] = Thread.CurrentThread;
 
@@ -496,10 +484,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                             threadQueue = new SynchronizationQueue<QueueElement>(threadQueueCounter);
 
-                            lock (Communicator.threadQueuesLock)
-                            {
-                                Communicator.threadQueues[clientRouterName] = threadQueue;
-                            }
+                            Communicator.threadQueues[clientRouterName] = threadQueue;
                         }
                     }
 
@@ -623,7 +608,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                     if (msgInHandler == true)
                     {
-                        lock (Communicator.receiveThreads)
+                        lock (Communicator.threadQueuesLock)
                         {
                             Communicator.receiveThreads[clientRouterName] = Thread.CurrentThread;
                         }
@@ -632,7 +617,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                     }
                     else
                     {
-                        lock (Communicator.forwardThreads)
+                        lock (Communicator.threadQueuesLock)
                         {
                             Communicator.forwardThreads[clientRouterName] = Thread.CurrentThread;
 
@@ -647,10 +632,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                                 threadQueue = new SynchronizationQueue<QueueElement>(threadQueueCounter);
 
-                                lock (Communicator.threadQueuesLock)
-                                {
-                                    Communicator.threadQueues[clientRouterName] = threadQueue;
-                                }
+                                Communicator.threadQueues[clientRouterName] = threadQueue;
                             }
                         }
 
