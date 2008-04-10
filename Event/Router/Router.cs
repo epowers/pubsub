@@ -332,15 +332,24 @@ namespace Microsoft.WebSolutionsPlatform.Event
         /// </summary>
 		protected override void OnStop()
 		{
-            Thread workerThread = workerThreads[manager.GetType()];
+            Thread[] threads = new Thread[workerThreads.Count];
+            Thread managerThread = workerThreads[manager.GetType()];
 
-			if((workerThread != null) && (workerThread.IsAlive))
-			{
-				workerThread.Abort();
+            workerThreads.Values.CopyTo(threads, 0);
 
-				workerThread.Join(60000);
-			}
-		}
+            if ((managerThread != null) && (managerThread.IsAlive))
+            {
+                managerThread.Abort();
+            }
+
+            foreach (Thread thread in threads)
+            {
+                if (thread != null && thread.IsAlive == true)
+                {
+                    thread.Abort();
+                }
+            }
+        }
 
 		/// <summary>
 		/// Adds a Route to the routing table

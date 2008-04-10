@@ -64,11 +64,6 @@ item: Parse String
   Pattern=:
   Variable1=SYSDRIVE
 end
-item: Set Variable
-  Variable=MAINDIR
-  Value=Microsoft\WspEventSystem
-  Flags=10000000
-end
 item: Check Configuration
   Flags=10111011
 end
@@ -88,8 +83,8 @@ item: Get Registry Key Value
 end
 item: Set Variable
   Variable=MAINDIR
-  Value=%PROGRAM_FILES%\%MAINDIR%
-  Flags=00001100
+  Value=%PROGRAM_FILES%\Microsoft\WspEventSystem
+  Flags=10001100
 end
 item: Set Variable
   Variable=EXPLORER
@@ -99,8 +94,8 @@ item: Else Statement
 end
 item: Set Variable
   Variable=MAINDIR
-  Value=%SYSDRIVE%:\%MAINDIR%
-  Flags=00001100
+  Value=%SYSDRIVE%:\Microsoft\WspEventSystem
+  Flags=10001100
 end
 item: End Block
 end

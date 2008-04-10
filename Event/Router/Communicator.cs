@@ -29,7 +29,6 @@ namespace Microsoft.WebSolutionsPlatform.Event
             internal static Thread distributeThread;
 
             internal static object threadQueuesLock = new object();
-            internal static object deadThreadQueuesLock = new object();
 
             internal static Dictionary<string, Thread> receiveThreads = new Dictionary<string, Thread>();
             internal static Dictionary<string, Thread> forwardThreads = new Dictionary<string, Thread>();
@@ -110,7 +109,9 @@ namespace Microsoft.WebSolutionsPlatform.Event
                             {
                                 if (parentOutConnection != null)
                                 {
-                                    forwardThreads[Router.parentRoute.RouterName] = parentOutConnection;
+                                    parentOutConnection.Abort();
+
+                                    forwardThreads.Remove(Router.parentRoute.RouterName);
                                 }
 
                                 abortParentOut = false;
@@ -164,7 +165,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                             {
                                 currentTickTimeout = DateTime.Now.Ticks - (((long)thisOutQueueMaxTimeout) * 10000000);
 
-                                lock (deadThreadQueuesLock)
+                                lock (threadQueuesLock)
                                 {
                                     removeItems.Clear();
 
@@ -215,7 +216,10 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                     catch (ThreadAbortException)
                     {
-                        return;
+                        // Another thread has signalled that this worker
+                        // thread must terminate.  Typically, this occurs when
+                        // the main service thread receives a service stop 
+                        // command.
                     }
 
                     catch (Exception e)
@@ -467,61 +471,58 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                 try
                 {
-                    clientRouterName = Router.parentRoute.RouterName;
-
-                    lock (Communicator.threadQueuesLock)
-                    {
-                        Communicator.forwardThreads[clientRouterName] = Thread.CurrentThread;
-
-                        if (Communicator.threadQueues.ContainsKey(clientRouterName) == true)
-                        {
-                            threadQueue = Communicator.threadQueues[clientRouterName];
-                        }
-                        else
-                        {
-                            threadQueueCounter = new PerformanceCounter(communicationCategoryName,
-                                forwarderQueueSizeName, clientRouterName, false);
-
-                            threadQueue = new SynchronizationQueue<QueueElement>(threadQueueCounter);
-
-                            Communicator.threadQueues[clientRouterName] = threadQueue;
-                        }
-                    }
-
-                    client = ConnectSocket(Router.parentRoute.RouterName, Router.parentRoute.Port);
-
-                    if (client == null)
-                    {
-                        return;
-                    }
-
-                    client.NoDelay = true;
-                    client.ReceiveTimeout = Router.parentRoute.Timeout;
-                    client.SendTimeout = Router.parentRoute.Timeout;
-
-                    client.IOControl(IOControlCode.KeepAliveValues, inOptionValues, null);
-                    client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
-
-                    preamble = new byte[routerNameEncoded.Length + 5];
-                    Buffer.BlockCopy(BitConverter.GetBytes((Int32)preamble.Length), 0, preamble, 0, 4);
-                    preamble[4] = 1;
-                    Buffer.BlockCopy(routerNameEncoded, 0, preamble, 5, routerNameEncoded.Length);
-
-                    client.Send(preamble);
-
-                    client.Receive(inResponse);
-
-                    SubscriptionMgr.ResendSubscriptions();
-
                     try
                     {
-                        lock (Communicator.deadThreadQueuesLock)
+                        clientRouterName = Router.parentRoute.RouterName;
+
+                        lock (Communicator.threadQueuesLock)
                         {
+                            Communicator.forwardThreads[clientRouterName] = Thread.CurrentThread;
+
+                            if (Communicator.threadQueues.ContainsKey(clientRouterName) == true)
+                            {
+                                threadQueue = Communicator.threadQueues[clientRouterName];
+                            }
+                            else
+                            {
+                                threadQueueCounter = new PerformanceCounter(communicationCategoryName,
+                                    forwarderQueueSizeName, clientRouterName, false);
+
+                                threadQueue = new SynchronizationQueue<QueueElement>(threadQueueCounter);
+
+                                Communicator.threadQueues[clientRouterName] = threadQueue;
+                            }
+
                             if (Communicator.deadThreadQueues.Contains(clientRouterName) == true)
                             {
                                 Communicator.deadThreadQueues.Remove(clientRouterName);
                             }
                         }
+
+                        client = ConnectSocket(Router.parentRoute.RouterName, Router.parentRoute.Port);
+
+                        if (client == null)
+                        {
+                            return;
+                        }
+
+                        client.NoDelay = true;
+                        client.ReceiveTimeout = Router.parentRoute.Timeout;
+                        client.SendTimeout = Router.parentRoute.Timeout;
+
+                        client.IOControl(IOControlCode.KeepAliveValues, inOptionValues, null);
+                        client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+
+                        preamble = new byte[routerNameEncoded.Length + 5];
+                        Buffer.BlockCopy(BitConverter.GetBytes((Int32)preamble.Length), 0, preamble, 0, 4);
+                        preamble[4] = 1;
+                        Buffer.BlockCopy(routerNameEncoded, 0, preamble, 5, routerNameEncoded.Length);
+
+                        client.Send(preamble);
+
+                        client.Receive(inResponse);
+
+                        SubscriptionMgr.ResendSubscriptions();
 
                         threadQueue.InUse = true;
 
@@ -529,7 +530,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                     }
                     finally
                     {
-                        lock (Communicator.deadThreadQueuesLock)
+                        lock (Communicator.threadQueuesLock)
                         {
                             threadQueue.InUse = false;
                             threadQueue.LastUsedTick = DateTime.Now.Ticks;
@@ -617,36 +618,33 @@ namespace Microsoft.WebSolutionsPlatform.Event
                     }
                     else
                     {
-                        lock (Communicator.threadQueuesLock)
-                        {
-                            Communicator.forwardThreads[clientRouterName] = Thread.CurrentThread;
-
-                            if (Communicator.threadQueues.ContainsKey(clientRouterName) == true)
-                            {
-                                threadQueue = Communicator.threadQueues[clientRouterName];
-                            }
-                            else
-                            {
-                                threadQueueCounter = new PerformanceCounter(communicationCategoryName,
-                                    forwarderQueueSizeName, clientRouterName, false);
-
-                                threadQueue = new SynchronizationQueue<QueueElement>(threadQueueCounter);
-
-                                Communicator.threadQueues[clientRouterName] = threadQueue;
-                            }
-                        }
-
-                        SubscriptionMgr.ResendSubscriptions();
-
                         try
                         {
-                            lock (Communicator.deadThreadQueuesLock)
+                            lock (Communicator.threadQueuesLock)
                             {
+                                Communicator.forwardThreads[clientRouterName] = Thread.CurrentThread;
+
+                                if (Communicator.threadQueues.ContainsKey(clientRouterName) == true)
+                                {
+                                    threadQueue = Communicator.threadQueues[clientRouterName];
+                                }
+                                else
+                                {
+                                    threadQueueCounter = new PerformanceCounter(communicationCategoryName,
+                                        forwarderQueueSizeName, clientRouterName, false);
+
+                                    threadQueue = new SynchronizationQueue<QueueElement>(threadQueueCounter);
+
+                                    Communicator.threadQueues[clientRouterName] = threadQueue;
+                                }
+
                                 if (Communicator.deadThreadQueues.Contains(clientRouterName) == true)
                                 {
                                     Communicator.deadThreadQueues.Remove(clientRouterName);
                                 }
                             }
+
+                            SubscriptionMgr.ResendSubscriptions();
 
                             threadQueue.InUse = true;
 
@@ -654,7 +652,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         }
                         finally
                         {
-                            lock (Communicator.deadThreadQueuesLock)
+                            lock (Communicator.threadQueuesLock)
                             {
                                 threadQueue.InUse = false;
                                 threadQueue.LastUsedTick = DateTime.Now.Ticks;

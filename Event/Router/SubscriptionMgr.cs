@@ -234,19 +234,6 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                             nextTimeout = DateTime.UtcNow.AddMinutes(subscriptionExpirationIncrement);
                         }
-
-                        if (DateTime.UtcNow > nextPushSubscriptions)
-                        {
-                            foreach (Guid subId in subscriptions.Keys)
-                            {
-                                if (subscriptions[subId].LocalOnly == false)
-                                {
-                                    forwarderQueue.Enqueue(subscriptions[subId].EventQueueElement);
-                                }
-                            }
-
-                            nextPushSubscriptions = DateTime.UtcNow.AddMinutes(subscriptionRefreshIncrement);
-                        }
                     }
                 }
                 catch

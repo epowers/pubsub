@@ -91,9 +91,12 @@ namespace Microsoft.WebSolutionsPlatform.Event
                     }
                 }
 
-                catch (ThreadAbortException e)
+                catch (ThreadAbortException)
                 {
-                    throw e;
+                    // Another thread has signalled that this worker
+                    // thread must terminate.  Typically, this occurs when
+                    // the main service thread receives a service stop 
+                    // command.
                 }
 
                 catch (Exception e)
