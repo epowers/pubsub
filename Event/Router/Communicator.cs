@@ -493,6 +493,8 @@ namespace Microsoft.WebSolutionsPlatform.Event
                                 Communicator.threadQueues[clientRouterName] = threadQueue;
                             }
 
+                            threadQueue.InUse = true;
+
                             if (Communicator.deadThreadQueues.Contains(clientRouterName) == true)
                             {
                                 Communicator.deadThreadQueues.Remove(clientRouterName);
@@ -524,18 +526,22 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                         SubscriptionMgr.ResendSubscriptions();
 
-                        threadQueue.InUse = true;
-
                         OutHandler();
                     }
                     finally
                     {
                         lock (Communicator.threadQueuesLock)
                         {
-                            threadQueue.InUse = false;
-                            threadQueue.LastUsedTick = DateTime.Now.Ticks;
+                            if (Communicator.forwardThreads.ContainsKey(clientRouterName) == true)
+                            {
+                                if (Communicator.forwardThreads[clientRouterName] == Thread.CurrentThread)
+                                {
+                                    threadQueue.InUse = false;
+                                    threadQueue.LastUsedTick = DateTime.Now.Ticks;
 
-                            Communicator.deadThreadQueues.Add(clientRouterName);
+                                    Communicator.deadThreadQueues.Add(clientRouterName);
+                                }
+                            }
                         }
                     }
                 }
@@ -638,6 +644,8 @@ namespace Microsoft.WebSolutionsPlatform.Event
                                     Communicator.threadQueues[clientRouterName] = threadQueue;
                                 }
 
+                                threadQueue.InUse = true;
+
                                 if (Communicator.deadThreadQueues.Contains(clientRouterName) == true)
                                 {
                                     Communicator.deadThreadQueues.Remove(clientRouterName);
@@ -646,18 +654,22 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                             SubscriptionMgr.ResendSubscriptions();
 
-                            threadQueue.InUse = true;
-
                             OutHandler();
                         }
                         finally
                         {
                             lock (Communicator.threadQueuesLock)
                             {
-                                threadQueue.InUse = false;
-                                threadQueue.LastUsedTick = DateTime.Now.Ticks;
+                                if (Communicator.forwardThreads.ContainsKey(clientRouterName) == true)
+                                {
+                                    if (Communicator.forwardThreads[clientRouterName] == Thread.CurrentThread)
+                                    {
+                                        threadQueue.InUse = false;
+                                        threadQueue.LastUsedTick = DateTime.Now.Ticks;
 
-                                Communicator.deadThreadQueues.Add(clientRouterName);
+                                        Communicator.deadThreadQueues.Add(clientRouterName);
+                                    }
+                                }
                             }
                         }
                     }
