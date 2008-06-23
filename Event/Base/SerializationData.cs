@@ -655,7 +655,8 @@ namespace Microsoft.WebSolutionsPlatform.Event
         /// </summary>
         public Guid GetEventType()
         {
-            return new Guid(dataReader.ReadString());
+            string guid = dataReader.ReadString();
+            return new Guid(guid);
         }
 
 		/// <summary>

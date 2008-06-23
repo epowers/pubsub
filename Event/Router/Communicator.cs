@@ -845,7 +845,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                                 eventType = new Guid(binReader.ReadString());
                             }
 
-                            if (String.Compare(originatingRouterName, Router.localRouterName, false) != 0)
+                            if (String.Compare(originatingRouterName, Router.localRouterName, true) != 0)
                             {
                                 Router.channelDictionary[originatingRouterName] = state.clientRouterName;
 
@@ -1192,7 +1192,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                             {
                                 foreach (string routerName in Communicator.threadQueues.Keys)
                                 {
-                                    if (string.Compare(outRouterName, routerName, false) != 0)
+                                    if (string.Compare(outRouterName, routerName, true) != 0)
                                     {
                                         if (element.EventType == Event.SubscriptionEvent)
                                         {

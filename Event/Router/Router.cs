@@ -296,9 +296,9 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
             eventDictionary = new Dictionary<Guid, DoubleDictionary<string, Guid>>();
             subscriptionDictionary = new Dictionary<Guid, DoubleDictionary<Guid, string>>();
-            routerDictionary = new Dictionary<string, DoubleDictionary<Guid, Guid>>();
+            routerDictionary = new Dictionary<string, DoubleDictionary<Guid, Guid>>(StringComparer.CurrentCultureIgnoreCase);
 
-            channelDictionary = new Dictionary<string, string>();
+            channelDictionary = new Dictionary<string, string>(StringComparer.CurrentCultureIgnoreCase);
 
 			LoadConfiguration();
 
@@ -427,9 +427,9 @@ namespace Microsoft.WebSolutionsPlatform.Event
 		{
 			if(eventDictionary.ContainsKey(eventType) == false)
 			{
-				DoubleDictionary<string, Guid> values = new DoubleDictionary<string, Guid>();
-				values.Dictionary1 = new Dictionary<string, DateTime>();
-				values.Dictionary2 = new Dictionary<Guid, DateTime>();
+                DoubleDictionary<string, Guid> values = new DoubleDictionary<string, Guid>();
+                values.Dictionary1 = new Dictionary<string, DateTime>(StringComparer.CurrentCultureIgnoreCase);
+                values.Dictionary2 = new Dictionary<Guid, DateTime>();
 
 				eventDictionary.Add(eventType, values);
 			}
@@ -470,7 +470,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
 			{
                 DoubleDictionary<Guid, string> values = new DoubleDictionary<Guid, string>();
                 values.Dictionary1 = new Dictionary<Guid, DateTime>();
-				values.Dictionary2 = new Dictionary<string, DateTime>();
+                values.Dictionary2 = new Dictionary<string, DateTime>(StringComparer.CurrentCultureIgnoreCase);
 
 				subscriptionDictionary.Add(subscriptionId, values);
 

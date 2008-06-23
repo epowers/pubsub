@@ -11,11 +11,11 @@
 #define DEBUGCODE( code_fragment)
 #endif
 
-extern INT32 InitMemoryMgr(LPCTSTR SharedMemoryName, DWORD SharedMemorySize, PCOMMBUFFER *CommBufferIn);
-extern INT32 JoinMemoryMgr(LPCTSTR SharedMemoryName, PCOMMBUFFER *CommBufferIn);
-extern INT32 ReleaseMemoryMgr(PCOMMBUFFER *CommBufferIn);
-extern INT32 PutBuffer(LPCSTR pEventBuffer, DWORD dwEventLength, DWORD dwTimeOut, PCOMMBUFFER *CommBufferIn);
-extern INT32 GetBuffer(LPCSTR pEventBuffer, DWORD dwEventBufferLength, DWORD dwTimeOut, DWORD *pBytesRead, PCOMMBUFFER *CommBufferIn);
+extern INT32 __cdecl InitMemoryMgr(LPCTSTR SharedMemoryName, DWORD SharedMemorySize, PCOMMBUFFER *CommBufferIn);
+extern INT32 __cdecl JoinMemoryMgr(LPCTSTR SharedMemoryName, PCOMMBUFFER *CommBufferIn);
+extern INT32 __cdecl ReleaseMemoryMgr(PCOMMBUFFER *CommBufferIn);
+extern INT32 __cdecl PutBuffer(LPCSTR pEventBuffer, DWORD dwEventLength, DWORD dwTimeOut, PCOMMBUFFER *CommBufferIn);
+extern INT32 __cdecl GetBuffer(LPCSTR pEventBuffer, DWORD dwEventBufferLength, DWORD dwTimeOut, DWORD *pBytesRead, PCOMMBUFFER *CommBufferIn);
 
 void InitEvent(PCOMMBUFFER CommBuffer);
 void InitNewEvent(PCOMMBUFFER CommBuffer);
@@ -47,7 +47,7 @@ INT32 iRefCount = 0;
 #define ALREADYREAD 0xFD
 
 
-extern INT32 InitMemoryMgr(LPCTSTR SharedMemoryNameIn, DWORD SharedMemorySize, PCOMMBUFFER *CommBufferIn)
+extern INT32 __cdecl InitMemoryMgr(LPCTSTR SharedMemoryNameIn, DWORD SharedMemorySize, PCOMMBUFFER *CommBufferIn)
 {
 	DWORD dwError;
 	DWORD errco;
@@ -188,7 +188,7 @@ extern INT32 InitMemoryMgr(LPCTSTR SharedMemoryNameIn, DWORD SharedMemorySize, P
    return SUCCESS;
 }
 
-extern INT32 JoinMemoryMgr(LPCTSTR SharedMemoryNameIn, PCOMMBUFFER *CommBufferIn)
+extern INT32 __cdecl JoinMemoryMgr(LPCTSTR SharedMemoryNameIn, PCOMMBUFFER *CommBufferIn)
 {
 	int rc;
 	PCOMMBUFFER CommBuffer;
@@ -331,7 +331,7 @@ extern INT32 JoinMemoryMgr(LPCTSTR SharedMemoryNameIn, PCOMMBUFFER *CommBufferIn
 	return SUCCESS;
 }
 
-extern INT32 ReleaseMemoryMgr(PCOMMBUFFER *CommBufferIn)
+extern INT32 __cdecl ReleaseMemoryMgr(PCOMMBUFFER *CommBufferIn)
 {
 	BOOL rc1 = SUCCESS;
 	BOOL rc2 = SUCCESS;
@@ -393,7 +393,7 @@ extern DWORD GetQueueSize(PCOMMBUFFER *CommBufferIn)
 	return CommBuffer->gpBuf->iEventBufferSize;
 }
 
-extern INT32 PutBuffer(LPCSTR pEventBuffer, DWORD dwEventLength, DWORD dwTimeOut, PCOMMBUFFER *CommBufferIn)
+extern INT32 __cdecl PutBuffer(LPCSTR pEventBuffer, DWORD dwEventLength, DWORD dwTimeOut, PCOMMBUFFER *CommBufferIn)
 {
 	DWORD dwWaitResult;
 	WSPEVENT wspEvent;
@@ -435,7 +435,7 @@ extern INT32 PutBuffer(LPCSTR pEventBuffer, DWORD dwEventLength, DWORD dwTimeOut
 	}
 }
 
-extern INT32 GetBuffer(LPCSTR pEventBuffer, DWORD dwEventBufferLength, DWORD dwTimeOut, 
+extern INT32 __cdecl GetBuffer(LPCSTR pEventBuffer, DWORD dwEventBufferLength, DWORD dwTimeOut, 
 						   DWORD *pBytesRead, PCOMMBUFFER *CommBufferIn)
 {
 	DWORD dwWaitResult;

@@ -392,7 +392,7 @@ namespace Microsoft.WebSolutionsPlatform.Event.PubSubManager
 
                         if (subscriptions.TryGetValue(eventType, out subscription) == true)
                         {
-                            if (subscription.LocalOnly == false || localRouterName == originatingRouterName)
+                            if (subscription.LocalOnly == false || string.Compare(localRouterName, originatingRouterName,true) == 0)
                             {
                                 StateInfo stateInfo = new StateInfo();
 
