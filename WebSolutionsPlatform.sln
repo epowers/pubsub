@@ -1,6 +1,6 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 9.00
-# Visual Studio 2005
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SharedMemoryMgr", "Common\SharedMemoryMgr\SharedMemoryMgr.vcproj", "{7E26768D-A33E-40E9-B3E1-D83752B6EEB3}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharedQueue", "Common\SharedQueue\SharedQueue.csproj", "{61FEA7C2-ED9D-4C66-B9CF-94E1A7692263}"
@@ -46,7 +46,7 @@ Global
 	GlobalSection(TeamFoundationVersionControl) = preSolution
 		SccNumberOfProjects = 10
 		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
-		SccTeamFoundationServer = http://tkbgitvstfat03:8080/
+		SccTeamFoundationServer = https://tfs04.codeplex.com/
 		SccLocalPath0 = .
 		SccProjectUniqueName1 = Common\\SharedMemoryMgr\\SharedMemoryMgr.vcproj
 		SccProjectName1 = Common/SharedMemoryMgr

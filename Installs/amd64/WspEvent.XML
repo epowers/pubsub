@@ -193,6 +193,11 @@
             <param name="info">The SerializationInfo that holds the serialized object data about the exception being thrown.</param>
             <param name="context">The StreamingContext that contains contextual information about the source or destination.</param>
         </member>
+        <member name="T:Microsoft.WebSolutionsPlatform.Event.PersistFileState">
+            <summary>
+            Defines the state a file can be in during the persist and copy functions of the Router
+            </summary>
+        </member>
         <member name="F:Microsoft.WebSolutionsPlatform.Event.PersistFileState.Open">
             <summary>
             File was opened
