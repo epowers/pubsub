@@ -529,7 +529,14 @@ namespace Microsoft.WebSolutionsPlatform.Event
                 }
                 else
                 {
-                    persistFileEvent.FileSize = (new FileInfo(outFileName)).Length;
+                    try
+                    {
+                        persistFileEvent.FileSize = (new FileInfo(outFileName)).Length;
+                    }
+                    catch
+                    {
+                        persistFileEvent.FileSize = 0;
+                    }
                 }
 
                 for (int i = 0; i < 20; i++)
