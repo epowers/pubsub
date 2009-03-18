@@ -16,137 +16,138 @@ using System.Xml.XPath;
 
 namespace Microsoft.WebSolutionsPlatform.Event
 {
-	public partial class Router : ServiceBase
-	{
-		internal class SubscriptionEntry : IComparable<SubscriptionEntry>
-		{
+    public partial class Router : ServiceBase
+    {
+        internal class SubscriptionEntry : IComparable<SubscriptionEntry>
+        {
             private Guid subscriptionId;
-			/// <summary>
-			/// ID for subscription
-			/// </summary>
+            /// <summary>
+            /// ID for subscription
+            /// </summary>
             public Guid SubscriptionId
-			{
-				get
-				{
+            {
+                get
+                {
                     return subscriptionId;
-				}
-			}
+                }
+            }
 
-			private string routerName;
-			/// <summary>
-			/// RouterName where subscription is made
-			/// </summary>
-			public string RouterName
-			{
-				get
-				{
-					return routerName;
-				}
-			}
+            private string routerName;
+            /// <summary>
+            /// RouterName where subscription is made
+            /// </summary>
+            public string RouterName
+            {
+                get
+                {
+                    return routerName;
+                }
+            }
 
             private Guid eventType;
-			/// <summary>
-			/// Event type registering for
-			/// </summary>
+            /// <summary>
+            /// Event type registering for
+            /// </summary>
             public Guid EventType
-			{
-				get
-				{
+            {
+                get
+                {
                     return eventType;
-				}
-			}
+                }
+            }
 
-			private bool localOnly;
-			/// <summary>
-			/// Defines if the subscription is only for the local machine
-			/// </summary>
-			public bool LocalOnly
-			{
-				get
-				{
-					return localOnly;
-				}
-			}
+            private bool localOnly;
+            /// <summary>
+            /// Defines if the subscription is only for the local machine
+            /// </summary>
+            public bool LocalOnly
+            {
+                get
+                {
+                    return localOnly;
+                }
+            }
 
-			private DateTime expirationTime;
-			/// <summary>
-			/// Expiration time for subscription
-			/// </summary>
-			public DateTime ExpirationTime
-			{
-				get
-				{
-					return expirationTime;
-				}
+            private DateTime expirationTime;
+            /// <summary>
+            /// Expiration time for subscription
+            /// </summary>
+            public DateTime ExpirationTime
+            {
+                get
+                {
+                    return expirationTime;
+                }
 
-				internal set
-				{
-					expirationTime = value;
-				}
-			}
+                internal set
+                {
+                    expirationTime = value;
+                }
+            }
 
-			private QueueElement eventQueueElement;
-			/// <summary>
-			/// EventQueueElement for subscription
-			/// </summary>
-			public QueueElement EventQueueElement
-			{
-				get
-				{
-					return eventQueueElement;
-				}
+            private QueueElement eventQueueElement;
+            /// <summary>
+            /// EventQueueElement for subscription
+            /// </summary>
+            public QueueElement EventQueueElement
+            {
+                get
+                {
+                    return eventQueueElement;
+                }
 
-				internal set
-				{
-					eventQueueElement = value;
-				}
-			}
+                internal set
+                {
+                    eventQueueElement = value;
+                }
+            }
 
-			/// <summary>
-			/// Used to create a SubscriptionEntry used by RouteMgr
-			/// </summary>
+            /// <summary>
+            /// Used to create a SubscriptionEntry used by RouteMgr
+            /// </summary>
             /// <param name="subscriptionId">ID of the subscription</param>
             /// <param name="eventType">event being registered for the subscription</param>
-			/// <param name="routerName">routerName where subscription is made</param>
-			/// <param name="localOnly">Defines if subscription is for local machine only</param>
+            /// <param name="routerName">routerName where subscription is made</param>
+            /// <param name="localOnly">Defines if subscription is for local machine only</param>
             public SubscriptionEntry(Guid subscriptionId, Guid eventType, string routerName, bool localOnly)
-			{
+            {
                 this.subscriptionId = subscriptionId;
                 this.eventType = eventType;
-				this.routerName = routerName;
-				this.localOnly = localOnly;
-				this.expirationTime = DateTime.UtcNow.AddMinutes(5);
-			}
+                this.routerName = routerName;
+                this.localOnly = localOnly;
+                this.expirationTime = DateTime.UtcNow.AddMinutes(5);
+            }
 
-			public int CompareTo( SubscriptionEntry otherSubscription )
-			{
+            public int CompareTo(SubscriptionEntry otherSubscription)
+            {
                 return subscriptionId.CompareTo(otherSubscription.subscriptionId);
-			}
-		}
+            }
+        }
 
-		internal class SubscriptionMgr : ServiceThread
-		{
+        internal class SubscriptionMgr : ServiceThread
+        {
+            internal static object subscriptionsLock = new object();
             internal static Dictionary<Guid, SubscriptionEntry> subscriptions = new Dictionary<Guid, SubscriptionEntry>();
 
             private DateTime nextTimeout = DateTime.UtcNow.AddMinutes(subscriptionExpirationIncrement);
             private DateTime nextPushSubscriptions = DateTime.UtcNow.AddMinutes(subscriptionRefreshIncrement);
 
-			public SubscriptionMgr()
-			{
-			}
+            public SubscriptionMgr()
+            {
+            }
 
-			public override void Start()
-			{
-				QueueElement element;
+            public override void Start()
+            {
+                QueueElement element;
                 QueueElement defaultElement = default(QueueElement);
                 QueueElement newElement = new QueueElement();
 
                 newElement.OriginatingRouterName = string.Empty;
                 newElement.InRouterName = string.Empty;
 
-				Subscription subscriptionEvent;
+                Subscription subscriptionEvent;
 
-				bool elementRetrieved;
+                bool elementRetrieved;
 
                 string inRouterName;
 
@@ -201,27 +202,30 @@ namespace Microsoft.WebSolutionsPlatform.Event
                                     element.OriginatingRouterName = subscriptionEvent.OriginatingRouterName;
                                 }
 
-                                if (subscriptionEvent.Subscribe == true)
+                                lock (subscriptionsLock)
                                 {
-                                    if (subscriptions.ContainsKey(subscriptionEvent.SubscriptionId) == false)
+                                    if (subscriptionEvent.Subscribe == true)
                                     {
-                                        if (channelDictionary.TryGetValue(element.OriginatingRouterName, out inRouterName) == false)
+                                        if (subscriptions.ContainsKey(subscriptionEvent.SubscriptionId) == false)
                                         {
-                                            inRouterName = element.InRouterName;
+                                            if (channelDictionary.TryGetValue(element.OriginatingRouterName, out inRouterName) == false)
+                                            {
+                                                inRouterName = element.InRouterName;
+                                            }
+
+                                            Router.AddSubscription(subscriptionEvent.SubscriptionId, subscriptionEvent.SubscriptionEventType,
+                                                inRouterName, subscriptionEvent.LocalOnly);
+
+                                            subscriptions[subscriptionEvent.SubscriptionId].EventQueueElement = element;
                                         }
 
-                                        Router.AddSubscription(subscriptionEvent.SubscriptionId, subscriptionEvent.SubscriptionEventType,
-                                            inRouterName, subscriptionEvent.LocalOnly);
-
-                                        subscriptions[subscriptionEvent.SubscriptionId].EventQueueElement = element;
+                                        subscriptions[subscriptionEvent.SubscriptionId].ExpirationTime = DateTime.UtcNow.AddMinutes(subscriptionExpirationIncrement);
                                     }
-
-                                    subscriptions[subscriptionEvent.SubscriptionId].ExpirationTime = DateTime.UtcNow.AddMinutes(subscriptionExpirationIncrement);
-                                }
-                                else
-                                {
-                                    Router.DeleteSubscription(subscriptionEvent.SubscriptionId);
-                                    subscriptions.Remove(subscriptionEvent.SubscriptionId);
+                                    else
+                                    {
+                                        Router.DeleteSubscription(subscriptionEvent.SubscriptionId);
+                                        subscriptions.Remove(subscriptionEvent.SubscriptionId);
+                                    }
                                 }
 
                                 forwarderQueue.Enqueue(element);
@@ -230,7 +234,10 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                         if (subscriptions.Count > 0 && DateTime.UtcNow > nextTimeout)
                         {
-                            RemoveExpiredEntries();
+                            lock (subscriptionsLock)
+                            {
+                                RemoveExpiredEntries();
+                            }
 
                             nextTimeout = DateTime.UtcNow.AddMinutes(subscriptionExpirationIncrement);
                         }
@@ -240,36 +247,39 @@ namespace Microsoft.WebSolutionsPlatform.Event
                 {
                     // intentionally left blank
                 }
-			}
+            }
 
             private static void RemoveExpiredEntries()
-			{
-				List<Guid> expiredSubscriptions = new List<Guid>();
+            {
+                List<Guid> expiredSubscriptions = new List<Guid>();
 
-				foreach(Guid subId in subscriptions.Keys)
-				{
+                foreach (Guid subId in subscriptions.Keys)
+                {
                     if (subscriptions[subId].ExpirationTime <= DateTime.UtcNow)
-					{
-						expiredSubscriptions.Add(subId);
-					}
-				}
+                    {
+                        expiredSubscriptions.Add(subId);
+                    }
+                }
 
-				for(int i = 0; i < expiredSubscriptions.Count; i++)
-				{
-					Router.DeleteSubscription(expiredSubscriptions[i]);
-				}
-			}
+                for (int i = 0; i < expiredSubscriptions.Count; i++)
+                {
+                    Router.DeleteSubscription(expiredSubscriptions[i]);
+                }
+            }
 
             /// <summary>
             /// Resend all subscriptions. This is intended to be used after a connection is made.
             /// </summary>
             public static void ResendSubscriptions()
             {
-                foreach (SubscriptionEntry subEntry in subscriptions.Values)
+                lock (subscriptionsLock)
                 {
-                    forwarderQueue.Enqueue(subEntry.EventQueueElement);
+                    foreach (SubscriptionEntry subEntry in subscriptions.Values)
+                    {
+                        forwarderQueue.Enqueue(subEntry.EventQueueElement);
+                    }
                 }
             }
         }
-	}
+    }
 }
