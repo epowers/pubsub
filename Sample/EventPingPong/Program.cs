@@ -64,7 +64,7 @@ namespace Microsoft.Sample.EventPingPong
         /// <summary>
         /// Base constructor to create a new event from a serialized event
         /// </summary>
-        /// <param name="serializationData">Serialized event data</param>
+        /// <param name="serializationData">Serialized event buffer</param>
         public PublishEvent(byte[] serializationData)
             : base(serializationData)
         {
@@ -74,11 +74,37 @@ namespace Microsoft.Sample.EventPingPong
 		/// <summary>
 		/// Used for event serialization.
 		/// </summary>
-		/// <param name="data">SerializationData object passed to store serialized object</param>
-        public override void GetObjectData(SerializationData data)
+		/// <param name="buffer">SerializationData object passed to store serialized object</param>
+        public override void GetObjectData(WspBuffer buffer)
         {
-            data.AddElement(@"EventNum", EventNum);
-            data.AddElement(@"InstanceId", InstanceId);
+            buffer.AddElement(@"EventNum", EventNum);
+            buffer.AddElement(@"InstanceId", InstanceId);
+        }
+
+        /// <summary>
+        /// Set values on object during deserialization
+        /// </summary>
+        /// <param name="elementName">Name of property</param>
+        /// <param name="elementValue">Value of property</param>
+        /// <returns></returns>
+        public override bool SetElement(string elementName, object elementValue)
+        {
+            switch (elementName)
+            {
+                case "EventNum":
+                    EventNum = (UInt64)elementValue;
+                    break;
+
+                case "InstanceId":
+                    InstanceId = (Guid)elementValue;
+                    break;
+
+                default:
+                    base.SetElement(elementName, elementValue);
+                    break;
+            }
+
+            return true;
         }
     }
 
@@ -125,7 +151,7 @@ namespace Microsoft.Sample.EventPingPong
         /// <summary>
         /// Base constructor to create a new event from a serialized event
         /// </summary>
-        /// <param name="serializationData">Serialized event data</param>
+        /// <param name="serializationData">Serialized event buffer</param>
         public SubscribeEvent(byte[] serializationData)
             : base(serializationData)
         {
@@ -135,11 +161,37 @@ namespace Microsoft.Sample.EventPingPong
         /// <summary>
         /// Used for event serialization.
         /// </summary>
-        /// <param name="data">SerializationData object passed to store serialized object</param>
-        public override void GetObjectData(SerializationData data)
+        /// <param name="buffer">SerializationData object passed to store serialized object</param>
+        public override void GetObjectData(WspBuffer buffer)
         {
-            data.AddElement(@"EventNum", EventNum);
-            data.AddElement(@"InstanceId", InstanceId);
+            buffer.AddElement(@"EventNum", EventNum);
+            buffer.AddElement(@"InstanceId", InstanceId);
+        }
+
+        /// <summary>
+        /// Set values on object during deserialization
+        /// </summary>
+        /// <param name="elementName">Name of property</param>
+        /// <param name="elementValue">Value of property</param>
+        /// <returns></returns>
+        public override bool SetElement(string elementName, object elementValue)
+        {
+            switch(elementName)
+            {
+                case "EventNum":
+                    EventNum = (UInt64)elementValue;
+                    break;
+
+                case "InstanceId":
+                    InstanceId = (Guid)elementValue;
+                    break;
+
+                default:
+                    base.SetElement(elementName, elementValue);
+                    break;
+            }
+
+            return true;
         }
     }
 }

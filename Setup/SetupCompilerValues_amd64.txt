@@ -1,1 +1,0 @@
-_BINARIES_=\\msspades\drops\mpt\EventPubSubSystem\Latest\amd64
