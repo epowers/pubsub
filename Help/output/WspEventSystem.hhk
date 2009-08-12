@@ -1,0 +1,1771 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML/EN">
+<HTML>
+  <BODY>
+    <UL>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Microsoft.WebSolutionsPlatform.Common namespace">
+        <param name="Local" value="html/f8856fd0-5419-4c22-0c22-1bfb98aa595b.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SharedQueue class">
+        <param name="Local" value="html/f014b00e-e4cd-89e8-4098-f920dd891c2a.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Microsoft.WebSolutionsPlatform.Common.SharedQueue class">
+        <param name="Local" value="html/f014b00e-e4cd-89e8-4098-f920dd891c2a.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SharedQueue class, constructor">
+        <param name="Local" value="html/817baf81-8241-1f65-55b2-dad3b64b7aea.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Dispose method">
+        <param name="Local" value="html/2e3c2648-4a94-0fec-4634-60bdafa92f0f.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SharedQueue.Dispose method">
+        <param name="Local" value="html/2e3c2648-4a94-0fec-4634-60bdafa92f0f.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SharedQueue class, constructor">
+        <param name="Local" value="html/2c430ab7-ac9b-aa35-6f9d-cb529e8abaab.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SharedQueue class, constructor">
+        <param name="Local" value="html/8f45ece8-77ce-93d3-6453-c54edbe52ed4.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Dequeue method">
+        <param name="Local" value="html/0b83b659-5a27-b0c6-3dca-3825f986b8c2.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SharedQueue.Dequeue method">
+        <param name="Local" value="html/0b83b659-5a27-b0c6-3dca-3825f986b8c2.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Dispose method">
+        <param name="Local" value="html/73ded6f2-593d-269d-194c-e55069c77b70.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SharedQueue.Dispose method">
+        <param name="Local" value="html/73ded6f2-593d-269d-194c-e55069c77b70.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Dispose method">
+        <param name="Local" value="html/382f300b-d424-0038-2942-69874495dd1d.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SharedQueue.Dispose method">
+        <param name="Local" value="html/382f300b-d424-0038-2942-69874495dd1d.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Enqueue method">
+        <param name="Local" value="html/b8301cdd-1cdd-67f7-23e0-bc538972d801.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SharedQueue.Enqueue method">
+        <param name="Local" value="html/b8301cdd-1cdd-67f7-23e0-bc538972d801.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Finalize method">
+        <param name="Local" value="html/1c542e5d-d3ed-ac8a-8276-92a3c3479c45.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SharedQueue.Finalize method">
+        <param name="Local" value="html/1c542e5d-d3ed-ac8a-8276-92a3c3479c45.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="QueueSize property">
+        <param name="Local" value="html/1cd40bab-2180-aa43-c0cd-83d2a6e2a51e.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SharedQueue.QueueSize property">
+        <param name="Local" value="html/1cd40bab-2180-aa43-c0cd-83d2a6e2a51e.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SharedQueueDoesNotExistException class">
+        <param name="Local" value="html/db854703-21df-0444-222c-d927af373916.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Microsoft.WebSolutionsPlatform.Common.SharedQueueDoesNotExistException class">
+        <param name="Local" value="html/db854703-21df-0444-222c-d927af373916.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SharedQueueDoesNotExistException class, constructor">
+        <param name="Local" value="html/5115172f-89f3-c3bf-c444-7877151889a1.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SharedQueueDoesNotExistException class, constructor">
+        <param name="Local" value="html/a416d718-7a0e-9033-ee38-104ef1ce04d4.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SharedQueueDoesNotExistException class, constructor">
+        <param name="Local" value="html/3a6aac03-25ac-44a5-3bb6-618bf30a3e02.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SharedQueueDoesNotExistException class, constructor">
+        <param name="Local" value="html/7dcd9617-a7c3-5aa9-94c8-f2d715b27aed.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SharedQueueDoesNotExistException class, constructor">
+        <param name="Local" value="html/bfc2bef1-026b-09d9-de8e-2e4c68ac5c4c.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SharedQueueException class">
+        <param name="Local" value="html/ece0f980-62ef-d769-26ee-bb83a92af9fe.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Microsoft.WebSolutionsPlatform.Common.SharedQueueException class">
+        <param name="Local" value="html/ece0f980-62ef-d769-26ee-bb83a92af9fe.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SharedQueueException class, constructor">
+        <param name="Local" value="html/55ff8199-8204-a7fe-9bba-e8e6f20d08f1.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SharedQueueException class, constructor">
+        <param name="Local" value="html/300c0850-c56a-f8ac-0b0b-7e42c250863c.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SharedQueueException class, constructor">
+        <param name="Local" value="html/211efa5a-ee0b-dde9-7489-c0fe1948ebf4.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SharedQueueException class, constructor">
+        <param name="Local" value="html/7b387f5a-7473-e6cb-0d07-a13b6e89419b.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SharedQueueException class, constructor">
+        <param name="Local" value="html/6243c62f-c99b-0a62-336e-45cff733c0d1.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SharedQueueFullException class">
+        <param name="Local" value="html/ab40005c-c861-ec94-1bbd-cfc323ae735b.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Microsoft.WebSolutionsPlatform.Common.SharedQueueFullException class">
+        <param name="Local" value="html/ab40005c-c861-ec94-1bbd-cfc323ae735b.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SharedQueueFullException class, constructor">
+        <param name="Local" value="html/31c989c1-f254-f05e-a045-c5b3a5d99451.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SharedQueueFullException class, constructor">
+        <param name="Local" value="html/309b949c-837b-8bd0-25ff-6152c11efdec.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SharedQueueFullException class, constructor">
+        <param name="Local" value="html/bf0f1713-5d51-449c-c35c-2453a808ffb6.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SharedQueueFullException class, constructor">
+        <param name="Local" value="html/4ff1c7d7-14d7-5ae4-54d4-564edd9549ce.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SharedQueueFullException class, constructor">
+        <param name="Local" value="html/b3dfcca0-3173-e40a-25fe-5fd4064da217.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SharedQueueInitializationException class">
+        <param name="Local" value="html/65ec200d-74a2-e775-5205-62c2382eaaf5.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Microsoft.WebSolutionsPlatform.Common.SharedQueueInitializationException class">
+        <param name="Local" value="html/65ec200d-74a2-e775-5205-62c2382eaaf5.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SharedQueueInitializationException class, constructor">
+        <param name="Local" value="html/d9e04dd1-3eb2-358a-4e5b-d4b4ba47f88c.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SharedQueueInitializationException class, constructor">
+        <param name="Local" value="html/20dc04c6-dd42-8c59-44a1-345a39bdaebe.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SharedQueueInitializationException class, constructor">
+        <param name="Local" value="html/3137545f-a540-71ee-adae-fa3fd81452d5.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SharedQueueInitializationException class, constructor">
+        <param name="Local" value="html/0e23e731-f03f-786d-7f2c-ffbb9f29510b.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SharedQueueInitializationException class, constructor">
+        <param name="Local" value="html/5eb2b423-a398-e8b0-dced-9860d5842fdc.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SharedQueueInsufficientMemoryException class">
+        <param name="Local" value="html/c7d3effb-5c87-4c23-1c29-282edc71b10d.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Microsoft.WebSolutionsPlatform.Common.SharedQueueInsufficientMemoryException class">
+        <param name="Local" value="html/c7d3effb-5c87-4c23-1c29-282edc71b10d.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SharedQueueInsufficientMemoryException class, constructor">
+        <param name="Local" value="html/358bde76-47d8-6944-1a5f-7714fc5a25b1.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SharedQueueInsufficientMemoryException class, constructor">
+        <param name="Local" value="html/ce00fa1a-17d7-dd10-2bcf-1e74837e7419.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SharedQueueInsufficientMemoryException class, constructor">
+        <param name="Local" value="html/2febcec2-16d0-7cc4-e5fe-828fbc90f8bf.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SharedQueueInsufficientMemoryException class, constructor">
+        <param name="Local" value="html/dd647566-db88-b795-1399-4c79191b9165.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SharedQueueInsufficientMemoryException class, constructor">
+        <param name="Local" value="html/a43172bf-4b86-d303-5039-3551b02988f8.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Microsoft.WebSolutionsPlatform.Event namespace">
+        <param name="Local" value="html/ba86a1ae-1d42-7ab6-8bd0-828b37261a04.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="DoubleDictionary structure">
+        <param name="Local" value="html/087e237e-57fe-76e0-7a74-f3a712de6283.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Microsoft.WebSolutionsPlatform.Event.DoubleDictionary structure">
+        <param name="Local" value="html/087e237e-57fe-76e0-7a74-f3a712de6283.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Dictionary1 property">
+        <param name="Local" value="html/ac828c3d-bf2f-4256-7155-aaef8f4b11a9.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="DoubleDictionary.Dictionary1 property">
+        <param name="Local" value="html/ac828c3d-bf2f-4256-7155-aaef8f4b11a9.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Dictionary2 property">
+        <param name="Local" value="html/215d9954-5a24-75fa-d2c7-fa025b7db9df.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="DoubleDictionary.Dictionary2 property">
+        <param name="Local" value="html/215d9954-5a24-75fa-d2c7-fa025b7db9df.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Event class">
+        <param name="Local" value="html/7862f9a3-9c77-6efd-dbc4-b369b1b49723.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Microsoft.WebSolutionsPlatform.Event.Event class">
+        <param name="Local" value="html/7862f9a3-9c77-6efd-dbc4-b369b1b49723.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Event class, constructor">
+        <param name="Local" value="html/6af579f2-f355-f68c-19ff-702e85a72464.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Dispose method">
+        <param name="Local" value="html/1119068e-73ad-bf42-98f6-fe1c463fefb9.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Event.Dispose method">
+        <param name="Local" value="html/1119068e-73ad-bf42-98f6-fe1c463fefb9.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Event class, constructor">
+        <param name="Local" value="html/25e6cc49-c005-4983-ba10-91b6b05e8992.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Event class, constructor">
+        <param name="Local" value="html/64dfbe01-f0db-0d73-61f0-7488262a3d6d.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Deserialize method">
+        <param name="Local" value="html/91ff0f9c-7fb2-8549-ae65-61dd18b2d7c4.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Event.Deserialize method">
+        <param name="Local" value="html/91ff0f9c-7fb2-8549-ae65-61dd18b2d7c4.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Dispose method">
+        <param name="Local" value="html/c5bbdc79-9adb-a33e-5672-38439067a02d.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Event.Dispose method">
+        <param name="Local" value="html/c5bbdc79-9adb-a33e-5672-38439067a02d.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Dispose method">
+        <param name="Local" value="html/624f3862-b228-69a7-b573-b57a6ed676ff.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Event.Dispose method">
+        <param name="Local" value="html/624f3862-b228-69a7-b573-b57a6ed676ff.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="EventName property">
+        <param name="Local" value="html/dd946c3f-78e4-6f77-145f-c1e888cd2a18.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Event.EventName property">
+        <param name="Local" value="html/dd946c3f-78e4-6f77-145f-c1e888cd2a18.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="EventPublisher property">
+        <param name="Local" value="html/c9f9db7f-fd2d-4388-8c59-66c5f0255462.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Event.EventPublisher property">
+        <param name="Local" value="html/c9f9db7f-fd2d-4388-8c59-66c5f0255462.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="EventTime property">
+        <param name="Local" value="html/4fd1b85c-a714-4634-7475-abf17b370580.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Event.EventTime property">
+        <param name="Local" value="html/4fd1b85c-a714-4634-7475-abf17b370580.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="EventType property">
+        <param name="Local" value="html/683e8fd6-304c-7e30-fba0-aa4b5e46812d.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Event.EventType property">
+        <param name="Local" value="html/683e8fd6-304c-7e30-fba0-aa4b5e46812d.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="EventVersion property">
+        <param name="Local" value="html/1f6e2f9d-5c74-326e-da82-d05074d60e33.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Event.EventVersion property">
+        <param name="Local" value="html/1f6e2f9d-5c74-326e-da82-d05074d60e33.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Finalize method">
+        <param name="Local" value="html/fe82f824-681f-f11d-6487-4cba632d7305.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Event.Finalize method">
+        <param name="Local" value="html/fe82f824-681f-f11d-6487-4cba632d7305.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="GetObjectData method">
+        <param name="Local" value="html/32d17d04-f5c5-c62d-2b20-9060ff2f5b72.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Event.GetObjectData method">
+        <param name="Local" value="html/32d17d04-f5c5-c62d-2b20-9060ff2f5b72.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="InRouterName property">
+        <param name="Local" value="html/339438c6-8562-eec1-88ca-3fd93024ad3e.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Event.InRouterName property">
+        <param name="Local" value="html/339438c6-8562-eec1-88ca-3fd93024ad3e.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="OriginatingRouterName property">
+        <param name="Local" value="html/c79ec651-db89-67b0-c6d8-1120eb925018.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Event.OriginatingRouterName property">
+        <param name="Local" value="html/c79ec651-db89-67b0-c6d8-1120eb925018.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Serialize method">
+        <param name="Local" value="html/00af61ad-0146-fc6d-8eae-5260e62f8640.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Event.Serialize method">
+        <param name="Local" value="html/00af61ad-0146-fc6d-8eae-5260e62f8640.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SerializedEvent property">
+        <param name="Local" value="html/e2bf5043-cbef-dd7a-34ec-bd0b8376d14b.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Event.SerializedEvent property">
+        <param name="Local" value="html/e2bf5043-cbef-dd7a-34ec-bd0b8376d14b.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SubscriptionEvent property">
+        <param name="Local" value="html/211b94fe-65f1-5fbd-0b37-20949bd159a8.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Event.SubscriptionEvent property">
+        <param name="Local" value="html/211b94fe-65f1-5fbd-0b37-20949bd159a8.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="EventSerializationException class">
+        <param name="Local" value="html/6af5d246-4d8c-c05c-2aac-3cc8923b6e95.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Microsoft.WebSolutionsPlatform.Event.EventSerializationException class">
+        <param name="Local" value="html/6af5d246-4d8c-c05c-2aac-3cc8923b6e95.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="EventSerializationException class, constructor">
+        <param name="Local" value="html/793541b8-671e-c64c-d410-bfa70b5d40b5.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="EventSerializationException class, constructor">
+        <param name="Local" value="html/b950d66e-6b41-5920-a2ec-abd3c26b163a.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="EventSerializationException class, constructor">
+        <param name="Local" value="html/acae783b-b388-fd35-cff1-021a4ee01002.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="EventSerializationException class, constructor">
+        <param name="Local" value="html/ef8c9884-fbad-283e-e893-4aea7fc61614.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="EventSerializationException class, constructor">
+        <param name="Local" value="html/4a9bfbe4-fa83-891b-e01d-42563fad0e7f.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="EventTypeNotSupportedException class">
+        <param name="Local" value="html/76f19513-858b-2cb0-4023-4e4c554aaea6.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Microsoft.WebSolutionsPlatform.Event.EventTypeNotSupportedException class">
+        <param name="Local" value="html/76f19513-858b-2cb0-4023-4e4c554aaea6.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="EventTypeNotSupportedException class, constructor">
+        <param name="Local" value="html/fd1115c4-9aeb-a9bb-b2f8-33101e9118ec.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="EventTypeNotSupportedException class, constructor">
+        <param name="Local" value="html/1c91b93d-753d-bfa5-fe47-439bce9eb3a3.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="EventTypeNotSupportedException class, constructor">
+        <param name="Local" value="html/3ba7da0d-cb6f-1ff9-c9d5-2a8cc702be6c.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="EventTypeNotSupportedException class, constructor">
+        <param name="Local" value="html/c8785346-1d49-47a2-4bfe-f35c204d16d5.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="EventTypeNotSupportedException class, constructor">
+        <param name="Local" value="html/cede0d4d-ab2b-a306-c1aa-e10c93eb59b5.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PrefixStream class">
+        <param name="Local" value="html/d4af7014-ebc3-96ec-45ce-4e7416db4c66.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Microsoft.WebSolutionsPlatform.Event.PrefixStream class">
+        <param name="Local" value="html/d4af7014-ebc3-96ec-45ce-4e7416db4c66.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="CanRead property">
+        <param name="Local" value="html/3e5f0e1b-42c9-4520-5c04-49b522fb28ae.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PrefixStream.CanRead property">
+        <param name="Local" value="html/3e5f0e1b-42c9-4520-5c04-49b522fb28ae.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="CanSeek property">
+        <param name="Local" value="html/3329eef9-de2d-33bc-30c5-dd619e8a532f.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PrefixStream.CanSeek property">
+        <param name="Local" value="html/3329eef9-de2d-33bc-30c5-dd619e8a532f.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="CanWrite property">
+        <param name="Local" value="html/332c0e75-f59c-929d-88c4-fb5f24989a41.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PrefixStream.CanWrite property">
+        <param name="Local" value="html/332c0e75-f59c-929d-88c4-fb5f24989a41.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Flush method">
+        <param name="Local" value="html/fe35fadc-8da7-0f07-fec3-45277430165d.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PrefixStream.Flush method">
+        <param name="Local" value="html/fe35fadc-8da7-0f07-fec3-45277430165d.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Length property">
+        <param name="Local" value="html/485008fa-bf30-0eda-f264-8a72e901d3c5.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PrefixStream.Length property">
+        <param name="Local" value="html/485008fa-bf30-0eda-f264-8a72e901d3c5.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Position property">
+        <param name="Local" value="html/1cd4c466-9630-1bde-e568-e2bcb964b671.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PrefixStream.Position property">
+        <param name="Local" value="html/1cd4c466-9630-1bde-e568-e2bcb964b671.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Read method">
+        <param name="Local" value="html/7a2a0a70-a338-d9c8-6d3f-58ec28f5702c.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PrefixStream.Read method">
+        <param name="Local" value="html/7a2a0a70-a338-d9c8-6d3f-58ec28f5702c.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Seek method">
+        <param name="Local" value="html/6a3692d3-7334-ead0-0a5e-304ccb30de1a.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PrefixStream.Seek method">
+        <param name="Local" value="html/6a3692d3-7334-ead0-0a5e-304ccb30de1a.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SetLength method">
+        <param name="Local" value="html/5aa451bf-651d-3184-345a-3de5cc383dff.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PrefixStream.SetLength method">
+        <param name="Local" value="html/5aa451bf-651d-3184-345a-3de5cc383dff.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Write method">
+        <param name="Local" value="html/67a5282b-2ca0-5f48-d269-d4c9c5753ba0.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PrefixStream.Write method">
+        <param name="Local" value="html/67a5282b-2ca0-5f48-d269-d4c9c5753ba0.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="ProjectInstaller class">
+        <param name="Local" value="html/e4947129-3acd-ec9c-866b-850e0154e489.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Microsoft.WebSolutionsPlatform.Event.ProjectInstaller class">
+        <param name="Local" value="html/e4947129-3acd-ec9c-866b-850e0154e489.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="ProjectInstaller class, constructor">
+        <param name="Local" value="html/7e3f0f6d-856f-12f5-82d7-569490514748.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Dispose method">
+        <param name="Local" value="html/270dd7ff-71b1-b861-185e-6e7fa3d738e3.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="ProjectInstaller.Dispose method">
+        <param name="Local" value="html/270dd7ff-71b1-b861-185e-6e7fa3d738e3.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PropertyType enumeration">
+        <param name="Local" value="html/9883a4d4-23ec-b73c-e757-2156c4fa668f.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Microsoft.WebSolutionsPlatform.Event.PropertyType enumeration">
+        <param name="Local" value="html/9883a4d4-23ec-b73c-e757-2156c4fa668f.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Router class">
+        <param name="Local" value="html/feb29ec4-1ab1-4075-625e-67ea1ca7a464.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Microsoft.WebSolutionsPlatform.Event.Router class">
+        <param name="Local" value="html/feb29ec4-1ab1-4075-625e-67ea1ca7a464.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Router class, constructor">
+        <param name="Local" value="html/f20f2264-c44a-6ddb-6dee-50d4f39f13c9.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="ConcatArrayList method">
+        <param name="Local" value="html/0e2a6def-4b9b-a496-2ff4-3d7f09a7e991.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Router.ConcatArrayList method">
+        <param name="Local" value="html/0e2a6def-4b9b-a496-2ff4-3d7f09a7e991.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Dispose method">
+        <param name="Local" value="html/0a892431-2361-f94b-56c2-3376dcd9ee72.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Router.Dispose method">
+        <param name="Local" value="html/0a892431-2361-f94b-56c2-3376dcd9ee72.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="OnStart method">
+        <param name="Local" value="html/495c1de8-15ec-7b16-48be-46c79dd354e2.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Router.OnStart method">
+        <param name="Local" value="html/495c1de8-15ec-7b16-48be-46c79dd354e2.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="OnStop method">
+        <param name="Local" value="html/36fe0fdc-daad-d395-b5ab-0616ae466c0b.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Router.OnStop method">
+        <param name="Local" value="html/36fe0fdc-daad-d395-b5ab-0616ae466c0b.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SerializationData class">
+        <param name="Local" value="html/3e70cd5d-73c2-f2ba-d49f-a45065311534.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Microsoft.WebSolutionsPlatform.Event.SerializationData class">
+        <param name="Local" value="html/3e70cd5d-73c2-f2ba-d49f-a45065311534.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SerializationData class, constructor">
+        <param name="Local" value="html/a8056af8-5375-583f-1b98-b1ddfd15b17d.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Dispose method">
+        <param name="Local" value="html/24e9c70b-1530-49d1-6b4c-7fedc29981e5.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SerializationData.Dispose method">
+        <param name="Local" value="html/24e9c70b-1530-49d1-6b4c-7fedc29981e5.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SerializationData class, constructor">
+        <param name="Local" value="html/8f02e075-5292-5832-4013-b5aa381870dd.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SerializationData class, constructor">
+        <param name="Local" value="html/343bd4cd-963c-4b17-13b9-b63d61caf8f7.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="AddElement method">
+        <param name="Local" value="html/919fef3d-3c80-bc18-6afd-6eb2cad8ebb7.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SerializationData.AddElement method">
+        <param name="Local" value="html/919fef3d-3c80-bc18-6afd-6eb2cad8ebb7.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Current property">
+        <param name="Local" value="html/986b8254-fdac-e89e-3981-84643aa8be7d.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SerializationData.Current property">
+        <param name="Local" value="html/986b8254-fdac-e89e-3981-84643aa8be7d.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Dispose method">
+        <param name="Local" value="html/474a0042-ad58-c682-5154-dbf26668cf15.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SerializationData.Dispose method">
+        <param name="Local" value="html/474a0042-ad58-c682-5154-dbf26668cf15.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Dispose method">
+        <param name="Local" value="html/e089dacc-a2c5-b744-0858-4646be813641.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SerializationData.Dispose method">
+        <param name="Local" value="html/e089dacc-a2c5-b744-0858-4646be813641.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Finalize method">
+        <param name="Local" value="html/f0e93174-7085-b8cf-df4e-2f5caf304053.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SerializationData.Finalize method">
+        <param name="Local" value="html/f0e93174-7085-b8cf-df4e-2f5caf304053.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="GetEnumerator method">
+        <param name="Local" value="html/464ad07a-252d-c0e0-12ed-b7e051c5a38f.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SerializationData.GetEnumerator method">
+        <param name="Local" value="html/464ad07a-252d-c0e0-12ed-b7e051c5a38f.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="GetEventType method">
+        <param name="Local" value="html/789d9b85-a54d-a755-dc59-3ce432b1c056.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SerializationData.GetEventType method">
+        <param name="Local" value="html/789d9b85-a54d-a755-dc59-3ce432b1c056.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="GetInRouterName method">
+        <param name="Local" value="html/b640785b-7041-a625-40bf-586d8966cb1c.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SerializationData.GetInRouterName method">
+        <param name="Local" value="html/b640785b-7041-a625-40bf-586d8966cb1c.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="GetOriginatingRouterName method">
+        <param name="Local" value="html/2601f06f-91bc-026e-c1cc-67c43d233fc1.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SerializationData.GetOriginatingRouterName method">
+        <param name="Local" value="html/2601f06f-91bc-026e-c1cc-67c43d233fc1.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Length property">
+        <param name="Local" value="html/01c68d0c-fede-0a21-ae45-1353419ab8a5.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SerializationData.Length property">
+        <param name="Local" value="html/01c68d0c-fede-0a21-ae45-1353419ab8a5.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="MoveNext method">
+        <param name="Local" value="html/c6188d5c-af5f-7301-dfbb-c8f4c724f5b8.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SerializationData.MoveNext method">
+        <param name="Local" value="html/c6188d5c-af5f-7301-dfbb-c8f4c724f5b8.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="ReadMode property">
+        <param name="Local" value="html/541d3b93-06af-ef84-4e6b-1e64971f98bb.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SerializationData.ReadMode property">
+        <param name="Local" value="html/541d3b93-06af-ef84-4e6b-1e64971f98bb.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Reset method">
+        <param name="Local" value="html/f6407bdc-cdf1-6ac1-2dd1-1f56002b132c.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SerializationData.Reset method">
+        <param name="Local" value="html/f6407bdc-cdf1-6ac1-2dd1-1f56002b132c.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="ResetStream method">
+        <param name="Local" value="html/3d2d08a7-90b2-f505-8c87-276cd0481391.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SerializationData.ResetStream method">
+        <param name="Local" value="html/3d2d08a7-90b2-f505-8c87-276cd0481391.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="System.Collections.IEnumerable.GetEnumerator method">
+        <param name="Local" value="html/ac9bec5b-12fb-4364-939c-36655998a5a0.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SerializationData.System.Collections.IEnumerable.GetEnumerator method">
+        <param name="Local" value="html/ac9bec5b-12fb-4364-939c-36655998a5a0.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="System.Collections.IEnumerator.Current property">
+        <param name="Local" value="html/24612b4d-0733-ac45-ea4e-102b98312f81.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SerializationData.System.Collections.IEnumerator.Current property">
+        <param name="Local" value="html/24612b4d-0733-ac45-ea4e-102b98312f81.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="ToBytes method">
+        <param name="Local" value="html/e1ecfb43-716e-3da4-3ce9-9e1a1783d156.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SerializationData.ToBytes method">
+        <param name="Local" value="html/e1ecfb43-716e-3da4-3ce9-9e1a1783d156.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="ToString method">
+        <param name="Local" value="html/9d7679fb-e73c-77fd-4b1e-0893a01a7e4c.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SerializationData.ToString method">
+        <param name="Local" value="html/9d7679fb-e73c-77fd-4b1e-0893a01a7e4c.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WriteMode property">
+        <param name="Local" value="html/7a39e263-a7b2-1b03-281a-d34075cb12e3.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SerializationData.WriteMode property">
+        <param name="Local" value="html/7a39e263-a7b2-1b03-281a-d34075cb12e3.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="ServiceThread class">
+        <param name="Local" value="html/cb214a09-74ff-01f6-b53d-e3ace5bdb772.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Microsoft.WebSolutionsPlatform.Event.ServiceThread class">
+        <param name="Local" value="html/cb214a09-74ff-01f6-b53d-e3ace5bdb772.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="ServiceThread class, constructor">
+        <param name="Local" value="html/4202dd9d-34c8-caf9-ae68-e928ca73ae48.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Start method">
+        <param name="Local" value="html/b6bb4448-18b9-2d7e-2f86-e2e79f089929.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="ServiceThread.Start method">
+        <param name="Local" value="html/b6bb4448-18b9-2d7e-2f86-e2e79f089929.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Subscription class">
+        <param name="Local" value="html/f1922069-a82a-e5ec-e637-97cae10b6e50.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Microsoft.WebSolutionsPlatform.Event.Subscription class">
+        <param name="Local" value="html/f1922069-a82a-e5ec-e637-97cae10b6e50.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Subscription class, constructor">
+        <param name="Local" value="html/ff73b681-4f52-124d-da14-f57f230617d2.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="GetObjectData method">
+        <param name="Local" value="html/e7ba388c-0c51-a2d0-853a-6f12dd25ed9e.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Subscription.GetObjectData method">
+        <param name="Local" value="html/e7ba388c-0c51-a2d0-853a-6f12dd25ed9e.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="LocalOnly property">
+        <param name="Local" value="html/819aec11-526c-7a34-e055-a1a59672339d.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Subscription.LocalOnly property">
+        <param name="Local" value="html/819aec11-526c-7a34-e055-a1a59672339d.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Subscribe property">
+        <param name="Local" value="html/56b36926-5052-b216-244b-9b7171a4664e.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Subscription.Subscribe property">
+        <param name="Local" value="html/56b36926-5052-b216-244b-9b7171a4664e.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SubscriptionEventType property">
+        <param name="Local" value="html/dc671751-03ec-c247-b383-61eb345bf97d.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Subscription.SubscriptionEventType property">
+        <param name="Local" value="html/dc671751-03ec-c247-b383-61eb345bf97d.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SubscriptionId property">
+        <param name="Local" value="html/e2c71b19-6252-4c2d-709e-5be691a0dfc6.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Subscription.SubscriptionId property">
+        <param name="Local" value="html/e2c71b19-6252-4c2d-709e-5be691a0dfc6.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SynchronizationQueue class">
+        <param name="Local" value="html/2f0fc1c3-a0c2-f537-e2a9-8d3b1ab3554d.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Microsoft.WebSolutionsPlatform.Event.SynchronizationQueue class">
+        <param name="Local" value="html/2f0fc1c3-a0c2-f537-e2a9-8d3b1ab3554d.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SynchronizationQueue class, constructor">
+        <param name="Local" value="html/13ba23eb-96a5-4a3d-a9d6-e0e4813a2794.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Dequeue method">
+        <param name="Local" value="html/589d301c-7176-b9b0-88e9-5b37b4a5e16d.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SynchronizationQueue.Dequeue method">
+        <param name="Local" value="html/589d301c-7176-b9b0-88e9-5b37b4a5e16d.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Dispose method">
+        <param name="Local" value="html/e0da6727-b2ea-a49c-84f7-19503a523c25.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SynchronizationQueue.Dispose method">
+        <param name="Local" value="html/e0da6727-b2ea-a49c-84f7-19503a523c25.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Enqueue method">
+        <param name="Local" value="html/b4d798d2-fc94-5b72-d8a7-b2499594c2d8.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SynchronizationQueue.Enqueue method">
+        <param name="Local" value="html/b4d798d2-fc94-5b72-d8a7-b2499594c2d8.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SynchronizationQueue class, constructor">
+        <param name="Local" value="html/35dd8b51-79d5-50ec-4004-7e2ff1dfcd37.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SynchronizationQueue class, constructor">
+        <param name="Local" value="html/bb93a564-872e-aee5-c73e-d40cc23f8610.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SynchronizationQueue class, constructor">
+        <param name="Local" value="html/f52eee32-89b7-7e95-da1d-0659d4bd50c3.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Dequeue method">
+        <param name="Local" value="html/56ada732-5b22-9352-799d-0ccceb3a807b.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SynchronizationQueue.Dequeue method">
+        <param name="Local" value="html/56ada732-5b22-9352-799d-0ccceb3a807b.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Dequeue method">
+        <param name="Local" value="html/45a157e9-7088-1738-98c0-0eefba7a27ec.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SynchronizationQueue.Dequeue method">
+        <param name="Local" value="html/45a157e9-7088-1738-98c0-0eefba7a27ec.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Dispose method">
+        <param name="Local" value="html/9c97c66e-75e4-6374-cf8d-e5e316ad0aab.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SynchronizationQueue.Dispose method">
+        <param name="Local" value="html/9c97c66e-75e4-6374-cf8d-e5e316ad0aab.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Dispose method">
+        <param name="Local" value="html/fc549869-3c96-3eb0-e1bf-1efc395bfbec.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SynchronizationQueue.Dispose method">
+        <param name="Local" value="html/fc549869-3c96-3eb0-e1bf-1efc395bfbec.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Enqueue method">
+        <param name="Local" value="html/24f07d9c-99ad-b0d5-dff9-cdae2b98b127.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SynchronizationQueue.Enqueue method">
+        <param name="Local" value="html/24f07d9c-99ad-b0d5-dff9-cdae2b98b127.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Enqueue method">
+        <param name="Local" value="html/7592aede-c590-4411-4137-42b302d756af.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SynchronizationQueue.Enqueue method">
+        <param name="Local" value="html/7592aede-c590-4411-4137-42b302d756af.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Finalize method">
+        <param name="Local" value="html/cf6e52de-9823-4815-903b-028420346f8d.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SynchronizationQueue.Finalize method">
+        <param name="Local" value="html/cf6e52de-9823-4815-903b-028420346f8d.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Timeout property">
+        <param name="Local" value="html/176ad6fc-a81f-b05e-1352-daed2529b02c.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SynchronizationQueue.Timeout property">
+        <param name="Local" value="html/176ad6fc-a81f-b05e-1352-daed2529b02c.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent class">
+        <param name="Local" value="html/422cb39c-540c-61e6-f0e4-2d8626f6f9f6.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Microsoft.WebSolutionsPlatform.Event.WebpageEvent class">
+        <param name="Local" value="html/422cb39c-540c-61e6-f0e4-2d8626f6f9f6.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent class, constructor">
+        <param name="Local" value="html/302fd3bc-4d74-aa63-2358-8aea5faa1716.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent class, constructor">
+        <param name="Local" value="html/fa757b75-453d-5da8-fd8a-d9ac03d09b8a.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent class, constructor">
+        <param name="Local" value="html/8cd22fe4-b9b6-47ff-b1d0-df6309a6c4b2.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="ActiveXControls property">
+        <param name="Local" value="html/23df0d73-a29a-3b47-f729-7a697dc9dbaa.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent.ActiveXControls property">
+        <param name="Local" value="html/23df0d73-a29a-3b47-f729-7a697dc9dbaa.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="AnonymousId property">
+        <param name="Local" value="html/061ffb23-6c1b-809d-faf7-6b078144a311.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent.AnonymousId property">
+        <param name="Local" value="html/061ffb23-6c1b-809d-faf7-6b078144a311.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Aol property">
+        <param name="Local" value="html/2a2de817-f74e-bc53-0237-c48c760dd32b.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent.Aol property">
+        <param name="Local" value="html/2a2de817-f74e-bc53-0237-c48c760dd32b.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="BackgroundSounds property">
+        <param name="Local" value="html/65175473-439b-fa1e-68e5-58627f6f1c66.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent.BackgroundSounds property">
+        <param name="Local" value="html/65175473-439b-fa1e-68e5-58627f6f1c66.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Beta property">
+        <param name="Local" value="html/74063486-0e2a-b3b3-f7ad-364798a12171.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent.Beta property">
+        <param name="Local" value="html/74063486-0e2a-b3b3-f7ad-364798a12171.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Browser property">
+        <param name="Local" value="html/c9ef4280-1e98-17ab-38bb-e0753d1000c4.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent.Browser property">
+        <param name="Local" value="html/c9ef4280-1e98-17ab-38bb-e0753d1000c4.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Cdf property">
+        <param name="Local" value="html/7a162ca8-b758-2844-f028-d0de3b09c292.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent.Cdf property">
+        <param name="Local" value="html/7a162ca8-b758-2844-f028-d0de3b09c292.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="ClrVersion property">
+        <param name="Local" value="html/b803bc52-45de-c6b2-c5d9-17a6800d348c.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent.ClrVersion property">
+        <param name="Local" value="html/b803bc52-45de-c6b2-c5d9-17a6800d348c.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Cookies property">
+        <param name="Local" value="html/4fd27f3c-04d6-b66c-714e-a5866b67d751.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent.Cookies property">
+        <param name="Local" value="html/4fd27f3c-04d6-b66c-714e-a5866b67d751.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Crawler property">
+        <param name="Local" value="html/54b0378d-a86f-e8af-3a0b-e8819c63c166.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent.Crawler property">
+        <param name="Local" value="html/54b0378d-a86f-e8af-3a0b-e8819c63c166.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="EcmaScriptVersion property">
+        <param name="Local" value="html/82fba530-01bf-8f85-5a93-94e95f861472.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent.EcmaScriptVersion property">
+        <param name="Local" value="html/82fba530-01bf-8f85-5a93-94e95f861472.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Ext property">
+        <param name="Local" value="html/7dd0e88f-323d-48e3-5942-76737e84ac57.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent.Ext property">
+        <param name="Local" value="html/7dd0e88f-323d-48e3-5942-76737e84ac57.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Frames property">
+        <param name="Local" value="html/1685d66e-d84a-47e2-5323-df599f8cc7cd.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent.Frames property">
+        <param name="Local" value="html/1685d66e-d84a-47e2-5323-df599f8cc7cd.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="GetObjectData method">
+        <param name="Local" value="html/ec3d2c81-4a48-8002-3241-0953b536fcef.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent.GetObjectData method">
+        <param name="Local" value="html/ec3d2c81-4a48-8002-3241-0953b536fcef.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="HostDomain property">
+        <param name="Local" value="html/a74b8452-fb4d-561a-4837-4da68e40990f.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent.HostDomain property">
+        <param name="Local" value="html/a74b8452-fb4d-561a-4837-4da68e40990f.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="JavaApplets property">
+        <param name="Local" value="html/d73c5702-e4a5-4a45-de96-085f6c21a72c.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent.JavaApplets property">
+        <param name="Local" value="html/d73c5702-e4a5-4a45-de96-085f6c21a72c.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="LogicalUri property">
+        <param name="Local" value="html/20b1edc4-6532-40ca-00b9-2df3f72927e3.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent.LogicalUri property">
+        <param name="Local" value="html/20b1edc4-6532-40ca-00b9-2df3f72927e3.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="MajorVersion property">
+        <param name="Local" value="html/f729785b-7863-0943-8fc8-01f8f0093be7.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent.MajorVersion property">
+        <param name="Local" value="html/f729785b-7863-0943-8fc8-01f8f0093be7.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="MinorVersion property">
+        <param name="Local" value="html/0cb62264-52f4-f9ba-6942-285fde1f3e7d.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent.MinorVersion property">
+        <param name="Local" value="html/0cb62264-52f4-f9ba-6942-285fde1f3e7d.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="MSDomVersion property">
+        <param name="Local" value="html/c21da8c0-a266-ddbb-ed6d-4d2b59fb8ffb.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent.MSDomVersion property">
+        <param name="Local" value="html/c21da8c0-a266-ddbb-ed6d-4d2b59fb8ffb.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Platform property">
+        <param name="Local" value="html/940bfd2a-0f70-829c-774e-5276d0f45ad4.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent.Platform property">
+        <param name="Local" value="html/940bfd2a-0f70-829c-774e-5276d0f45ad4.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Request property">
+        <param name="Local" value="html/4a8293c6-97c2-b2ad-822e-0e37c5e8647a.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent.Request property">
+        <param name="Local" value="html/4a8293c6-97c2-b2ad-822e-0e37c5e8647a.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="RequestType property">
+        <param name="Local" value="html/960465e4-9f0c-cc88-3070-c3f4fcf682b6.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent.RequestType property">
+        <param name="Local" value="html/960465e4-9f0c-cc88-3070-c3f4fcf682b6.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Source property">
+        <param name="Local" value="html/8c97e80e-62ce-491d-511e-886fe39c9f52.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent.Source property">
+        <param name="Local" value="html/8c97e80e-62ce-491d-511e-886fe39c9f52.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SourceServer property">
+        <param name="Local" value="html/cc26784a-6a9c-7148-ccdc-2223c73be6de.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent.SourceServer property">
+        <param name="Local" value="html/cc26784a-6a9c-7148-ccdc-2223c73be6de.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="StatusCode property">
+        <param name="Local" value="html/f1a80b69-3b51-46b0-a27f-808a6eeba84d.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent.StatusCode property">
+        <param name="Local" value="html/f1a80b69-3b51-46b0-a27f-808a6eeba84d.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SubDirectory property">
+        <param name="Local" value="html/33bccb32-99fe-f6d0-b640-7920c808926c.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent.SubDirectory property">
+        <param name="Local" value="html/33bccb32-99fe-f6d0-b640-7920c808926c.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Tables property">
+        <param name="Local" value="html/0f69f984-5811-22df-4bc7-b1291ebf60b2.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent.Tables property">
+        <param name="Local" value="html/0f69f984-5811-22df-4bc7-b1291ebf60b2.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Type property">
+        <param name="Local" value="html/b1efb5cd-e2f4-a7b0-61a6-54f061625041.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent.Type property">
+        <param name="Local" value="html/b1efb5cd-e2f4-a7b0-61a6-54f061625041.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="UriHash property">
+        <param name="Local" value="html/5dfd8f71-a166-531a-bd66-f39af84ede35.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent.UriHash property">
+        <param name="Local" value="html/5dfd8f71-a166-531a-bd66-f39af84ede35.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="UriQuery property">
+        <param name="Local" value="html/f52bc1ba-894c-af24-f4ae-b54c614509a3.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent.UriQuery property">
+        <param name="Local" value="html/f52bc1ba-894c-af24-f4ae-b54c614509a3.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="UriStem property">
+        <param name="Local" value="html/33f554c9-668b-41f4-c350-e2adc4efd6b4.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent.UriStem property">
+        <param name="Local" value="html/33f554c9-668b-41f4-c350-e2adc4efd6b4.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="UrlReferrer property">
+        <param name="Local" value="html/1aa6f5df-f182-9ce4-d997-435860b5d4c3.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent.UrlReferrer property">
+        <param name="Local" value="html/1aa6f5df-f182-9ce4-d997-435860b5d4c3.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="UrlReferrerDomain property">
+        <param name="Local" value="html/e879163d-815d-ce24-c995-18112da3a66a.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent.UrlReferrerDomain property">
+        <param name="Local" value="html/e879163d-815d-ce24-c995-18112da3a66a.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="UserAgent property">
+        <param name="Local" value="html/8b4d1635-3652-e33b-5b71-90036521c449.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent.UserAgent property">
+        <param name="Local" value="html/8b4d1635-3652-e33b-5b71-90036521c449.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="UserHostAddress property">
+        <param name="Local" value="html/25bf6430-8930-2634-4892-a1207ea186a7.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent.UserHostAddress property">
+        <param name="Local" value="html/25bf6430-8930-2634-4892-a1207ea186a7.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="VBScript property">
+        <param name="Local" value="html/5aef5742-2e0a-1aa5-5136-8e3250b5d401.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent.VBScript property">
+        <param name="Local" value="html/5aef5742-2e0a-1aa5-5136-8e3250b5d401.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Version property">
+        <param name="Local" value="html/1d2f92c0-6d9b-cc90-209f-0886c5073945.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent.Version property">
+        <param name="Local" value="html/1d2f92c0-6d9b-cc90-209f-0886c5073945.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="VirtualRoot property">
+        <param name="Local" value="html/ebfdbe8a-32b2-9dea-92ef-ee9dfc59e348.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent.VirtualRoot property">
+        <param name="Local" value="html/ebfdbe8a-32b2-9dea-92ef-ee9dfc59e348.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="W3CDomVersion property">
+        <param name="Local" value="html/9cdaaf25-13ea-afad-45c8-4a592bc7e003.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent.W3CDomVersion property">
+        <param name="Local" value="html/9cdaaf25-13ea-afad-45c8-4a592bc7e003.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Win16 property">
+        <param name="Local" value="html/8453f923-a2b1-6c37-27f7-c854ce160795.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent.Win16 property">
+        <param name="Local" value="html/8453f923-a2b1-6c37-27f7-c854ce160795.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Win32 property">
+        <param name="Local" value="html/22b4a170-a099-7163-5bed-df01ed59f52e.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WebpageEvent.Win32 property">
+        <param name="Local" value="html/22b4a170-a099-7163-5bed-df01ed59f52e.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WorkerThreadType enumeration">
+        <param name="Local" value="html/3ce8c3b6-438d-98b5-268c-5ea7eb97bc4d.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Microsoft.WebSolutionsPlatform.Event.WorkerThreadType enumeration">
+        <param name="Local" value="html/3ce8c3b6-438d-98b5-268c-5ea7eb97bc4d.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WspKeyValuePair structure">
+        <param name="Local" value="html/db769abd-2624-b007-e7a2-d7301cbfe791.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Microsoft.WebSolutionsPlatform.Event.WspKeyValuePair structure">
+        <param name="Local" value="html/db769abd-2624-b007-e7a2-d7301cbfe791.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WspKeyValuePair structure, constructor">
+        <param name="Local" value="html/7919df68-3eb5-9c43-e05a-2451c135a734.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Key property">
+        <param name="Local" value="html/f8bfd6f7-1813-185a-9a3c-1fc7770f85a8.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WspKeyValuePair.Key property">
+        <param name="Local" value="html/f8bfd6f7-1813-185a-9a3c-1fc7770f85a8.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="ValueIn property">
+        <param name="Local" value="html/1b8fdcec-9331-5956-1f44-de83a1005789.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="WspKeyValuePair.ValueIn property">
+        <param name="Local" value="html/1b8fdcec-9331-5956-1f44-de83a1005789.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Microsoft.WebSolutionsPlatform.Event.PubSubManager namespace">
+        <param name="Local" value="html/977c95db-a181-f43c-a0d0-f1a4c97742f4.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="ISubscriptionCallback interface">
+        <param name="Local" value="html/3fe086b9-6190-6a8b-ae79-7fc5261e76e5.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Microsoft.WebSolutionsPlatform.Event.PubSubManager.ISubscriptionCallback interface">
+        <param name="Local" value="html/3fe086b9-6190-6a8b-ae79-7fc5261e76e5.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SubscriptionCallback method">
+        <param name="Local" value="html/50afeaa8-64cd-6751-b66d-05cccc50a46e.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="ISubscriptionCallback.SubscriptionCallback method">
+        <param name="Local" value="html/50afeaa8-64cd-6751-b66d-05cccc50a46e.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PublishManager class">
+        <param name="Local" value="html/5f990651-6558-0133-c137-9f11398767db.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Microsoft.WebSolutionsPlatform.Event.PubSubManager.PublishManager class">
+        <param name="Local" value="html/5f990651-6558-0133-c137-9f11398767db.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PublishManager class, constructor">
+        <param name="Local" value="html/331f8f0e-473b-e227-109a-f6d4ffdcf406.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Dispose method">
+        <param name="Local" value="html/76cc2259-6ae5-aae4-02cd-8ce33cb2f685.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PublishManager.Dispose method">
+        <param name="Local" value="html/76cc2259-6ae5-aae4-02cd-8ce33cb2f685.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PublishManager class, constructor">
+        <param name="Local" value="html/cb687ece-ea5b-cc7e-2f10-f0d261d9e747.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PublishManager class, constructor">
+        <param name="Local" value="html/c85142e2-f5ac-2682-8622-2dec818e2e70.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Dispose method">
+        <param name="Local" value="html/61628fdb-902a-a563-5701-4bbb7323446e.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PublishManager.Dispose method">
+        <param name="Local" value="html/61628fdb-902a-a563-5701-4bbb7323446e.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Dispose method">
+        <param name="Local" value="html/103d5a55-b7d4-371f-ba77-fdf9cdaa5680.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PublishManager.Dispose method">
+        <param name="Local" value="html/103d5a55-b7d4-371f-ba77-fdf9cdaa5680.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Finalize method">
+        <param name="Local" value="html/02c9b496-a8b9-eb82-8800-e479f01c383f.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PublishManager.Finalize method">
+        <param name="Local" value="html/02c9b496-a8b9-eb82-8800-e479f01c383f.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Publish method">
+        <param name="Local" value="html/99f4803b-61dd-276b-6974-d139da7d8ccf.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PublishManager.Publish method">
+        <param name="Local" value="html/99f4803b-61dd-276b-6974-d139da7d8ccf.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="QueueSize property">
+        <param name="Local" value="html/bc2dd72c-caa4-db25-d31c-a761723dc4a7.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PublishManager.QueueSize property">
+        <param name="Local" value="html/bc2dd72c-caa4-db25-d31c-a761723dc4a7.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="RetryAttempts property">
+        <param name="Local" value="html/6ca7f804-166c-5512-80e1-9cc6cde87cf2.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PublishManager.RetryAttempts property">
+        <param name="Local" value="html/6ca7f804-166c-5512-80e1-9cc6cde87cf2.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="RetryPause property">
+        <param name="Local" value="html/3380cc15-fcd7-bb33-8196-870ac08ec5ce.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PublishManager.RetryPause property">
+        <param name="Local" value="html/3380cc15-fcd7-bb33-8196-870ac08ec5ce.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Timeout property">
+        <param name="Local" value="html/13174791-0ead-b54e-bb22-2506ec2463da.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PublishManager.Timeout property">
+        <param name="Local" value="html/13174791-0ead-b54e-bb22-2506ec2463da.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PubSubConnectionFailedException class">
+        <param name="Local" value="html/6c353d7c-fc3a-b778-7833-667a8693eddd.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Microsoft.WebSolutionsPlatform.Event.PubSubManager.PubSubConnectionFailedException class">
+        <param name="Local" value="html/6c353d7c-fc3a-b778-7833-667a8693eddd.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PubSubConnectionFailedException class, constructor">
+        <param name="Local" value="html/c7ffe5d5-8a5f-1804-6e11-0984b5cb7847.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PubSubConnectionFailedException class, constructor">
+        <param name="Local" value="html/2d92227f-b339-3c3b-1024-2926ef2897f6.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PubSubConnectionFailedException class, constructor">
+        <param name="Local" value="html/25e207e6-f360-5ff7-e3ad-0189eece5f3f.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PubSubConnectionFailedException class, constructor">
+        <param name="Local" value="html/a4e66955-b275-a04a-cb19-1b26d48d736c.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PubSubConnectionFailedException class, constructor">
+        <param name="Local" value="html/2eaca9a7-bb49-5e49-6118-e82e1e043d95.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PubSubException class">
+        <param name="Local" value="html/2f8be806-bcfe-6f40-877e-d4df9b183d44.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Microsoft.WebSolutionsPlatform.Event.PubSubManager.PubSubException class">
+        <param name="Local" value="html/2f8be806-bcfe-6f40-877e-d4df9b183d44.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PubSubException class, constructor">
+        <param name="Local" value="html/b388ecd6-da35-e681-160c-6db18b89245d.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PubSubException class, constructor">
+        <param name="Local" value="html/bed38b03-6bad-f237-7e4d-522ac3dc1015.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PubSubException class, constructor">
+        <param name="Local" value="html/57f27430-a25d-6ec5-1dfb-f3268c1df5d6.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PubSubException class, constructor">
+        <param name="Local" value="html/54a97f45-8264-c2b0-d4f6-baf0d62fb23a.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PubSubException class, constructor">
+        <param name="Local" value="html/eb852a0d-3b29-8e81-927e-9e7d48ba72d6.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PubSubInitializationException class">
+        <param name="Local" value="html/16dd59ff-7b7c-5507-1f21-731ba42b5918.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Microsoft.WebSolutionsPlatform.Event.PubSubManager.PubSubInitializationException class">
+        <param name="Local" value="html/16dd59ff-7b7c-5507-1f21-731ba42b5918.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PubSubInitializationException class, constructor">
+        <param name="Local" value="html/3c329082-0f5b-c229-a45f-2d6c98cd6abe.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PubSubInitializationException class, constructor">
+        <param name="Local" value="html/db81d9b8-f3fa-6722-982b-a6f329fae521.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PubSubInitializationException class, constructor">
+        <param name="Local" value="html/ffe6f97b-55b8-9914-f99d-79e763c8a9b2.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PubSubInitializationException class, constructor">
+        <param name="Local" value="html/b0c9be14-8f1c-4802-02ea-5e4f5f9370b9.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PubSubInitializationException class, constructor">
+        <param name="Local" value="html/4b5c2d1f-ba3e-59b2-8ac2-3f94b33dbcd4.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PubSubInsufficientMemoryException class">
+        <param name="Local" value="html/d55560d3-e2bc-a8eb-6ada-ccba12e3ad89.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Microsoft.WebSolutionsPlatform.Event.PubSubManager.PubSubInsufficientMemoryException class">
+        <param name="Local" value="html/d55560d3-e2bc-a8eb-6ada-ccba12e3ad89.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PubSubInsufficientMemoryException class, constructor">
+        <param name="Local" value="html/4c366daf-052c-09e7-efdf-068e600131d0.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PubSubInsufficientMemoryException class, constructor">
+        <param name="Local" value="html/daed5189-04aa-10bc-789c-8a24540bdcd3.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PubSubInsufficientMemoryException class, constructor">
+        <param name="Local" value="html/7cfc89d4-2df1-566d-a091-9e8aecb1a892.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PubSubInsufficientMemoryException class, constructor">
+        <param name="Local" value="html/0178d3dd-da9f-8cab-655b-48b2c90b2c7e.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PubSubInsufficientMemoryException class, constructor">
+        <param name="Local" value="html/9f19608f-bed6-5847-6813-14affa6d0e99.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PubSubQueueDoesNotExistException class">
+        <param name="Local" value="html/c09cadf1-6aa4-fc38-140a-e739fe2f773a.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Microsoft.WebSolutionsPlatform.Event.PubSubManager.PubSubQueueDoesNotExistException class">
+        <param name="Local" value="html/c09cadf1-6aa4-fc38-140a-e739fe2f773a.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PubSubQueueDoesNotExistException class, constructor">
+        <param name="Local" value="html/c12a8895-6250-9aee-3799-b3b9a339b149.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PubSubQueueDoesNotExistException class, constructor">
+        <param name="Local" value="html/65fb704d-8b1c-76e8-ca33-ab3eeaf438a1.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PubSubQueueDoesNotExistException class, constructor">
+        <param name="Local" value="html/b7ba65bc-a5e7-b269-8125-1ae19e8b4f43.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PubSubQueueDoesNotExistException class, constructor">
+        <param name="Local" value="html/f502a827-e2ff-af8f-1fc2-69c1cc01ab92.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PubSubQueueDoesNotExistException class, constructor">
+        <param name="Local" value="html/f7909000-c080-073a-72e1-3052d94d7483.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PubSubQueueFullException class">
+        <param name="Local" value="html/f01deb27-681e-8d77-2b08-9c5e1eba7f44.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Microsoft.WebSolutionsPlatform.Event.PubSubManager.PubSubQueueFullException class">
+        <param name="Local" value="html/f01deb27-681e-8d77-2b08-9c5e1eba7f44.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PubSubQueueFullException class, constructor">
+        <param name="Local" value="html/eedc4c43-273a-ad33-9997-4541e317efc8.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PubSubQueueFullException class, constructor">
+        <param name="Local" value="html/38fec177-600e-8dcd-fe6f-8c567d1d4c0f.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PubSubQueueFullException class, constructor">
+        <param name="Local" value="html/6cdfa1a4-78f0-7cd6-9a70-109c398ce946.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PubSubQueueFullException class, constructor">
+        <param name="Local" value="html/84f586c3-b084-b067-1321-6c148c86a901.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="PubSubQueueFullException class, constructor">
+        <param name="Local" value="html/4bdbae77-0caf-adfd-6bfc-ca2b064dd50b.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SubscriptionManager class">
+        <param name="Local" value="html/e7c2857e-7da0-5a13-dc80-62dfe6fbee3e.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Microsoft.WebSolutionsPlatform.Event.PubSubManager.SubscriptionManager class">
+        <param name="Local" value="html/e7c2857e-7da0-5a13-dc80-62dfe6fbee3e.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SubscriptionManager class, constructor">
+        <param name="Local" value="html/97ee50c2-6189-896f-e10a-5ae5a77d610c.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Dispose method">
+        <param name="Local" value="html/9a8b789a-19cd-9ce8-b960-2afa8599481a.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SubscriptionManager.Dispose method">
+        <param name="Local" value="html/9a8b789a-19cd-9ce8-b960-2afa8599481a.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SubscriptionManager class, constructor">
+        <param name="Local" value="html/79440013-5dc0-0bd0-b140-81eef4e2a851.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SubscriptionManager class, constructor">
+        <param name="Local" value="html/ff00f49c-0625-1db9-72f6-07344c860028.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="AddSubscription method">
+        <param name="Local" value="html/0234c944-68d3-64b9-1aa6-1cbe9f752bed.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SubscriptionManager.AddSubscription method">
+        <param name="Local" value="html/0234c944-68d3-64b9-1aa6-1cbe9f752bed.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="CallbackMethod property">
+        <param name="Local" value="html/277a9e90-d127-fee0-ade9-ba65db504cb1.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SubscriptionManager.CallbackMethod property">
+        <param name="Local" value="html/277a9e90-d127-fee0-ade9-ba65db504cb1.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Dispose method">
+        <param name="Local" value="html/7b56f791-6437-834b-ed28-4dc8870a6019.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SubscriptionManager.Dispose method">
+        <param name="Local" value="html/7b56f791-6437-834b-ed28-4dc8870a6019.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Dispose method">
+        <param name="Local" value="html/8bce1ae8-0498-58ba-cceb-cf907d20bcd3.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SubscriptionManager.Dispose method">
+        <param name="Local" value="html/8bce1ae8-0498-58ba-cceb-cf907d20bcd3.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Finalize method">
+        <param name="Local" value="html/bfc84837-411b-946e-5ac8-0bf92a400a7b.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SubscriptionManager.Finalize method">
+        <param name="Local" value="html/bfc84837-411b-946e-5ac8-0bf92a400a7b.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="GetSubscriptions method">
+        <param name="Local" value="html/b1262dd3-f43e-036f-ea16-958a3b41fa2c.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SubscriptionManager.GetSubscriptions method">
+        <param name="Local" value="html/b1262dd3-f43e-036f-ea16-958a3b41fa2c.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="ListenForEvents property">
+        <param name="Local" value="html/b84a0cb3-2840-24ff-084f-bfef68fd2a61.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SubscriptionManager.ListenForEvents property">
+        <param name="Local" value="html/b84a0cb3-2840-24ff-084f-bfef68fd2a61.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="QueueSize property">
+        <param name="Local" value="html/e85da134-9472-fa79-af81-6f12dbaed6d7.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SubscriptionManager.QueueSize property">
+        <param name="Local" value="html/e85da134-9472-fa79-af81-6f12dbaed6d7.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="RemoveSubscription method">
+        <param name="Local" value="html/a834c495-202a-61ee-c561-4cf430c50ce3.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SubscriptionManager.RemoveSubscription method">
+        <param name="Local" value="html/a834c495-202a-61ee-c561-4cf430c50ce3.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Timeout property">
+        <param name="Local" value="html/833ed77b-e784-0cea-fcdc-2f7f588803f7.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="SubscriptionManager.Timeout property">
+        <param name="Local" value="html/833ed77b-e784-0cea-fcdc-2f7f588803f7.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Callback delegate">
+        <param name="Local" value="html/b19bb624-4f90-cb55-501b-db5cafc2cfd6.htm">
+      </OBJECT><LI>
+      <LI><OBJECT type="text/sitemap">
+        <param name="Name" value="Microsoft.WebSolutionsPlatform.Event.PubSubManager.Callback delegate">
+        <param name="Local" value="html/b19bb624-4f90-cb55-501b-db5cafc2cfd6.htm">
+      </OBJECT><LI>
+    </UL>
+  </BODY>
+</HTML>
