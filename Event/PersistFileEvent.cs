@@ -171,11 +171,11 @@ namespace Microsoft.WebSolutionsPlatform.Event
             }
         }
 
-        private string settingFieldTerminator;
+        private char settingFieldTerminator;
         /// <summary>
         /// Config setting for the field terminator
         /// </summary>
-        public string SettingFieldTerminator
+        public char SettingFieldTerminator
         {
             get
             {
@@ -187,11 +187,11 @@ namespace Microsoft.WebSolutionsPlatform.Event
             }
         }
 
-        private string settingRowTerminator;
+        private char settingRowTerminator;
         /// <summary>
         /// Config setting for the row terminator
         /// </summary>
-        public string SettingRowTerminator
+        public char SettingRowTerminator
         {
             get
             {
@@ -200,6 +200,118 @@ namespace Microsoft.WebSolutionsPlatform.Event
             set
             {
                 settingRowTerminator = value;
+            }
+        }
+
+        private char settingKeyValueSeparator;
+        /// <summary>
+        /// Config setting for the key/value separator
+        /// </summary>
+        public char SettingKeyValueSeparator
+        {
+            get
+            {
+                return settingKeyValueSeparator;
+            }
+            set
+            {
+                settingKeyValueSeparator = value;
+            }
+        }
+
+        private char settingBeginObjectSeparator;
+        /// <summary>
+        /// Config setting for the begin object separator
+        /// </summary>
+        public char SettingBeginObjectSeparator
+        {
+            get
+            {
+                return settingBeginObjectSeparator;
+            }
+            set
+            {
+                settingBeginObjectSeparator = value;
+            }
+        }
+
+        private char settingEndObjectSeparator;
+        /// <summary>
+        /// Config setting for the end object separator
+        /// </summary>
+        public char SettingEndObjectSeparator
+        {
+            get
+            {
+                return settingEndObjectSeparator;
+            }
+            set
+            {
+                settingEndObjectSeparator = value;
+            }
+        }
+
+        private char settingBeginArraySeparator;
+        /// <summary>
+        /// Config setting for the begin array separator
+        /// </summary>
+        public char SettingBeginArraySeparator
+        {
+            get
+            {
+                return settingBeginArraySeparator;
+            }
+            set
+            {
+                settingBeginArraySeparator = value;
+            }
+        }
+
+        private char settingEndArraySeparator;
+        /// <summary>
+        /// Config setting for the end array separator
+        /// </summary>
+        public char SettingEndArraySeparator
+        {
+            get
+            {
+                return settingEndArraySeparator;
+            }
+            set
+            {
+                settingEndArraySeparator = value;
+            }
+        }
+
+        private char settingStringDelimiter;
+        /// <summary>
+        /// Config setting for the string delimiter
+        /// </summary>
+        public char SettingStringDelimiter
+        {
+            get
+            {
+                return settingStringDelimiter;
+            }
+            set
+            {
+                settingStringDelimiter = value;
+            }
+        }
+
+        private char settingEscapeCharacter;
+        /// <summary>
+        /// Config setting for the escape character
+        /// </summary>
+        public char SettingEscapeCharacter
+        {
+            get
+            {
+                return settingEscapeCharacter;
+            }
+            set
+            {
+                settingEscapeCharacter = value;
             }
         }
 
@@ -240,6 +352,10 @@ namespace Microsoft.WebSolutionsPlatform.Event
             buffer.AddElement(@"SettingLocalOnly", settingLocalOnly);
             buffer.AddElement(@"SettingFieldTerminator", settingFieldTerminator);
             buffer.AddElement(@"SettingRowTerminator", settingRowTerminator);
+            buffer.AddElement(@"SettingBeginObjectSeparator", settingBeginArraySeparator);
+            buffer.AddElement(@"SettingEndObjectSeparator", settingEndArraySeparator);
+            buffer.AddElement(@"SettingKeyValueSeparator", settingKeyValueSeparator);
+            buffer.AddElement(@"SettingEscapeCharacter", settingEscapeCharacter);
         }
 
         /// <summary>
@@ -285,11 +401,27 @@ namespace Microsoft.WebSolutionsPlatform.Event
                     break;
 
                 case "SettingFieldTerminator":
-                    SettingFieldTerminator = (string)elementValue;
+                    SettingFieldTerminator = (char)elementValue;
                     break;
 
                 case "SettingRowTerminator":
-                    SettingRowTerminator = (string)elementValue;
+                    SettingRowTerminator = (char)elementValue;
+                    break;
+
+                case "SettingBeginObjectSeparator":
+                    SettingBeginObjectSeparator = (char)elementValue;
+                    break;
+
+                case "SettingEndObjectSeparator":
+                    SettingEndObjectSeparator = (char)elementValue;
+                    break;
+
+                case "SettingKeyValueSeparator":
+                    SettingKeyValueSeparator = (char)elementValue;
+                    break;
+
+                case "SettingEscapeCharacter":
+                    SettingEscapeCharacter = (char)elementValue;
                     break;
 
                 default:

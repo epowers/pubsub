@@ -16,21 +16,53 @@ using System.Xml.XPath;
 
 namespace Microsoft.WebSolutionsPlatform.Event
 {
-	public partial class Router : ServiceBase
-	{
-		internal class Manager : ServiceThread
-		{
+    public partial class Router : ServiceBase
+    {
+        internal class Manager : ServiceThread
+        {
             public static Semaphore ThreadInitialize = new Semaphore(0, 1);
 
-			public override void Start()
-			{
-				try
-				{
+            static RequestListenMgr requestListener;
+
+            public override void Start()
+            {
+                string servicePrefix;
+                char[] sep = new Char[] { '/' };
+
+                try
+                {
                     Type[] workerThreadTypes = new Type[workerThreads.Count];
                     workerThreads.Keys.CopyTo(workerThreadTypes, 0);
 
-                    while(true)
-					{
+                    if (string.Compare(role, @"origin", true) == 0)
+                    {
+                        string[] subs = bootstrapUrl.Split(sep, 4);
+                        servicePrefix = @"http://*:80/" + subs[3];
+                        servicePrefix = servicePrefix.TrimEnd(sep);
+                        servicePrefix = servicePrefix + @"/";
+
+                        requestListener = new RequestListenMgr();
+                        RequestListenMgr.SetServicePrefix(servicePrefix);
+                    }
+                    else
+                    {
+                        requestListener = null;
+                    }
+
+                    while (autoConfig == true && mgmtGroup == Guid.Empty)
+                    {
+                        try
+                        {
+                            LoadConfiguration();
+                        }
+                        catch
+                        {
+                            Thread.Sleep(60000);
+                        }
+                    }
+
+                    while (true)
+                    {
                         try
                         {
                             foreach (Type workerThreadType in workerThreadTypes)
@@ -65,33 +97,40 @@ namespace Microsoft.WebSolutionsPlatform.Event
                             EventLog.WriteEntry("WspEventRouter", e.ToString(), EventLogEntryType.Warning);
                         }
                     }
-				}
-				catch(ThreadAbortException)
-				{
-					bool abortCompleted = false;
+                }
+                catch (ThreadAbortException)
+                {
+                    bool abortCompleted = false;
 
-					foreach(Type workerThreadType in workerThreads.Keys)
-					{
-						workerThreads[workerThreadType].Abort();
-					}
+                    foreach (Type workerThreadType in workerThreads.Keys)
+                    {
+                        workerThreads[workerThreadType].Abort();
+                    }
 
-					while(abortCompleted == false)
-					{
-						abortCompleted = true;
+                    while (abortCompleted == false)
+                    {
+                        abortCompleted = true;
 
-						foreach(Type workerThreadType in workerThreads.Keys)
-						{
-							if(workerThreads[workerThreadType].ThreadState != System.Threading.ThreadState.Aborted)
-							{
-								abortCompleted = false;
-							}
-						}
+                        foreach (Type workerThreadType in workerThreads.Keys)
+                        {
+                            if (workerThreads[workerThreadType].ThreadState != System.Threading.ThreadState.Aborted)
+                            {
+                                abortCompleted = false;
+                            }
+                        }
 
-						if(abortCompleted == false)
-							Thread.Sleep(1000);
-					}
-				}
-			}
-		}
-	}
+                        if (abortCompleted == false)
+                            Thread.Sleep(1000);
+                    }
+                }
+                finally
+                {
+                    if (RequestListenMgr.listener != null)
+                    {
+                        RequestListenMgr.listener.Close();
+                    }
+                }
+            }
+        }
+    }
 }

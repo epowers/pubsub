@@ -19,23 +19,32 @@ namespace Microsoft.WebSolutionsPlatform.Event
 {
     public partial class Router : ServiceBase
     {
+        internal class ParentConnection
+        {
+            internal Thread parentInConnection;
+            internal Thread parentOutConnection;
+
+            internal ParentConnection()
+            {
+            }
+        }
+
         internal class Communicator : ServiceThread
         {
             internal static Thread receiveServerThread;
             internal static bool abortParent = false;
-            internal static Thread parentInConnection;
-            internal static Thread parentOutConnection;
+            internal static List<ParentConnection> parentConnections = new List<ParentConnection>();
             internal static Thread distributeThread;
 
             internal static object threadQueuesLock = new object();
 
-            internal static Dictionary<string, Thread> commInThreads = new Dictionary<string, Thread>();
-            internal static Dictionary<string, Thread> commOutThreads = new Dictionary<string, Thread>();
+            internal static Dictionary<string, List<Thread>> commInThreads = new Dictionary<string, List<Thread>>(StringComparer.CurrentCultureIgnoreCase);
+            internal static Dictionary<string, List<Thread>> commOutThreads = new Dictionary<string, List<Thread>>(StringComparer.CurrentCultureIgnoreCase);
 
             internal static Dictionary<string, SynchronizationQueue<QueueElement>> threadQueues =
-                new Dictionary<string, SynchronizationQueue<QueueElement>>();
+                new Dictionary<string, SynchronizationQueue<QueueElement>>(StringComparer.CurrentCultureIgnoreCase);
 
-            internal static List<string> deadThreadQueues = new List<string>();
+            internal static Dictionary<string, object> deadThreadQueues = new Dictionary<string, object>(StringComparer.CurrentCultureIgnoreCase);
 
             public Communicator()
             {
@@ -44,8 +53,8 @@ namespace Microsoft.WebSolutionsPlatform.Event
             public override void Start()
             {
                 int i;
-                List<string> removeItems = new List<string>();
-                List<Thread> removeThreads = new List<Thread>();
+                List<string> removeRouters = new List<string>();
+                List<KeyValuePair<string, Thread>> removeThreads = new List<KeyValuePair<string, Thread>>();
                 long currentTickTimeout;
                 PerformanceCounter threadQueueCounter;
 
@@ -83,54 +92,86 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                         if (Router.parentRoute != null)
                         {
-                            if (parentInConnection == null || parentOutConnection == null)
+                            try
                             {
-                                abortParent = true;
+                                for (i = 0; i < parentConnections.Count; i++)
+                                {
+                                    ParentConnection parentConnection = parentConnections[i];
+
+                                    if (parentConnection.parentInConnection == null || parentConnection.parentOutConnection == null)
+                                    {
+                                        abortParent = true;
+                                    }
+
+                                    if (abortParent == true ||
+                                        (parentConnection.parentInConnection != null &&
+                                            parentConnection.parentInConnection.ThreadState == System.Threading.ThreadState.Stopped) ||
+                                        (parentConnection.parentOutConnection != null &&
+                                            parentConnection.parentOutConnection.ThreadState == System.Threading.ThreadState.Stopped))
+                                    {
+                                        if (parentConnection.parentInConnection != null)
+                                        {
+                                            parentConnection.parentInConnection.Abort();
+                                            parentConnection.parentInConnection = null;
+                                        }
+
+                                        if (parentConnection.parentOutConnection != null)
+                                        {
+                                            parentConnection.parentOutConnection.Abort();
+                                            parentConnection.parentOutConnection = null;
+                                        }
+
+                                        parentConnections.RemoveAt(i);
+                                        i--;
+                                    }
+                                }
+
+                                for (i = 0; i + parentConnections.Count < parentRoute.NumConnections; i++)
+                                {
+                                    if (string.IsNullOrEmpty(parentRoute.RouterName) == true)
+                                    {
+                                        continue;
+                                    }
+
+                                    Socket parentSocket = OpenParentSocket();
+
+                                    if (parentSocket != null)
+                                    {
+                                        ParentConnection parentConnection = new ParentConnection();
+
+                                        parentConnection.parentInConnection =
+                                            new Thread(new ThreadStart(new CommunicationHandler(parentSocket, parentRoute.RouterName, null).ConnectionInStart));
+
+                                        parentConnection.parentInConnection.Start();
+
+                                        ManualResetEvent startEvent = new ManualResetEvent(false);
+                                        startEvent.Reset();
+
+                                        parentConnection.parentOutConnection =
+                                            new Thread(new ThreadStart(new CommunicationHandler(parentSocket, parentRoute.RouterName, startEvent).ConnectionOutStart));
+
+                                        lock (threadQueuesLock)
+                                        {
+                                            List<Thread> threads;
+
+                                            if (Communicator.commOutThreads.TryGetValue(parentRoute.RouterName, out threads) == false)
+                                            {
+                                                Communicator.commOutThreads[parentRoute.RouterName] = new List<Thread>();
+                                            }
+
+                                            Communicator.commOutThreads[parentRoute.RouterName].Add(parentConnection.parentOutConnection);
+                                        }
+
+                                        parentConnection.parentOutConnection.Start();
+
+                                        startEvent.WaitOne(10000, false);
+
+                                        parentConnections.Add(parentConnection);
+                                    }
+                                }
                             }
-
-                            if (abortParent == true ||
-                                (parentInConnection != null && parentInConnection.ThreadState == System.Threading.ThreadState.Stopped) ||
-                                (parentOutConnection != null && parentOutConnection.ThreadState == System.Threading.ThreadState.Stopped))
+                            catch
                             {
-                                if (parentInConnection != null)
-                                {
-                                    parentInConnection.Abort();
-                                    parentInConnection = null;
-                                }
-
-                                if (parentOutConnection != null)
-                                {
-                                    parentOutConnection.Abort();
-                                    parentOutConnection = null;
-                                }
-                            }
-
-                            if (parentInConnection == null && parentOutConnection == null)
-                            {
-                                abortParent = false;
-
-                                Socket parentSocket = OpenParentSocket();
-
-                                if (parentSocket != null)
-                                {
-                                    parentInConnection =
-                                        new Thread(new ThreadStart(new CommunicationHandler(parentSocket,
-                                            Router.parentRoute.RouterName, null).ConnectionInStart));
-
-                                    parentInConnection.Start();
-
-
-                                    ManualResetEvent startEvent = new ManualResetEvent(false);
-                                    startEvent.Reset();
-
-                                    parentOutConnection =
-                                        new Thread(new ThreadStart(new CommunicationHandler(parentSocket,
-                                            Router.parentRoute.RouterName, startEvent).ConnectionOutStart));
-
-                                    parentOutConnection.Start();
-
-                                    startEvent.WaitOne(10000, false);
-                                }
                             }
                         }
 
@@ -138,114 +179,137 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         {
                             foreach (string routerName in commInThreads.Keys)
                             {
-                                if (commInThreads[routerName].ThreadState == System.Threading.ThreadState.Stopped)
+                                foreach (Thread thread in commInThreads[routerName])
                                 {
-                                    removeThreads.Add(commInThreads[routerName]);
-                                    removeItems.Add(routerName);
+                                    if (thread.ThreadState == System.Threading.ThreadState.Stopped)
+                                    {
+                                        removeThreads.Add(new KeyValuePair<string, Thread>(routerName, thread));
+                                        removeRouters.Add(routerName);
+                                    }
                                 }
                             }
 
-                            if (removeItems.Count > 0)
+                            if (removeThreads.Count > 0)
                             {
-                                for (i = 0; i < removeItems.Count; i++)
+                                for (i = 0; i < removeThreads.Count; i++)
                                 {
-                                    commInThreads.Remove(removeItems[i]);
+                                    removeThreads[i].Value.Abort();
+
+                                    commInThreads[removeThreads[i].Key].Remove(removeThreads[i].Value);
                                 }
 
-                                removeItems.Clear();
+                                removeThreads.Clear();
                             }
-                        }
 
-                        if (removeThreads.Count > 0)
-                        {
-                            for (i = 0; i < removeThreads.Count; i++)
+                            if (removeRouters.Count > 0)
                             {
-                                removeThreads[i].Abort();
+                                List<Thread> threads;
+
+                                for (i = 0; i < removeRouters.Count; i++)
+                                {
+                                    commInThreads.TryGetValue(removeRouters[i], out threads);
+
+                                    if (threads != null && commInThreads[removeRouters[i]].Count == 0)
+                                    {
+                                        commInThreads.Remove(removeRouters[i]);
+                                    }
+                                }
+
+                                removeRouters.Clear();
                             }
 
-                            removeThreads.Clear();
-                        }
-
-                        lock (threadQueuesLock)
-                        {
                             foreach (string routerName in commOutThreads.Keys)
                             {
-                                if (commOutThreads[routerName].ThreadState == System.Threading.ThreadState.Stopped)
+                                foreach (Thread thread in commOutThreads[routerName])
                                 {
-                                    if (commInThreads.ContainsKey(routerName) == true)
+                                    if (thread.ThreadState == System.Threading.ThreadState.Stopped)
                                     {
-                                        removeThreads.Add(commInThreads[routerName]);
+                                        removeThreads.Add(new KeyValuePair<string, Thread>(routerName, thread));
+                                        removeRouters.Add(routerName);
                                     }
-                                    removeItems.Add(routerName);
                                 }
                             }
 
-                            if (removeItems.Count > 0)
+                            if (removeThreads.Count > 0)
                             {
-                                for (i = 0; i < removeItems.Count; i++)
+                                for (i = 0; i < removeThreads.Count; i++)
                                 {
-                                    commOutThreads.Remove(removeItems[i]);
+                                    removeThreads[i].Value.Abort();
+
+                                    commOutThreads[removeThreads[i].Key].Remove(removeThreads[i].Value);
                                 }
 
-                                removeItems.Clear();
+                                removeThreads.Clear();
                             }
-                        }
 
-                        if (removeThreads.Count > 0)
-                        {
-                            for (i = 0; i < removeThreads.Count; i++)
+                            if (removeRouters.Count > 0)
                             {
-                                removeThreads[i].Abort();
+                                for (i = 0; i < removeRouters.Count; i++)
+                                {
+                                    if (commOutThreads.ContainsKey(removeRouters[i]) == true)
+                                    {
+                                        if (commOutThreads[removeRouters[i]].Count == 0)
+                                        {
+                                            threadQueues[removeRouters[i]].InUse = false;
+                                            threadQueues[removeRouters[i]].LastUsedTick = DateTime.Now.Ticks;
+
+                                            Communicator.deadThreadQueues[removeRouters[i]] = null;
+
+                                            commOutThreads.Remove(removeRouters[i]);
+                                        }
+                                    }
+                                }
+
+                                removeRouters.Clear();
                             }
 
-                            removeThreads.Clear();
-                        }
-
-                        lock (threadQueuesLock)
-                        {
                             if (deadThreadQueues.Count > 0)
                             {
                                 currentTickTimeout = DateTime.Now.Ticks - (((long)thisOutQueueMaxTimeout) * 10000000);
 
-                                removeItems.Clear();
+                                removeRouters.Clear();
 
-                                foreach (string threadQueueName in deadThreadQueues)
+                                foreach (string threadQueueName in deadThreadQueues.Keys)
                                 {
                                     try
                                     {
                                         if (threadQueues[threadQueueName].LastUsedTick < currentTickTimeout ||
                                             threadQueues[threadQueueName].Size > thisOutQueueMaxSize)
                                         {
-                                            removeItems.Add(threadQueueName);
+                                            removeRouters.Add(threadQueueName);
                                         }
                                     }
                                     catch
                                     {
-                                        removeItems.Add(threadQueueName);
+                                        removeRouters.Add(threadQueueName);
                                     }
                                 }
 
-                                if (removeItems.Count > 0)
+                                if (removeRouters.Count > 0)
                                 {
-                                    for (i = 0; i < removeItems.Count; i++)
+                                    for (i = 0; i < removeRouters.Count; i++)
                                     {
                                         try
                                         {
-                                            threadQueueCounter = new PerformanceCounter(communicationCategoryName,
-                                                forwarderQueueSizeName, removeItems[i], false);
+                                            threadQueueCounter = new PerformanceCounter();
+                                            threadQueueCounter.InstanceLifetime = PerformanceCounterInstanceLifetime.Process;
+                                            threadQueueCounter.CategoryName = communicationCategoryName;
+                                            threadQueueCounter.CounterName = forwarderQueueSizeName;
+                                            threadQueueCounter.InstanceName = removeRouters[i];
+                                            threadQueueCounter.ReadOnly = false;
 
                                             threadQueueCounter.RemoveInstance();
 
-                                            Communicator.threadQueues[removeItems[i]].Clear();
-                                            Communicator.threadQueues.Remove(removeItems[i]);
+                                            Communicator.threadQueues[removeRouters[i]].Clear();
+                                            Communicator.threadQueues.Remove(removeRouters[i]);
                                         }
                                         finally
                                         {
-                                            deadThreadQueues.Remove(removeItems[i]);
+                                            deadThreadQueues.Remove(removeRouters[i]);
                                         }
                                     }
 
-                                    removeItems.Clear();
+                                    removeRouters.Clear();
                                 }
                             }
                         }
@@ -577,14 +641,30 @@ namespace Microsoft.WebSolutionsPlatform.Event
                     lock (Communicator.threadQueuesLock)
                     {
                         commThread = new Thread(new ThreadStart(new CommunicationHandler(socket, clientRouterName, null).ConnectionInStart));
-                        Communicator.commInThreads[clientRouterName] = commThread;
+
+                        List<Thread> threads;
+
+                        if (Communicator.commInThreads.TryGetValue(clientRouterName, out threads) == false)
+                        {
+                            Communicator.commInThreads[clientRouterName] = new List<Thread>();
+                        }
+
+                        Communicator.commInThreads[clientRouterName].Add(commThread);
+
                         commThread.Start();
 
                         startEvent = new ManualResetEvent(false);
                         startEvent.Reset();
 
                         commThread = new Thread(new ThreadStart(new CommunicationHandler(socket, clientRouterName, startEvent).ConnectionOutStart));
-                        Communicator.commOutThreads[clientRouterName] = commThread;
+
+                        if (Communicator.commOutThreads.TryGetValue(clientRouterName, out threads) == false)
+                        {
+                            Communicator.commOutThreads[clientRouterName] = new List<Thread>();
+                        }
+
+                        Communicator.commOutThreads[clientRouterName].Add(commThread);
+
                         commThread.Start();
                     }
 
@@ -631,15 +711,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                 if (preambleLength == receiveState.totalBytesRead)
                 {
-                    if (Communicator.commInThreads.ContainsKey(clientRouterName) == true ||
-                        Communicator.commOutThreads.ContainsKey(clientRouterName) == true)
-                    {
-                        outResponse[0] = 0;
-                    }
-                    else
-                    {
-                        outResponse[0] = 1;
-                    }
+                    outResponse[0] = 1;
                 }
                 else
                 {
@@ -727,31 +799,43 @@ namespace Microsoft.WebSolutionsPlatform.Event
                 {
                     try
                     {
-                        lock (Communicator.threadQueuesLock)
+                        if (Communicator.threadQueues.TryGetValue(clientRouterName, out threadQueue) == false)
                         {
-                            if (Communicator.threadQueues.ContainsKey(clientRouterName) == true)
+                            lock (Communicator.threadQueuesLock)
                             {
-                                threadQueue = Communicator.threadQueues[clientRouterName];
-                            }
-                            else
-                            {
-                                threadQueueCounter = new PerformanceCounter(communicationCategoryName,
-                                    forwarderQueueSizeName, clientRouterName, false);
+                                threadQueueCounter = new PerformanceCounter();
+                                threadQueueCounter.InstanceLifetime = PerformanceCounterInstanceLifetime.Process;
+                                threadQueueCounter.CategoryName = communicationCategoryName;
+                                threadQueueCounter.CounterName = forwarderQueueSizeName;
+                                threadQueueCounter.InstanceName = clientRouterName;
+                                threadQueueCounter.ReadOnly = false;
 
                                 threadQueue = new SynchronizationQueue<QueueElement>(threadQueueCounter);
 
                                 Communicator.threadQueues[clientRouterName] = threadQueue;
-                            }
 
-                            threadQueue.InUse = true;
+                                threadQueue.InUse = true;
 
-                            if (Communicator.deadThreadQueues.Contains(clientRouterName) == true)
-                            {
-                                Communicator.deadThreadQueues.Remove(clientRouterName);
+                                SubscriptionMgr.ResendSubscriptions(clientRouterName);
                             }
                         }
+                        else
+                        {
+                            lock (Communicator.threadQueuesLock)
+                            {
+                                if (threadQueue.InUse != true)
+                                {
+                                    threadQueue.InUse = true;
 
-                        SubscriptionMgr.ResendSubscriptions();
+                                    if (Communicator.deadThreadQueues.ContainsKey(clientRouterName) == true)
+                                    {
+                                        Communicator.deadThreadQueues.Remove(clientRouterName);
+                                    }
+
+                                    SubscriptionMgr.ResendSubscriptions(clientRouterName);
+                                }
+                            }
+                        }
                     }
                     catch (Exception e)
                     {
@@ -775,20 +859,6 @@ namespace Microsoft.WebSolutionsPlatform.Event
                 }
                 finally
                 {
-                    lock (Communicator.threadQueuesLock)
-                    {
-                        if (Communicator.commOutThreads.ContainsKey(clientRouterName) == true)
-                        {
-                            if (Communicator.commOutThreads[clientRouterName] == Thread.CurrentThread)
-                            {
-                                threadQueue.InUse = false;
-                                threadQueue.LastUsedTick = DateTime.Now.Ticks;
-
-                                Communicator.deadThreadQueues.Add(clientRouterName);
-                            }
-                        }
-                    }
-
                     try
                     {
                         Communicator.CloseSocket(socket, clientRouterName);
@@ -1168,12 +1238,10 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
             public override void Start()
             {
-                string outRouterName;
                 QueueElement element;
                 QueueElement defaultElement = default(QueueElement);
                 QueueElement newElement = new QueueElement();
                 bool elementRetrieved;
-                DoubleDictionary<Guid, Guid> eventDictionary;
 
                 try
                 {
@@ -1215,31 +1283,41 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                         if (elementRetrieved == true)
                         {
-                            if (channelDictionary.TryGetValue(element.OriginatingRouterName, out outRouterName) == false)
+                            if (channelDictionary.TryGetValue(element.OriginatingRouterName, out element.InRouterName) == false)
                             {
-                                outRouterName = string.Empty;
+                                element.InRouterName = string.Empty;
                             }
 
-                            lock (Communicator.threadQueuesLock)
+                            if (element.EventType == Event.SubscriptionEvent || element.EventType == mgmtGroup)
                             {
-                                foreach (string routerName in Communicator.threadQueues.Keys)
+                                lock (Communicator.threadQueuesLock)
                                 {
-                                    if (string.Compare(outRouterName, routerName, true) != 0)
+                                    foreach (string routerName in Communicator.threadQueues.Keys)
                                     {
-                                        if (element.EventType == Event.SubscriptionEvent)
+                                        if (string.Compare(element.InRouterName, routerName, true) != 0)
                                         {
                                             Communicator.threadQueues[routerName].Enqueue(element);
                                         }
-                                        else
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                SubscriptionDetail subscriptionDetail;
+                                SynchronizationQueue<QueueElement> queue;
+
+                                if (SubscriptionMgr.subscriptions.TryGetValue(element.EventType, out subscriptionDetail) == true)
+                                {
+                                    lock (subscriptionDetail.SubscriptionDetailLock)
+                                    {
+                                        foreach (string routerName in subscriptionDetail.Routes.Keys)
                                         {
-                                            lock (SubscriptionMgr.subscriptionsLock)
+                                            if (string.Compare(routerName, Router.LocalRouterName, true) != 0 &&
+                                                string.Compare(routerName, element.InRouterName, true) != 0)
                                             {
-                                                if (Router.routerDictionary.TryGetValue(routerName, out eventDictionary) == true)
+                                                if (Communicator.threadQueues.TryGetValue(routerName, out queue) == true)
                                                 {
-                                                    if (eventDictionary.Dictionary1.ContainsKey(element.EventType) == true)
-                                                    {
-                                                        Communicator.threadQueues[routerName].Enqueue(element);
-                                                    }
+                                                    queue.Enqueue(element);
                                                 }
                                             }
                                         }

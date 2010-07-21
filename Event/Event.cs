@@ -291,6 +291,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
             string stringValue = string.Empty;
             byte byteValue = 0;
+            SByte sbyteValue = 0;
             byte[] byteArrayValue = null;
             char charValue = Char.MinValue;
             char[] charArrayValue = null;
@@ -310,7 +311,9 @@ namespace Microsoft.WebSolutionsPlatform.Event
             IPAddress ipAddressValue = null;
             Uri uriValue = null;
             Dictionary<string, string> stringDictionaryValue = null;
-
+            Dictionary<string, object> objectDictionaryValue = null;
+            List<string> stringListValue = null;
+            List<object> objectListValue = null;
 
             serializedEvent = new WspBuffer(serializationData);
 
@@ -398,6 +401,16 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         }
 
                         SetElement(propName, int64Value);
+
+                        continue;
+
+                    case (byte)PropertyType.SByte:
+                        if (serializedEvent.Read(out sbyteValue) == false)
+                        {
+                            throw new EventDeserializationException("Error reading PropertyType from buffer");
+                        }
+
+                        SetElement(propName, sbyteValue);
 
                         continue;
 
@@ -575,13 +588,43 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                         continue;
 
-                    case (byte)PropertyType.Dictionary:
+                    case (byte)PropertyType.StringDictionary:
                         if (serializedEvent.Read(out stringDictionaryValue) == false)
                         {
                             throw new EventDeserializationException("Error reading PropertyType from buffer");
                         }
 
                         SetElement(propName, stringDictionaryValue);
+
+                        continue;
+
+                    case (byte)PropertyType.ObjectDictionary:
+                        if (serializedEvent.Read(out objectDictionaryValue) == false)
+                        {
+                            throw new EventDeserializationException("Error reading PropertyType from buffer");
+                        }
+
+                        SetElement(propName, objectDictionaryValue);
+
+                        continue;
+
+                    case (byte)PropertyType.StringList:
+                        if (serializedEvent.Read(out stringListValue) == false)
+                        {
+                            throw new EventDeserializationException("Error reading PropertyType from buffer");
+                        }
+
+                        SetElement(propName, stringListValue);
+
+                        continue;
+
+                    case (byte)PropertyType.ObjectList:
+                        if (serializedEvent.Read(out objectListValue) == false)
+                        {
+                            throw new EventDeserializationException("Error reading PropertyType from buffer");
+                        }
+
+                        SetElement(propName, objectListValue);
 
                         continue;
 

@@ -70,9 +70,21 @@ namespace Microsoft.Sample.EventPingPong
 
             subMgr = new SubscriptionManager(pubCallback);
             subMgr.ListenForEvents = true;
-            subMgr.AddSubscription(subEvent.EventType, false);
+            subMgr.AddSubscription(pubEvent.InstanceId, false);
 
-            pubMgr.Publish(pubEvent.Serialize());
+            while (true)
+            {
+                try
+                {
+                    pubMgr.Publish(pubEvent.Serialize());
+
+                    break;
+                }
+                catch
+                {
+                    Thread.Sleep(2000);
+                }
+            }
         }
 
         public void StopPublish()
@@ -81,7 +93,7 @@ namespace Microsoft.Sample.EventPingPong
 
             if (subMgr != null)
             {
-                subMgr.RemoveSubscription(subEvent.EventType);
+                subMgr.RemoveSubscription(pubEvent.InstanceId);
                 subMgr.ListenForEvents = false;
                 subMgr = null;
             }
@@ -156,8 +168,21 @@ namespace Microsoft.Sample.EventPingPong
 
                 subEvent.EventNum = localEvent.EventNum;
                 subEvent.InstanceId = localEvent.InstanceId;
+                subEvent.EventType = localEvent.InstanceId;
 
-                pubMgr.Publish(subEvent.Serialize());
+                while (true)
+                {
+                    try
+                    {
+                        pubMgr.Publish(subEvent.Serialize());
+
+                        break;
+                    }
+                    catch
+                    {
+                        Thread.Sleep(2000);
+                    }
+                }
             }
 
             eventNumberSent.Text = counter.ToString();
@@ -180,7 +205,19 @@ namespace Microsoft.Sample.EventPingPong
 
                     pubEvent.EventNum++;
 
-                    pubMgr.Publish(pubEvent.Serialize());
+                    while (true)
+                    {
+                        try
+                        {
+                            pubMgr.Publish(pubEvent.Serialize());
+
+                            break;
+                        }
+                        catch
+                        {
+                            Thread.Sleep(2000);
+                        }
+                    }
                 }
 
                 eventNumberSent.Text = counter.ToString();

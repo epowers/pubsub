@@ -104,8 +104,20 @@ namespace Microsoft.WebSolutionsPlatform.Event
         /// </summary>
         IPAddress = 21,
         /// <summary>
-        /// Generic Dictionary type
+        /// Generic StringDictionary type
         /// </summary>
-        Dictionary = 22
+        StringDictionary = 22,
+        /// <summary>
+        /// Generic KeyValue List as ObjectDictionary
+        /// </summary>
+        ObjectDictionary = 23,
+        /// <summary>
+        /// Generic list of strings
+        /// </summary>
+        StringList = 24,
+        /// <summary>
+        /// Generic list of objects
+        /// </summary>
+        ObjectList = 25
     }
 }

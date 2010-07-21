@@ -29,11 +29,18 @@ namespace Microsoft.WebSolutionsPlatform.Event
             internal long MaxFileSize;
             internal long CopyIntervalTicks;
             internal long NextCopyTick;
+            internal bool CreateEmptyFiles;
             internal string OutFileName;
             internal StreamWriter OutStream;
-            internal string FieldTerminator;
-            internal string RowTerminator;
-            internal string HeaderRow;
+            internal char FieldTerminator;
+            internal char RowTerminator;
+            internal char KeyValueSeparator;
+            internal char BeginObjectSeparator;
+            internal char EndObjectSeparator;
+            internal char BeginArraySeparator;
+            internal char EndArraySeparator;
+            internal char StringDelimiter;
+            internal char EscapeCharacter;
             internal Subscription subscription;
 
             internal Guid persistEventType;
@@ -68,42 +75,15 @@ namespace Microsoft.WebSolutionsPlatform.Event
             {
                 InUse = false;
                 Loaded = false;
-                HeaderRow = null;
                 CopyIntervalTicks = 600000000;
                 MaxFileSize = long.MaxValue - 1;
+                CreateEmptyFiles = false;
 
                 subscription = new Subscription();
                 subscription.SubscriptionId = Guid.NewGuid();
                 subscription.Subscribe = true;
             }
         }
-
-        internal class PersistEvent : Event
-        {
-            StringBuilder sb = new StringBuilder();
-
-            /// <summary>
-            /// Base constructor to create a new persist file event
-            /// </summary>
-            internal PersistEvent()
-                : base()
-            {
-                EventType = new Guid(@"5D2289A1-319C-4298-BA0F-67BD9EDD3440");
-            }
-
-            /// <summary>
-            /// Base constructor to create a new persist file event from a serialized event
-            /// </summary>
-            /// <param name="buffer">Serialized event serializedEvent</param>
-            internal PersistEvent(byte[] buffer)
-                : base(buffer)
-            {
-            }
-
-            public override void GetObjectData(WspBuffer buffer)
-            {
-            }
-         }
 
         internal class Persister : ServiceThread
         {
@@ -112,6 +92,8 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
             internal static long lastConfigFileTick;
             internal static long nextConfigFileCheckTick = 0;
+
+            internal static long lastLocalConfigFileTick;
 
             internal static PublishManager pubMgr = null;
 
@@ -130,7 +112,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
             public Persister()
             {
                 fileNameBase = Dns.GetHostName() + @".Events.";
-                fileNameSuffix = @".evt";
+                fileNameSuffix = @".txt";
 
                 persistFileEvents = new Stack<PersistFileEvent>();
             }
@@ -140,7 +122,8 @@ namespace Microsoft.WebSolutionsPlatform.Event
                 bool elementRetrieved;
                 WspBuffer serializedEvent;
                 long currentTick;
-                long fileTick;
+                long configFileTick;
+                long localConfigFileTick;
                 PersistEventInfo eventInfo;
                 string eventFieldTerminator = @",";
                 StreamWriter eventStream;
@@ -174,9 +157,10 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         {
                             nextConfigFileCheckTick = currentTick + 300000000;
 
-                            fileTick = Router.GetConfigFileTick();
+                            configFileTick = Router.GetConfigFileTick();
+                            localConfigFileTick = Router.GetLocalConfigFileTick();
 
-                            if (fileTick != lastConfigFileTick)
+                            if (configFileTick != lastConfigFileTick || localConfigFileTick != lastLocalConfigFileTick)
                             {
                                 nextCopyTick = 0;
 
@@ -185,7 +169,11 @@ namespace Microsoft.WebSolutionsPlatform.Event
                                     eInfo.Loaded = false;
                                 }
 
-                                Router.LoadPersistConfig();
+                                lock (configFileLock)
+                                {
+                                    Router.LoadPersistConfig();
+                                    Router.LoadPersistLocalConfig();
+                                }
 
                                 foreach (PersistEventInfo eInfo in persistEvents.Values)
                                 {
@@ -199,7 +187,8 @@ namespace Microsoft.WebSolutionsPlatform.Event
                                     }
                                 }
 
-                                lastConfigFileTick = fileTick;
+                                lastConfigFileTick = configFileTick;
+                                lastLocalConfigFileTick = localConfigFileTick;
                             }
 
                             foreach (PersistEventInfo eInfo in persistEvents.Values)
@@ -253,7 +242,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                                     if (persistEventInfo.InUse == true)
                                     {
-                                        persistEventInfo.OutFileName = persistEventInfo.TempFileDirectory + fileNameBase + persistEventInfo.NextCopyTick.ToString() + fileNameSuffix;
+                                        persistEventInfo.OutFileName = persistEventInfo.TempFileDirectory + fileNameBase + DateTime.UtcNow.ToString("u").Replace(":", "-") + fileNameSuffix;
 
                                         if (File.Exists(persistEventInfo.OutFileName) == true)
                                             persistEventInfo.OutStream = new StreamWriter(File.Open(persistEventInfo.OutFileName, FileMode.Append, FileAccess.Write, FileShare.None), Encoding.Unicode);
@@ -261,11 +250,6 @@ namespace Microsoft.WebSolutionsPlatform.Event
                                             persistEventInfo.OutStream = new StreamWriter(File.Open(persistEventInfo.OutFileName, FileMode.Create, FileAccess.Write, FileShare.None), Encoding.Unicode);
 
                                         SendPersistEvent(PersistFileState.Open, persistEventInfo, persistEventInfo.OutFileName);
-
-                                        if (persistEventInfo.HeaderRow != null)
-                                        {
-                                            persistEventInfo.OutStream.Write(persistEventInfo.HeaderRow);
-                                        }
                                     }
                                 }
 
@@ -291,7 +275,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                             if (eventInfo.InUse == true)
                             {
-                                eventFieldTerminator = eventInfo.FieldTerminator;
+                                eventFieldTerminator = eventInfo.FieldTerminator.ToString();
 
                                 eventStream = eventInfo.OutStream;
 
@@ -299,7 +283,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                                 {
                                     eventInfo.NextCopyTick = DateTime.UtcNow.Ticks + eventInfo.CopyIntervalTicks;
 
-                                    eventInfo.OutFileName = eventInfo.TempFileDirectory + fileNameBase + eventInfo.NextCopyTick.ToString() + fileNameSuffix;
+                                    eventInfo.OutFileName = eventInfo.TempFileDirectory + fileNameBase + DateTime.UtcNow.ToString("u").Replace(":", "-") + fileNameSuffix;
 
                                     if (File.Exists(eventInfo.OutFileName) == true)
                                         eventInfo.OutStream = new StreamWriter(File.Open(eventInfo.OutFileName, FileMode.Append, FileAccess.Write, FileShare.None), Encoding.Unicode);
@@ -316,63 +300,33 @@ namespace Microsoft.WebSolutionsPlatform.Event
                                     SendPersistEvent(PersistFileState.Open, eventInfo, eventInfo.OutFileName);
                                 }
 
-                                if (eventInfo.HeaderRow == null)
-                                {
-                                    StringBuilder sb = new StringBuilder();
+                                eventStream.Write(eventInfo.BeginObjectSeparator);
 
-                                    serializedEvent = new WspBuffer(element.SerializedEvent);
+                                //eventStream.Write(eventInfo.StringDelimiter.ToString());
+                                //eventStream.Write("EventType");
+                                //eventStream.Write(eventInfo.StringDelimiter.ToString());
+                                //eventStream.Write(eventInfo.KeyValueSeparator.ToString());
+                                //eventStream.Write(eventInfo.StringDelimiter.ToString());
+                                //eventStream.Write(CleanseString(element.EventType.ToString(), eventInfo));
+                                //eventStream.Write(eventInfo.StringDelimiter.ToString());
+                                //eventStream.Write(eventInfo.FieldTerminator.ToString());
 
-                                    if (serializedEvent.GetHeader(out originatingRouterName, out inRouterName, out eventType) == false)
-                                    {
-                                        throw new EventDeserializationException("Error reading OriginatingRouterName from serializedEvent");
-                                    }
+                                eventStream.Write(eventInfo.StringDelimiter.ToString());
+                                eventStream.Write("OriginatingRouterName");
+                                eventStream.Write(eventInfo.StringDelimiter.ToString());
+                                eventStream.Write(eventInfo.KeyValueSeparator.ToString());
+                                eventStream.Write(eventInfo.StringDelimiter.ToString());
+                                eventStream.Write(CleanseString(element.OriginatingRouterName, eventInfo));
+                                eventStream.Write(eventInfo.StringDelimiter.ToString());
+                                eventStream.Write(eventInfo.FieldTerminator.ToString());
 
-                                    sb.Append(@"EventType/");
-                                    sb.Append(eventType.GetType().ToString());
-                                    sb.Append(eventFieldTerminator);
-
-                                    sb.Append(@"OriginatingRouterName/");
-                                    sb.Append(originatingRouterName.GetType().ToString());
-                                    sb.Append(eventFieldTerminator);
-
-                                    sb.Append(@"InRouterName/");
-                                    sb.Append(inRouterName.GetType().ToString());
-
-                                    while (serializedEvent.Position < serializedEvent.Size)
-                                    {
-                                        sb.Append(eventFieldTerminator);
-
-                                        if (serializedEvent.Read(out propName) == false)
-                                        {
-                                            throw new EventDeserializationException("Error reading PropertyName from buffer");
-                                        }
-
-                                        sb.Append(propName);
-                                        sb.Append(@"/");
-
-                                        if (serializedEvent.Read(out propType) == false)
-                                        {
-                                            throw new EventDeserializationException("Error reading PropertyType from buffer");
-                                        }
-
-                                        if (serializedEvent.Read((PropertyType) propType, out propValue) == false)
-                                        {
-                                            throw new EventDeserializationException("Error reading PropertyValue from buffer");
-                                        }
-
-                                        sb.Append(propValue.GetType().ToString());
-                                    }
-
-                                    sb.Append(eventInfo.RowTerminator);
-
-                                    eventInfo.HeaderRow = sb.ToString();
-
-                                    eventStream.Write(eventInfo.HeaderRow);
-                                }
-
-                                eventStream.Write(element.EventType.ToString() + eventFieldTerminator);
-                                eventStream.Write(element.OriginatingRouterName + eventFieldTerminator);
-                                eventStream.Write(element.InRouterName);
+                                eventStream.Write(eventInfo.StringDelimiter.ToString());
+                                eventStream.Write("InRouterName");
+                                eventStream.Write(eventInfo.StringDelimiter.ToString());
+                                eventStream.Write(eventInfo.KeyValueSeparator.ToString());
+                                eventStream.Write(eventInfo.StringDelimiter.ToString());
+                                eventStream.Write(CleanseString(element.InRouterName, eventInfo));
+                                eventStream.Write(eventInfo.StringDelimiter.ToString());
 
                                 serializedEvent = new WspBuffer(element.SerializedEvent);
 
@@ -388,19 +342,81 @@ namespace Microsoft.WebSolutionsPlatform.Event
                                         throw new EventDeserializationException("Error reading PropertyName from buffer");
                                     }
 
+                                    eventStream.Write(eventInfo.FieldTerminator.ToString());
+                                    eventStream.Write(eventInfo.StringDelimiter.ToString());
+                                    eventStream.Write(CleanseString(propName, eventInfo));
+                                    eventStream.Write(eventInfo.StringDelimiter.ToString());
+                                    eventStream.Write(eventInfo.KeyValueSeparator.ToString());
+
                                     if (serializedEvent.Read(out propType) == false)
                                     {
                                         throw new EventDeserializationException("Error reading PropertyType from buffer");
                                     }
 
-                                    if (serializedEvent.Read((PropertyType)propType, out propValue) == false)
+                                    switch (propType)
                                     {
-                                        throw new EventDeserializationException("Error reading PropertyValue from buffer");
-                                    }
+                                        case (byte)PropertyType.StringDictionary:
 
-                                    eventStream.Write(eventFieldTerminator);
-                                    eventStream.Write(propValue.ToString());
+                                            WriteStringDictionary(eventStream, serializedEvent, eventInfo);
+                                            break;
+
+                                        case (byte)PropertyType.ObjectDictionary:
+
+                                            WriteObjectDictionary(eventStream, serializedEvent, eventInfo);
+                                            break;
+
+                                        case (byte)PropertyType.StringList:
+                                            WriteStringList(eventStream, serializedEvent, eventInfo);
+                                            break;
+
+                                        case (byte)PropertyType.ObjectList:
+                                            WriteObjectList(eventStream, serializedEvent, eventInfo);
+                                            break;
+
+                                        case (byte)PropertyType.ByteArray:
+                                            WriteByteArray(eventStream, serializedEvent, eventInfo);
+                                            break;
+
+                                        case (byte)PropertyType.CharArray:
+                                            WriteCharArray(eventStream, serializedEvent, eventInfo);
+                                            break;
+
+                                        case (byte)PropertyType.DateTime:
+                                            WriteDateTime(eventStream, serializedEvent, eventInfo);
+                                            break;
+
+                                        case (byte)PropertyType.Int64:
+                                            if (string.Compare(propName, "EventTime", true) == 0)
+                                            {
+                                                WriteDateTime(eventStream, serializedEvent, eventInfo);
+                                            }
+                                            else
+                                            {
+                                                if (serializedEvent.Read((PropertyType)propType, out propValue) == false)
+                                                {
+                                                    throw new EventDeserializationException("Error reading PropertyValue from buffer");
+                                                }
+
+                                                eventStream.Write(eventInfo.StringDelimiter.ToString());
+                                                eventStream.Write(CleanseString(propValue.ToString(), eventInfo));
+                                                eventStream.Write(eventInfo.StringDelimiter.ToString());
+                                            }
+                                            break;
+
+                                        default:
+                                            if (serializedEvent.Read((PropertyType)propType, out propValue) == false)
+                                            {
+                                                throw new EventDeserializationException("Error reading PropertyValue from buffer");
+                                            }
+
+                                            eventStream.Write(eventInfo.StringDelimiter.ToString());
+                                            eventStream.Write(CleanseString(propValue.ToString(), eventInfo));
+                                            eventStream.Write(eventInfo.StringDelimiter.ToString());
+                                            break;
+                                    }
                                 }
+
+                                eventStream.Write(eventInfo.EndObjectSeparator);
 
                                 eventStream.Write(eventInfo.RowTerminator);
 
@@ -433,6 +449,455 @@ namespace Microsoft.WebSolutionsPlatform.Event
                     EventLog.WriteEntry("WspEventRouter", e.ToString(), EventLogEntryType.Error);
                     throw e;
                 }
+            }
+
+            private void WriteStringDictionary(StreamWriter eventStream, WspBuffer serializedEvent, PersistEventInfo eventInfo)
+            {
+                int dictCount;
+                string stringKey;
+                string stringValue;
+                bool first = true;
+
+                if (serializedEvent.Read(out dictCount) == false)
+                {
+                    throw new EventDeserializationException("Error reading StringDictionary length from buffer");
+                }
+
+                eventStream.Write(eventInfo.BeginObjectSeparator);
+
+                for (int i = 0; i < dictCount; i++)
+                {
+                    if (first == true)
+                    {
+                        first = false;
+                    }
+                    else
+                    {
+                        eventStream.Write(eventInfo.FieldTerminator);
+                    }
+
+                    if (serializedEvent.Read(out stringKey) == false)
+                    {
+                        throw new EventDeserializationException("Error reading StringDictionary key from buffer");
+                    }
+
+                    eventStream.Write(eventInfo.StringDelimiter.ToString());
+                    eventStream.Write(CleanseString(stringKey, eventInfo));
+                    eventStream.Write(eventInfo.StringDelimiter.ToString());
+
+                    eventStream.Write(eventInfo.KeyValueSeparator);
+
+                    if (serializedEvent.Read(out stringValue) == false)
+                    {
+                        throw new EventDeserializationException("Error reading StringDictionary value from buffer");
+                    }
+
+                    eventStream.Write(eventInfo.StringDelimiter.ToString());
+                    eventStream.Write(CleanseString(stringValue, eventInfo));
+                    eventStream.Write(eventInfo.StringDelimiter.ToString());
+                }
+
+                eventStream.Write(eventInfo.EndObjectSeparator);
+            }
+
+            private void WriteObjectDictionary(StreamWriter eventStream, WspBuffer serializedEvent, PersistEventInfo eventInfo)
+            {
+                int dictCount;
+                string stringKey;
+                byte propType;
+                object propValue;
+                bool first = true;
+
+                if (serializedEvent.Read(out dictCount) == false)
+                {
+                    throw new EventDeserializationException("Error reading StringDictionary length from buffer");
+                }
+
+                eventStream.Write(eventInfo.BeginObjectSeparator);
+
+                for (int i = 0; i < dictCount; i++)
+                {
+                    if (first == true)
+                    {
+                        first = false;
+                    }
+                    else
+                    {
+                        eventStream.Write(eventInfo.FieldTerminator);
+                    }
+
+                    if (serializedEvent.Read(out stringKey) == false)
+                    {
+                        throw new EventDeserializationException("Error reading StringDictionary key from buffer");
+                    }
+
+                    eventStream.Write(eventInfo.StringDelimiter.ToString());
+                    eventStream.Write(CleanseString(stringKey, eventInfo));
+                    eventStream.Write(eventInfo.StringDelimiter.ToString());
+
+                    eventStream.Write(eventInfo.KeyValueSeparator);
+
+                    if (serializedEvent.Read(out propType) == false)
+                    {
+                        throw new EventDeserializationException("Error reading PropertyType from buffer");
+                    }
+
+                    if ((PropertyType)propType == PropertyType.StringDictionary)
+                    {
+                        WriteStringDictionary(eventStream, serializedEvent, eventInfo);
+                    }
+                    else
+                    {
+                        if ((PropertyType)propType == PropertyType.ObjectDictionary)
+                        {
+                            WriteObjectDictionary(eventStream, serializedEvent, eventInfo);
+                        }
+                        else
+                        {
+                            if ((PropertyType)propType == PropertyType.StringList)
+                            {
+                                WriteStringList(eventStream, serializedEvent, eventInfo);
+                            }
+                            else
+                            {
+                                if ((PropertyType)propType == PropertyType.ObjectList)
+                                {
+                                    WriteObjectList(eventStream, serializedEvent, eventInfo);
+                                }
+                                else
+                                {
+                                    if (serializedEvent.Read((PropertyType)propType, out propValue) == false)
+                                    {
+                                        throw new EventDeserializationException("Error reading PropertyValue from buffer");
+                                    }
+
+                                    eventStream.Write(eventInfo.StringDelimiter.ToString());
+                                    eventStream.Write(CleanseString(propValue.ToString(), eventInfo));
+                                    eventStream.Write(eventInfo.StringDelimiter.ToString());
+                                }
+                            }
+                        }
+                    }
+                }
+
+                eventStream.Write(eventInfo.EndObjectSeparator);
+            }
+
+            private void WriteStringList(StreamWriter eventStream, WspBuffer serializedEvent, PersistEventInfo eventInfo)
+            {
+                int listCount;
+                string stringValue;
+                bool first = true;
+
+                if (serializedEvent.Read(out listCount) == false)
+                {
+                    throw new EventDeserializationException("Error reading List length from buffer");
+                }
+
+                eventStream.Write(eventInfo.BeginArraySeparator);
+
+                for (int i = 0; i < listCount; i++)
+                {
+                    if (first == true)
+                    {
+                        first = false;
+                    }
+                    else
+                    {
+                        eventStream.Write(eventInfo.FieldTerminator);
+                    }
+
+                    if (serializedEvent.Read(out stringValue) == false)
+                    {
+                        throw new EventDeserializationException("Error reading List value from buffer");
+                    }
+
+                    eventStream.Write(eventInfo.StringDelimiter.ToString());
+                    eventStream.Write(CleanseString(stringValue, eventInfo));
+                    eventStream.Write(eventInfo.StringDelimiter.ToString());
+                }
+
+                eventStream.Write(eventInfo.EndArraySeparator);
+            }
+
+            private void WriteObjectList(StreamWriter eventStream, WspBuffer serializedEvent, PersistEventInfo eventInfo)
+            {
+                int listCount;
+                byte propType;
+                object propValue;
+                bool first = true;
+
+                if (serializedEvent.Read(out listCount) == false)
+                {
+                    throw new EventDeserializationException("Error reading List length from buffer");
+                }
+
+                eventStream.Write(eventInfo.BeginArraySeparator);
+
+                for (int i = 0; i < listCount; i++)
+                {
+                    if (first == true)
+                    {
+                        first = false;
+                    }
+                    else
+                    {
+                        eventStream.Write(eventInfo.FieldTerminator);
+                    }
+
+                    if (serializedEvent.Read(out propType) == false)
+                    {
+                        throw new EventDeserializationException("Error reading PropertyType from buffer");
+                    }
+
+                    if ((PropertyType)propType == PropertyType.StringDictionary)
+                    {
+                        WriteStringDictionary(eventStream, serializedEvent, eventInfo);
+                    }
+                    else
+                    {
+                        if ((PropertyType)propType == PropertyType.ObjectDictionary)
+                        {
+                            WriteObjectDictionary(eventStream, serializedEvent, eventInfo);
+                        }
+                        else
+                        {
+                            if ((PropertyType)propType == PropertyType.StringList)
+                            {
+                                WriteStringList(eventStream, serializedEvent, eventInfo);
+                            }
+                            else
+                            {
+                                if ((PropertyType)propType == PropertyType.ObjectList)
+                                {
+                                    WriteObjectList(eventStream, serializedEvent, eventInfo);
+                                }
+                                else
+                                {
+                                    if (serializedEvent.Read((PropertyType)propType, out propValue) == false)
+                                    {
+                                        throw new EventDeserializationException("Error reading PropertyValue from buffer");
+                                    }
+
+                                    eventStream.Write(eventInfo.StringDelimiter.ToString());
+                                    eventStream.Write(CleanseString(propValue.ToString(), eventInfo));
+                                    eventStream.Write(eventInfo.StringDelimiter.ToString());
+                                }
+                            }
+                        }
+                    }
+                }
+
+                eventStream.Write(eventInfo.EndArraySeparator);
+            }
+
+            private void WriteByteArray(StreamWriter eventStream, WspBuffer serializedEvent, PersistEventInfo eventInfo)
+            {
+                byte[] byteArray;
+                bool first = true;
+
+                if (serializedEvent.Read(out byteArray) == false)
+                {
+                    throw new EventDeserializationException("Error reading List length from buffer");
+                }
+
+                eventStream.Write(eventInfo.BeginArraySeparator);
+
+                for (int i = 0; i < byteArray.Length; i++)
+                {
+                    if (first == true)
+                    {
+                        first = false;
+                    }
+                    else
+                    {
+                        eventStream.Write(eventInfo.FieldTerminator);
+                    }
+
+                    eventStream.Write(eventInfo.StringDelimiter.ToString());
+                    eventStream.Write(CleanseString(byteArray[i].ToString(), eventInfo));
+                    eventStream.Write(eventInfo.StringDelimiter.ToString());
+                }
+
+                eventStream.Write(eventInfo.EndArraySeparator);
+            }
+
+            private void WriteCharArray(StreamWriter eventStream, WspBuffer serializedEvent, PersistEventInfo eventInfo)
+            {
+                char[] charArray;
+                bool first = true;
+
+                if (serializedEvent.Read(out charArray) == false)
+                {
+                    throw new EventDeserializationException("Error reading List length from buffer");
+                }
+
+                eventStream.Write(eventInfo.BeginArraySeparator);
+
+                for (int i = 0; i < charArray.Length; i++)
+                {
+                    if (first == true)
+                    {
+                        first = false;
+                    }
+                    else
+                    {
+                        eventStream.Write(eventInfo.FieldTerminator);
+                    }
+
+                    eventStream.Write(eventInfo.StringDelimiter.ToString());
+                    eventStream.Write(CleanseString(charArray[i].ToString(), eventInfo));
+                    eventStream.Write(eventInfo.StringDelimiter.ToString());
+                }
+
+                eventStream.Write(eventInfo.EndArraySeparator);
+            }
+
+            private void WriteDateTime(StreamWriter eventStream, WspBuffer serializedEvent, PersistEventInfo eventInfo)
+            {
+                DateTime dateTime;
+
+                if (serializedEvent.Read(out dateTime) == false)
+                {
+                    throw new EventDeserializationException("Error reading List length from buffer");
+                }
+
+                eventStream.Write(eventInfo.StringDelimiter.ToString());
+                eventStream.Write(CleanseString(dateTime.ToString("o"), eventInfo));
+                eventStream.Write(eventInfo.StringDelimiter.ToString());
+            }
+
+            private string CleanseString(string stringIn, PersistEventInfo eventInfo)
+            {
+                StringBuilder sb = new StringBuilder();
+
+                if (string.IsNullOrEmpty(stringIn) == false)
+                {
+                    for (int i = 0; i < stringIn.Length; i++)
+                    {
+                        if (stringIn[i] == eventInfo.StringDelimiter)
+                        {
+                            sb.Append(eventInfo.EscapeCharacter);
+                            sb.Append(eventInfo.StringDelimiter);
+                            continue;
+                        }
+                        else if (stringIn[i] == eventInfo.EscapeCharacter)
+                        {
+                            if (eventInfo.EscapeCharacter == '\\' && (i + 1) < stringIn.Length)
+                            {
+                                switch (stringIn.Substring(i, 2))
+                                {
+                                    case @"\b":
+                                        sb.Append(@"\b");
+                                        i++;
+                                        continue;
+
+                                    case @"\f":
+                                        sb.Append(@"\f");
+                                        i++;
+                                        continue;
+
+                                    case @"\n":
+                                        sb.Append(@"\n");
+                                        i++;
+                                        continue;
+
+                                    case @"\r":
+                                        sb.Append(@"\r");
+                                        i++;
+                                        continue;
+
+                                    case @"\t":
+                                        sb.Append(@"\t");
+                                        i++;
+                                        continue;
+
+                                    case @"\u":
+                                        sb.Append(@"\u");
+                                        i++;
+                                        continue;
+
+                                    case @"\/":
+                                        sb.Append(@"\/");
+                                        i++;
+                                        continue;
+
+                                    case "\\\"":
+                                        sb.Append("\\\"");
+                                        i++;
+                                        continue;
+
+                                    case @"\\":
+                                        sb.Append(@"\\");
+                                        i++;
+                                        continue;
+
+                                    default:
+                                        sb.Append(eventInfo.EscapeCharacter);
+                                        sb.Append(eventInfo.EscapeCharacter);
+                                        continue;
+                                }
+                            }
+                            else
+                            {
+                                sb.Append(eventInfo.EscapeCharacter);
+                                sb.Append(eventInfo.EscapeCharacter);
+                                continue;
+                            }
+                        }
+                        else
+                        {
+                            switch (stringIn[i])
+                            {
+                                case '\b':
+                                    sb.Append(eventInfo.EscapeCharacter);
+                                    sb.Append('b');
+                                    continue;
+
+                                case '\f':
+                                    sb.Append(eventInfo.EscapeCharacter);
+                                    sb.Append('f');
+                                    continue;
+
+                                case '\n':
+                                    sb.Append(eventInfo.EscapeCharacter);
+                                    sb.Append('n');
+                                    continue;
+
+                                case '\r':
+                                    sb.Append(eventInfo.EscapeCharacter);
+                                    sb.Append('r');
+                                    continue;
+
+                                case '\t':
+                                    sb.Append(eventInfo.EscapeCharacter);
+                                    sb.Append('t');
+                                    continue;
+
+                                case '/':
+                                    sb.Append(eventInfo.EscapeCharacter);
+                                    sb.Append('/');
+                                    continue;
+
+                                case '\"':
+                                    sb.Append(eventInfo.EscapeCharacter);
+                                    sb.Append('\"');
+                                    continue;
+
+                                case '\\':
+                                    sb.Append(eventInfo.EscapeCharacter);
+                                    sb.Append('\\');
+                                    continue;
+
+                                default:
+                                    sb.Append(stringIn[i]);
+                                    continue;
+                            }
+                        }
+                    }
+                }
+
+                return sb.ToString();
             }
 
             private void CopyFile()
@@ -585,11 +1050,18 @@ namespace Microsoft.WebSolutionsPlatform.Event
                 persistFileEvent.PersistEventType = eventInfo.PersistEventType;
                 persistFileEvent.FileState = fileState;
                 persistFileEvent.FileName = outFileName;
-                persistFileEvent.SettingFieldTerminator = eventInfo.FieldTerminator;
                 persistFileEvent.SettingLocalOnly = eventInfo.LocalOnly;
                 persistFileEvent.SettingMaxCopyInterval = (int)(eventInfo.CopyIntervalTicks / 10000000);
                 persistFileEvent.SettingMaxFileSize = eventInfo.MaxFileSize;
+                persistFileEvent.SettingFieldTerminator = eventInfo.FieldTerminator;
                 persistFileEvent.SettingRowTerminator = eventInfo.RowTerminator;
+                persistFileEvent.SettingBeginObjectSeparator = eventInfo.BeginObjectSeparator;
+                persistFileEvent.SettingEndObjectSeparator = eventInfo.EndObjectSeparator;
+                persistFileEvent.SettingBeginArraySeparator = eventInfo.BeginArraySeparator;
+                persistFileEvent.SettingEndArraySeparator = eventInfo.EndArraySeparator;
+                persistFileEvent.SettingKeyValueSeparator = eventInfo.KeyValueSeparator;
+                persistFileEvent.SettingStringDelimiter = eventInfo.StringDelimiter;
+                persistFileEvent.SettingEscapeCharacter = eventInfo.EscapeCharacter;
                 persistFileEvent.FileNameBase = fileNameBase;
 
                 if (fileState == PersistFileState.Open || outFileName == null)
@@ -613,10 +1085,10 @@ namespace Microsoft.WebSolutionsPlatform.Event
                     try
                     {
                         pubMgr.Publish(persistFileEvent.Serialize());
+                        break;
                     }
                     catch
                     {
-                        break;
                     }
                 }
 

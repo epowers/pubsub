@@ -25,7 +25,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
     /// Enum for different types of worker threads
     /// </summary>
     public enum WorkerThreadType : int
-	{
+    {
         /// <summary>
         /// Not defined
         /// </summary>
@@ -42,27 +42,35 @@ namespace Microsoft.WebSolutionsPlatform.Event
         /// This is the thread that takes incoming events from a parent/child machine and 
         /// publishes them to this machine.
         /// </summary>
-		RePublisherThread = 3,
+        RePublisherThread = 3,
         /// <summary>
         /// This is the thread that manages the subscription routing table
         /// </summary>
-		SubscriptionMgrThread = 4,
+        SubscriptionMgrThread = 4,
         /// <summary>
         /// This is the thread that persists events to the file system
         /// </summary>
-		PersisterThread = 5,
+        PersisterThread = 5,
         /// <summary>
         /// This is the thread that monitors the health of the other threads and restarts threads as 
         /// needed
         /// </summary>
-		ManagerThread = 6
-	}
+        ManagerThread = 6
+    }
+
+    internal enum Role : int
+    {
+        Origin = 1,
+        Primary = 2,
+        Secondary = 3,
+        Client = 4
+    }
 
     /// <summary>
     /// Struct containing two dictionary entries
     /// </summary>
     public struct DoubleDictionary<TDictionary1, TDictionary2>
-	{
+    {
         private Dictionary<TDictionary1, DateTime> dictionary1;
         /// <summary>
         /// First dictionary of structure.
@@ -96,15 +104,15 @@ namespace Microsoft.WebSolutionsPlatform.Event
                 dictionary2 = value;
             }
         }
-	}
+    }
 
-	internal struct QueueElement
-	{
-		internal Guid EventType;
-		internal Event Event;
-		internal byte[] SerializedEvent;
+    internal struct QueueElement
+    {
+        internal Guid EventType;
+        internal Event Event;
+        internal byte[] SerializedEvent;
         internal int SerializedLength;
-		internal string OriginatingRouterName;
+        internal string OriginatingRouterName;
         internal string InRouterName;
     }
 
@@ -112,18 +120,24 @@ namespace Microsoft.WebSolutionsPlatform.Event
     /// Abstract class for worker threads
     /// </summary>
     public abstract class ServiceThread
-	{
+    {
         /// <summary>
         /// The Start method is used to start the thread.
         /// </summary>
-		public abstract void Start();
-	}
+        public abstract void Start();
+    }
 
     /// <summary>
     /// Main class for the Event Router
     /// </summary>
     public partial class Router : ServiceBase
     {
+        internal static object configFileLock = new object();
+        internal static bool autoConfig = false;
+        internal static string bootstrapUrl = string.Empty;
+        internal static Guid mgmtGroup = Guid.Empty;
+        internal static string role = @"client";
+
         internal static UInt32 eventQueueSize;
         internal static Int32 averageEventSize;
 
@@ -180,16 +194,14 @@ namespace Microsoft.WebSolutionsPlatform.Event
         internal static SubscriptionMgr subscriptionMgr;
         internal static Persister persister;
         internal static Communicator communicator;
+        internal static Configurator configurator;
         internal static Manager manager;
 
         internal static SynchronizationQueue<QueueElement> subscriptionMgrQueue;
         internal static SynchronizationQueue<QueueElement> rePublisherQueue;
         internal static SynchronizationQueue<QueueElement> persisterQueue;
         internal static SynchronizationQueue<QueueElement> forwarderQueue;
-
-        internal static Dictionary<Guid, DoubleDictionary<string, Guid>> eventDictionary; //Route, Subscription
-        internal static Dictionary<Guid, DoubleDictionary<Guid, string>> subscriptionDictionary; //EventType, Route
-        internal static Dictionary<string, DoubleDictionary<Guid, Guid>> routerDictionary; //EventType, Subscription
+        internal static SynchronizationQueue<QueueElement> mgmtQueue;
 
         internal static Dictionary<string, string> channelDictionary; //RouterName, OutRouterName (channel)
 
@@ -278,12 +290,14 @@ namespace Microsoft.WebSolutionsPlatform.Event
             subscriptionMgr = new SubscriptionMgr();
             persister = new Persister();
             communicator = new Communicator();
+            configurator = new Configurator();
             manager = new Manager();
 
             subscriptionMgrQueue = new SynchronizationQueue<QueueElement>(2000, subscriptionQueueSize);
             rePublisherQueue = new SynchronizationQueue<QueueElement>(2000, rePublisherQueueSize);
             persisterQueue = new SynchronizationQueue<QueueElement>(2000, persisterQueueSize);
             forwarderQueue = new SynchronizationQueue<QueueElement>(2000, forwarderQueueSize);
+            mgmtQueue = new SynchronizationQueue<QueueElement>(100);
 
             workerThreads = new Dictionary<Type, Thread>();
 
@@ -292,15 +306,19 @@ namespace Microsoft.WebSolutionsPlatform.Event
             workerThreads.Add(subscriptionMgr.GetType(), null);
             workerThreads.Add(persister.GetType(), null);
             workerThreads.Add(communicator.GetType(), null);
+            workerThreads.Add(configurator.GetType(), null);
             workerThreads.Add(manager.GetType(), null);
-
-            eventDictionary = new Dictionary<Guid, DoubleDictionary<string, Guid>>();
-            subscriptionDictionary = new Dictionary<Guid, DoubleDictionary<Guid, string>>();
-            routerDictionary = new Dictionary<string, DoubleDictionary<Guid, Guid>>(StringComparer.CurrentCultureIgnoreCase);
 
             channelDictionary = new Dictionary<string, string>(StringComparer.CurrentCultureIgnoreCase);
 
-            LoadConfiguration();
+            try
+            {
+                LoadConfiguration();
+            }
+            catch
+            {
+                // We'll load the config later
+            }
 
             this.ServiceName = "WspEventRouter";
         }
@@ -352,164 +370,6 @@ namespace Microsoft.WebSolutionsPlatform.Event
         }
 
         /// <summary>
-        /// Adds a Route to the routing table
-        /// </summary>
-        /// <param name="routerName">Name of the parent router</param>
-        /// <param name="port">TCP port used by the router</param>
-        /// <param name="bufferSize">Size of serializedEvent for talking to router</param>
-        /// <param name="timeout">Timeout for making TCP calls</param>
-        internal static void AddRoute(string routerName, int port, int bufferSize, int timeout)
-        {
-            if (routerDictionary.ContainsKey(routerName) == false)
-            {
-                DoubleDictionary<Guid, Guid> values = new DoubleDictionary<Guid, Guid>();
-                values.Dictionary1 = new Dictionary<Guid, DateTime>();
-                values.Dictionary2 = new Dictionary<Guid, DateTime>();
-
-                routerDictionary.Add(routerName, values);
-
-                parentRoute = new Route(routerName, port, bufferSize, timeout);
-            }
-        }
-
-        /// <summary>
-        /// Adds a Route to the routing table
-        /// </summary>
-        /// <param name="routerName">routerName where subscription is made</param>
-        /// <param name="eventType">eventType of the event</param>
-        /// <param name="subscriptionId">subscriptionId of the event</param>
-        internal static void AddRoute(string routerName, Guid eventType, Guid subscriptionId)
-        {
-            if (routerDictionary.ContainsKey(routerName) == false)
-            {
-                DoubleDictionary<Guid, Guid> values = new DoubleDictionary<Guid, Guid>();
-                values.Dictionary1 = new Dictionary<Guid, DateTime>();
-                values.Dictionary2 = new Dictionary<Guid, DateTime>();
-
-                routerDictionary.Add(routerName, values);
-            }
-
-            routerDictionary[routerName].Dictionary1[eventType] = DateTime.UtcNow;
-            routerDictionary[routerName].Dictionary2[subscriptionId] = DateTime.UtcNow;
-        }
-
-        /// <summary>
-        /// Deletes a Route from the routing table
-        /// </summary>
-        /// <param name="routerName">routerName of the router</param>
-        internal static void DeleteRoute(string routerName)
-        {
-            foreach (Guid eventType in routerDictionary[routerName].Dictionary1.Keys)
-            {
-                eventDictionary[eventType].Dictionary1.Remove(routerName);
-            }
-
-            foreach (Guid subscriptionId in routerDictionary[routerName].Dictionary2.Keys)
-            {
-                subscriptionDictionary[subscriptionId].Dictionary2.Remove(routerName);
-            }
-
-            routerDictionary.Remove(routerName);
-
-            if (parentRoute.RouterName == routerName)
-            {
-                parentRoute = null;
-            }
-        }
-
-        /// <summary>
-        /// Adds an EventType to the routing table
-        /// </summary>
-        /// <param name="eventType">eventType of the event</param>
-        /// <param name="routerName">routerName where subscription is made</param>
-        /// <param name="subscriptionId">subscriptionId of the event</param>
-        internal static void AddEvent(Guid eventType, string routerName, Guid subscriptionId)
-        {
-            if (eventDictionary.ContainsKey(eventType) == false)
-            {
-                DoubleDictionary<string, Guid> values = new DoubleDictionary<string, Guid>();
-                values.Dictionary1 = new Dictionary<string, DateTime>(StringComparer.CurrentCultureIgnoreCase);
-                values.Dictionary2 = new Dictionary<Guid, DateTime>();
-
-                eventDictionary.Add(eventType, values);
-            }
-
-            eventDictionary[eventType].Dictionary1[routerName] = DateTime.UtcNow;
-            eventDictionary[eventType].Dictionary2[subscriptionId] = DateTime.UtcNow;
-        }
-
-        /// <summary>
-        /// Deletes an EventType from the routing table
-        /// </summary>
-        /// <param name="eventType">eventType of the event</param>
-        internal static void DeleteEvent(Guid eventType)
-        {
-            foreach (string routerName in eventDictionary[eventType].Dictionary1.Keys)
-            {
-                routerDictionary[routerName].Dictionary1.Remove(eventType);
-
-                foreach (Guid subscriptionId in routerDictionary[routerName].Dictionary2.Keys)
-                {
-                    subscriptionDictionary[subscriptionId].Dictionary1.Remove(eventType);
-                }
-            }
-
-            eventDictionary.Remove(eventType);
-        }
-
-        /// <summary>
-        /// Adds a Subscription to the routing table
-        /// </summary>
-        /// <param name="subscriptionId">subscriptionId of the event</param>
-        /// <param name="eventType">eventType of the subscription</param>
-        /// <param name="routerName">routerName where subscription is made</param>
-        /// <param name="localOnly">Defines if subscription is for local machine only</param>
-        internal static void AddSubscription(Guid subscriptionId, Guid eventType, string routerName, bool localOnly)
-        {
-            if (subscriptionDictionary.ContainsKey(subscriptionId) == false)
-            {
-                DoubleDictionary<Guid, string> values = new DoubleDictionary<Guid, string>();
-                values.Dictionary1 = new Dictionary<Guid, DateTime>();
-                values.Dictionary2 = new Dictionary<string, DateTime>(StringComparer.CurrentCultureIgnoreCase);
-
-                subscriptionDictionary.Add(subscriptionId, values);
-
-                SubscriptionMgr.subscriptions.Add(subscriptionId, new SubscriptionEntry(subscriptionId, eventType, routerName, localOnly));
-
-                subscriptionEntries.Increment();
-            }
-
-            subscriptionDictionary[subscriptionId].Dictionary1[eventType] = DateTime.UtcNow;
-            AddEvent(eventType, routerName, subscriptionId);
-
-            subscriptionDictionary[subscriptionId].Dictionary2[routerName] = DateTime.UtcNow;
-            AddRoute(routerName, eventType, subscriptionId);
-        }
-
-        /// <summary>
-        /// Deletes a Subscription from the routing table
-        /// </summary>
-        /// <param name="subscriptionId">subscriptionId of the event</param>
-        internal static void DeleteSubscription(Guid subscriptionId)
-        {
-            foreach (Guid eventType in subscriptionDictionary[subscriptionId].Dictionary1.Keys)
-            {
-                eventDictionary[eventType].Dictionary2.Remove(subscriptionId);
-            }
-
-            foreach (string routerName in subscriptionDictionary[subscriptionId].Dictionary2.Keys)
-            {
-                routerDictionary[routerName].Dictionary2.Remove(subscriptionId);
-            }
-
-            subscriptionDictionary.Remove(subscriptionId);
-
-            SubscriptionMgr.subscriptions.Remove(subscriptionId);
-
-            subscriptionEntries.Decrement();
-        }
-
-        /// <summary>
         /// Concatenates an ArrayList of byte[] and returns one byte[]
         /// </summary>
         /// <param name="arrayIn">ArrayList of byte[]</param>
@@ -541,103 +401,120 @@ namespace Microsoft.WebSolutionsPlatform.Event
         }
     }
 
-	internal class Route : IComparable<Route>
-	{
-		private string routerName;
-		/// <summary>
-		/// Name of the router
-		/// </summary>
+    internal class Route : IComparable<Route>
+    {
+        private string routerName;
+        /// <summary>
+        /// Name of the router
+        /// </summary>
         public string RouterName
-		{
-			get
-			{
+        {
+            get
+            {
                 return routerName;
-			}
-		}
+            }
+        }
 
-		private int port;
-		/// <summary>
-		/// TCP port for route
-		/// </summary>
-		public int Port
-		{
-			get
-			{
-				return port;
-			}
-			internal set
-			{
-				port = value;
-			}
-		}
+        private int numConnections;
+        /// <summary>
+        /// Number of connections to parent
+        /// </summary>
+        public int NumConnections
+        {
+            get
+            {
+                return numConnections;
+            }
+            internal set
+            {
+                numConnections = value;
+            }
+        }
 
-		private int bufferSize;
-		/// <summary>
-		/// Buffer size used for the TCP port for route
-		/// </summary>
-		public int BufferSize
-		{
-			get
-			{
-				return bufferSize;
-			}
-			internal set
-			{
-				bufferSize = value;
-			}
-		}
+        private int port;
+        /// <summary>
+        /// TCP port for route
+        /// </summary>
+        public int Port
+        {
+            get
+            {
+                return port;
+            }
+            internal set
+            {
+                port = value;
+            }
+        }
 
-		private int timeout;
-		/// <summary>
-		/// Timeout used for TCP calls
-		/// </summary>
-		public int Timeout
-		{
-			get
-			{
-				return timeout;
-			}
-			internal set
-			{
-				timeout = value;
-			}
-		}
+        private int bufferSize;
+        /// <summary>
+        /// Buffer size used for the TCP port for route
+        /// </summary>
+        public int BufferSize
+        {
+            get
+            {
+                return bufferSize;
+            }
+            internal set
+            {
+                bufferSize = value;
+            }
+        }
 
-		private DateTime expirationTime;
-		/// <summary>
-		/// Expiration time for route
-		/// </summary>
-		public DateTime ExpirationTime
-		{
-			get
-			{
-				return expirationTime;
-			}
-			internal set
-			{
-				expirationTime = value;
-			}
-		}
+        private int timeout;
+        /// <summary>
+        /// Timeout used for TCP calls
+        /// </summary>
+        public int Timeout
+        {
+            get
+            {
+                return timeout;
+            }
+            internal set
+            {
+                timeout = value;
+            }
+        }
 
-		/// <summary>
-		/// Used to create a Route used by RouteMgr
-		/// </summary>
+        private DateTime expirationTime;
+        /// <summary>
+        /// Expiration time for route
+        /// </summary>
+        public DateTime ExpirationTime
+        {
+            get
+            {
+                return expirationTime;
+            }
+            internal set
+            {
+                expirationTime = value;
+            }
+        }
+
+        /// <summary>
+        /// Used to create a Route used by RouteMgr
+        /// </summary>
         /// <param name="routerName">Name of the router</param>
-		/// <param name="port">TCP port used by the router</param>
-		/// <param name="bufferSize">Buffer size used for the TCP port for route</param>
-		/// <param name="timeout">Timeout used for TCP calls</param>
-        public Route(string routerName, int port, int bufferSize, int timeout)
-		{
+        /// <param name="port">TCP port used by the router</param>
+        /// <param name="bufferSize">Buffer size used for the TCP port for route</param>
+        /// <param name="timeout">Timeout used for TCP calls</param>
+        public Route(string routerName, int numConnections, int port, int bufferSize, int timeout)
+        {
             this.routerName = routerName;
-			this.port = port;
-			this.bufferSize = bufferSize;
-			this.timeout = timeout;
-			this.expirationTime = DateTime.UtcNow.AddMinutes(5);
-		}
+            this.numConnections = numConnections;
+            this.port = port;
+            this.bufferSize = bufferSize;
+            this.timeout = timeout;
+            this.expirationTime = DateTime.UtcNow.AddMinutes(5);
+        }
 
-		public int CompareTo( Route otherRoute )
-		{
+        public int CompareTo(Route otherRoute)
+        {
             return RouterName.CompareTo(otherRoute.RouterName);
-		}
-	}
+        }
+    }
 }

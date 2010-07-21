@@ -10,16 +10,16 @@ using System.IO;
 
 namespace Microsoft.WebSolutionsPlatform.Event
 {
-	[RunInstaller(true)]
-	public partial class ProjectInstaller : Installer
-	{
+    [RunInstaller(true)]
+    public partial class ProjectInstaller : Installer
+    {
         /// <summary>
         /// Constructor
         /// </summary>
-		public ProjectInstaller()
-		{
+        public ProjectInstaller()
+        {
             InitializeComponent();
-		}
+        }
 
         /// <summary>
         /// Override 'Uninstall' method of Installer class.
@@ -59,6 +59,9 @@ namespace Microsoft.WebSolutionsPlatform.Event
         {
             string targetDir = Context.Parameters["TARGETDIR"];
 
+            string wspRole = Context.Parameters["ROLE"];
+            string wspBootstrapUrl = Context.Parameters["BOOTSTRAPURL"];
+            string wspMgmtGroup = Context.Parameters["MGMTGROUP"];
             string wspParent = Context.Parameters["WSPPARENT"];
             string wspInternetFacing = Context.Parameters["WSPINTERNETFACING"];
             string wspEventQueueSize = Context.Parameters["WSPQUEUESIZE"];
@@ -88,71 +91,107 @@ namespace Microsoft.WebSolutionsPlatform.Event
                 sw.WriteLine("<?xml version=\"1.0\" encoding=\"utf-8\" ?>");
                 sw.WriteLine("<configuration>");
                 sw.WriteLine("	<configSections>");
-                sw.WriteLine("		<section name=\"eventRouterSettings\" type=\"foo\"/>");
-                sw.WriteLine("		<section name=\"eventPersistSettings\" type=\"foo2\"/>");
+                sw.WriteLine("		<section name=\"eventRouterSettings\" type=\"RouterSettings\"/>");
+                sw.WriteLine("		<section name=\"eventPersistSettings\" type=\"PersistSettings\"/>");
                 sw.WriteLine("	</configSections>");
                 sw.WriteLine("");
                 sw.WriteLine("	<eventRouterSettings>");
-                sw.WriteLine("		<!-- refreshIncrement should be about 1/3 of what the expirationIncrement is. -->");
-                sw.WriteLine("		<!-- This setting needs to be consistent across all the machines in the eventing network. -->");
-                sw.WriteLine("		<subscriptionManagement refreshIncrement=\"3\"  expirationIncrement=\"10\"/>");
+                sw.WriteLine("    <!-- If you choose autoConfig to be true then you need to first install the origin router and have the DNS configured with -->");
+                sw.WriteLine("    <!-- data center routers if your topology requires it. With autoConfig turned on, all config files will be kept identical -->");
+                sw.WriteLine("    <!-- to the origin's config file. When it is changed, all others will automatically be changed. -->");
+                sw.WriteLine("    <!-- The bootstrapUrl must resolve to the origin router. It will initially be called by a client to retrieve its config file. -->");
+                sw.WriteLine("    <!-- The mgmtGroup is the eventId which will be used to communicate all config info while servers are running. -->");
+                sw.WriteLine("    <!-- Role defines what role a given server takes when automatically establishing the topology. -->");
+                sw.WriteLine("    <!-- The values for role are: -->");
+                sw.WriteLine("    <!--   origin   -->");
+                sw.WriteLine("    <!--   primary   -->");
+                sw.WriteLine("    <!--   secondary   -->");
+                sw.WriteLine("    <!--   client   -->");
+                sw.WriteLine("    <!-- <configInfo role=\"origin\" autoConfig=\"false\" bootstrapUrl=\"http://WspOrigin/GetConfig\" mgmtGroup=\"2B2B78DB-8AE7-4a16-AB6C-850F54A82D54\"/> -->");
                 sw.WriteLine("");
 
-                if (wspEventQueueSize == null || wspEventQueueSize == string.Empty)
+                if (wspRole != string.Empty)
                 {
-                    sw.WriteLine("		<localPublish eventQueueName=\"WspEventQueue\" eventQueueSize=\"102400000\" averageEventSize=\"10240\"/>");
+                    if (string.Compare(wspRole, "origin", true) == 0)
+                    {
+                        sw.WriteLine("    <configInfo role=\"" + wspRole + "\" autoConfig=\"true\" bootstrapUrl=\"" + wspBootstrapUrl + "\" mgmtGroup=\"" + wspMgmtGroup + "\"/>");
+                    }
+                    else
+                    {
+                        sw.WriteLine("    <configInfo role=\"" + wspRole + "\" autoConfig=\"true\" bootstrapUrl=\"" + wspBootstrapUrl + "\"/>");
+                    }
+
+                    sw.WriteLine("");
+                    sw.WriteLine("	</eventRouterSettings>");
                 }
                 else
                 {
-                    sw.WriteLine("		<localPublish eventQueueName=\"WspEventQueue\" eventQueueSize=\"" + wspEventQueueSize + "\" averageEventSize=\"10240\"/>");
+                    sw.WriteLine("    <configInfo role=\"client\" autoConfig=\"false\" bootstrapUrl=\"\"/>");
+                    sw.WriteLine("");
+                    sw.WriteLine("    <clientRoleInfo>");
+                    sw.WriteLine("");
+                    sw.WriteLine("      <subscriptionManagement refreshIncrement=\"3\"  expirationIncrement=\"10\"/>");
+                    sw.WriteLine("");
+
+                    if (wspEventQueueSize == null || wspEventQueueSize == string.Empty)
+                    {
+                        sw.WriteLine("		<localPublish eventQueueName=\"WspEventQueue\" eventQueueSize=\"102400000\" averageEventSize=\"10240\"/>");
+                    }
+                    else
+                    {
+                        sw.WriteLine("		<localPublish eventQueueName=\"WspEventQueue\" eventQueueSize=\"" + wspEventQueueSize + "\" averageEventSize=\"10240\"/>");
+                    }
+
+                    sw.WriteLine("");
+                    sw.WriteLine("		<!-- These settings control what should happen to an output queue when communications is lost to a parent or child.-->");
+                    sw.WriteLine("		<!-- maxQueueSize is in bytes and maxTimeout is in seconds.-->");
+                    sw.WriteLine("		<!-- When the maxQueueSize is reached or the maxTimeout is reached for a communication that has been lost, the queue is deleted.-->");
+                    sw.WriteLine("		<outputCommunicationQueues maxQueueSize=\"200000000\" maxTimeout=\"600\"/>");
+                    sw.WriteLine("");
+                    sw.WriteLine("		<!-- nic can be an alias which specifies a specific IP address or an IP address. -->");
+                    sw.WriteLine("		<!-- port can be 0 if you don't want to have the router open a listening port to be a parent to other routers. -->");
+
+                    if (wspInternetFacing == null || wspInternetFacing == string.Empty)
+                    {
+                        sw.WriteLine("		<thisRouter nic=\"\" port=\"1300\" bufferSize=\"1024000\" timeout=\"30000\" />");
+                    }
+                    else
+                    {
+                        sw.WriteLine("		<thisRouter nic=\"\" port=\"0\" bufferSize=\"1024000\" timeout=\"30000\" />");
+                    }
+
+                    sw.WriteLine("");
+
+                    if (wspParent == null || wspParent == string.Empty)
+                    {
+                        sw.WriteLine("		<!-- <parentRouter name=\"ParentMachineName\" numConnections=\"2\" port=\"1300\" bufferSize=\"1024000\" timeout=\"30000\" />  -->");
+                    }
+                    else
+                    {
+                        sw.WriteLine("		<parentRouter name=\"" + wspParent + "\" numConnections=\"2\" port=\"1300\" bufferSize=\"1024000\" timeout=\"30000\" />");
+                    }
+
+                    sw.WriteLine("");
+                    sw.WriteLine("    </clientRoleInfo>");
+                    sw.WriteLine("");
+                    sw.WriteLine("	</eventRouterSettings>");
+                    sw.WriteLine("");
+                    sw.WriteLine("	<eventPersistSettings>");
+                    sw.WriteLine("");
+                    sw.WriteLine("	    <!-- type specifies the EventType to be persisted.-->");
+                    sw.WriteLine("		<!-- localOnly is a boolean which specifies whether only events published on this machine are persisted or if events from the entire network are persisted.-->");
+                    sw.WriteLine("		<!-- maxFileSize specifies the maximum size in bytes that the persisted file should be before it is copied.-->");
+                    sw.WriteLine("		<!-- maxCopyInterval specifies in seconds the longest time interval before the persisted file is copied.-->");
+                    sw.WriteLine("		<!-- fieldTerminator specifies the character used between fields.-->");
+                    sw.WriteLine("		<!-- rowTerminator specifies the character used at the end of each row written.-->");
+                    sw.WriteLine("		<!-- tempFileDirectory is the local directory used for writing out the persisted event serializedEvent.-->");
+                    sw.WriteLine("		<!-- copyToFileDirectory is the final destination of the persisted serializedEvent file. It can be local or remote using a UNC.-->");
+                    sw.WriteLine("");
+                    sw.WriteLine("		<!-- <event type=\"78422526-7B21-4559-8B9A-BC551B46AE34\" localOnly=\"true\" maxFileSize=\"2000000000\" maxCopyInterval=\"60\" fieldTerminator=\",\" rowTerminator=\"\\n\" tempFileDirectory=\"c:\\temp\\WebEvents\\\" copyToFileDirectory=\"c:\\temp\\WebEvents\\log\\\" /> -->");
+                    sw.WriteLine("");
+                    sw.WriteLine("	</eventPersistSettings>");
                 }
 
-                sw.WriteLine("");
-                sw.WriteLine("		<!-- These settings control what should happen to an output queue when communications is lost to a parent or child.-->");
-                sw.WriteLine("		<!-- maxQueueSize is in bytes and maxTimeout is in seconds.-->");
-                sw.WriteLine("		<!-- When the maxQueueSize is reached or the maxTimeout is reached for a communication that has been lost, the queue is deleted.-->");
-                sw.WriteLine("		<outputCommunicationQueues maxQueueSize=\"200000000\" maxTimeout=\"600\"/>");
-                sw.WriteLine("");
-                sw.WriteLine("		<!-- nic can be an alias which specifies a specific IP address or an IP address. -->");
-                sw.WriteLine("		<!-- port can be 0 if you don't want to have the router open a listening port to be a parent to other routers. -->");
-
-                if (wspInternetFacing == null || wspInternetFacing == string.Empty)
-                {
-                    sw.WriteLine("		<thisRouter nic=\"\" port=\"1300\" bufferSize=\"1024000\" timeout=\"30000\" />");
-                }
-                else
-                {
-                    sw.WriteLine("		<thisRouter nic=\"\" port=\"0\" bufferSize=\"1024000\" timeout=\"30000\" />");
-                }
-
-                sw.WriteLine("");
-
-                if (wspParent == null || wspParent == string.Empty)
-                {
-                    sw.WriteLine("		<!-- <parentRouter name=\"ParentMachineName\" port=\"1300\" bufferSize=\"1024000\" timeout=\"30000\" />  -->");
-                }
-                else
-                {
-                    sw.WriteLine("		<parentRouter name=\"" + wspParent + "\" port=\"1300\" bufferSize=\"1024000\" timeout=\"30000\" />");
-                }
-
-                sw.WriteLine("");
-                sw.WriteLine("	</eventRouterSettings>");
-                sw.WriteLine("");
-                sw.WriteLine("	<eventPersistSettings>");
-                sw.WriteLine("");
-                sw.WriteLine("	    <!-- type specifies the EventType to be persisted.-->");
-                sw.WriteLine("		<!-- localOnly is a boolean which specifies whether only events published on this machine are persisted or if events from the entire network are persisted.-->");
-                sw.WriteLine("		<!-- maxFileSize specifies the maximum size in bytes that the persisted file should be before it is copied.-->");
-                sw.WriteLine("		<!-- maxCopyInterval specifies in seconds the longest time interval before the persisted file is copied.-->");
-                sw.WriteLine("		<!-- fieldTerminator specifies the character used between fields.-->");
-                sw.WriteLine("		<!-- rowTerminator specifies the character used at the end of each row written.-->");
-                sw.WriteLine("		<!-- tempFileDirectory is the local directory used for writing out the persisted event serializedEvent.-->");
-                sw.WriteLine("		<!-- copyToFileDirectory is the final destination of the persisted serializedEvent file. It can be local or remote using a UNC.-->");
-                sw.WriteLine("");
-                sw.WriteLine("		<!-- <event type=\"78422526-7B21-4559-8B9A-BC551B46AE34\" localOnly=\"true\" maxFileSize=\"2000000000\" maxCopyInterval=\"60\" fieldTerminator=\",\" rowTerminator=\"\\n\" tempFileDirectory=\"c:\\temp\\WebEvents\\\" copyToFileDirectory=\"c:\\temp\\WebEvents\\log\\\" /> -->");
-                sw.WriteLine("");
-                sw.WriteLine("	</eventPersistSettings>");
                 sw.WriteLine("</configuration>");
             }
         }

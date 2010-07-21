@@ -10,6 +10,9 @@ namespace Microsoft.WebSolutionsPlatform.Event
     /// </summary>
     public class WspBuffer
     {
+        private static Dictionary<Type, PropertyType> propTypes = null;
+        private static object lockObj = new object();
+
         private byte[] buffer;
 
         private int position = 0;
@@ -73,21 +76,24 @@ namespace Microsoft.WebSolutionsPlatform.Event
         {
             if ((position + length) > buffer.Length)
             {
-                int newLength;
+                int newLength = buffer.Length;
 
-                if ((int.MaxValue / 2) > buffer.Length)
+                while( newLength < (position + length) )
                 {
-                    newLength = buffer.Length * 2;
-                }
-                else
-                {
-                    if (buffer.Length == int.MaxValue)
+                    if ((int.MaxValue / 2) > buffer.Length)
                     {
-                        throw new OutOfMemoryException("WspBuffer has reached maximum size.");
+                        newLength = buffer.Length * 2;
                     }
                     else
                     {
-                        newLength = int.MaxValue;
+                        if (buffer.Length == int.MaxValue)
+                        {
+                            throw new OutOfMemoryException("WspBuffer has reached maximum size.");
+                        }
+                        else
+                        {
+                            newLength = int.MaxValue;
+                        }
                     }
                 }
 
@@ -415,7 +421,17 @@ namespace Microsoft.WebSolutionsPlatform.Event
         /// <param name="value">Value object to be written</param>
         public void Write(Single value)
         {
-            AppendBytes(BitConverter.GetBytes(value), 0, 8);
+            AppendBytes(BitConverter.GetBytes(value), 0, 4);
+        }
+
+        /// <summary>
+        /// Write buffer to the WspBuffer
+        /// </summary>
+        /// <param name="value">Value object to be written</param>
+        [CLSCompliantAttribute(false)]
+        public void Write(SByte value)
+        {
+            AppendByte((byte) value);
         }
 
         /// <summary>
@@ -469,6 +485,191 @@ namespace Microsoft.WebSolutionsPlatform.Event
         /// Write buffer to the WspBuffer
         /// </summary>
         /// <param name="value">Value object to be written</param>
+        public void Write(object value)
+        {
+            PropertyType propType;
+            Type valueType = value.GetType();
+
+            if (propTypes == null)
+            {
+                LoadPropTypes();
+            }
+
+            if (propTypes.TryGetValue(valueType, out propType) == true)
+            {
+                Write((byte)propType);
+
+                switch (propType)
+                {
+                    case PropertyType.String:
+                        Write((string)value);
+                        break;
+
+                    case PropertyType.Boolean:
+                        Write((bool)value);
+                        break;
+
+                    case PropertyType.Int32:
+                        Write((Int32)value);
+                        break;
+
+                    case PropertyType.Int64:
+                        Write((Int64)value);
+                        break;
+
+                    case PropertyType.Double:
+                        Write((double)value);
+                        break;
+
+                    case PropertyType.Decimal:
+                        Write((decimal)value);
+                        break;
+
+                    case PropertyType.Byte:
+                        Write((byte)value);
+                        break;
+
+                    case PropertyType.Char:
+                        Write((char)value);
+                        break;
+
+                    case PropertyType.Version:
+                        Write((Version)value);
+                        break;
+
+                    case PropertyType.DateTime:
+                        Write((DateTime)value);
+                        break;
+
+                    case PropertyType.Guid:
+                        Write((Guid)value);
+                        break;
+
+                    case PropertyType.Uri:
+                        Write((Uri)value);
+                        break;
+
+                    case PropertyType.Int16:
+                        Write((Int16)value);
+                        break;
+
+                    case PropertyType.Single:
+                        Write((Single)value);
+                        break;
+
+                    case PropertyType.UInt16:
+                        Write((UInt16)value);
+                        break;
+
+                    case PropertyType.UInt32:
+                        Write((UInt32)value);
+                        break;
+
+                    case PropertyType.UInt64:
+                        Write((UInt64)value);
+                        break;
+
+                    case PropertyType.IPAddress:
+                        Write((IPAddress)value);
+                        break;
+
+                    case PropertyType.ByteArray:
+                        Write((byte[])value);
+                        break;
+
+                    case PropertyType.CharArray:
+                        Write((char[])value);
+                        break;
+
+                    case PropertyType.StringDictionary:
+                        Write((Dictionary<string, string>)value);
+                        break;
+
+                    case PropertyType.ObjectDictionary:
+                        Write((Dictionary<string, object>)value);
+                        break;
+
+                    case PropertyType.StringList:
+                        Write((List<string>)value);
+                        break;
+
+                    case PropertyType.ObjectList:
+                        Write((List<object>)value);
+                        break;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Load property types into dictionary
+        /// </summary>
+        private void LoadPropTypes()
+        {
+            bool boolType = true;
+            byte byteType = 0;
+            byte[] byteArrayType = new byte[1];
+            char charType = ' ';
+            char[] charArrayType = new char[1];
+            decimal decimalType = 0;
+            double doubleType = 0;
+            Int16 int16Type = 0;
+            Int32 int32Type = 0;
+            Int64 int64Type = 0;
+            SByte sByteType = 0;
+            Single singleType = 0;
+            string stringType = string.Empty;
+            UInt16 uInt16Type = 0;
+            UInt32 uInt32Type = 0;
+            UInt64 uInt64Type = 0;
+            Version versionType = new Version();
+            DateTime dateTimeType = DateTime.Now;
+            Guid guidType = Guid.Empty;
+            Uri uriType = new Uri("http://localhost");
+            IPAddress ipAddressType = new IPAddress(0);
+            Dictionary<string, string> stringDictionaryType = new Dictionary<string,string>();
+            Dictionary<string, object> objectDictionaryType = new Dictionary<string,object>();
+            List<string> stringListType = new List<string>();
+            List<object> objectListType = new List<object>();
+
+           lock(lockObj)
+            {
+                if (propTypes == null)
+                {
+                    propTypes = new Dictionary<Type, PropertyType>();
+
+                    propTypes[boolType.GetType()] = PropertyType.Boolean;
+                    propTypes[byteType.GetType()] = PropertyType.Byte;
+                    propTypes[byteArrayType.GetType()] = PropertyType.ByteArray;
+                    propTypes[charType.GetType()] = PropertyType.Char;
+                    propTypes[charArrayType.GetType()] = PropertyType.CharArray;
+                    propTypes[decimalType.GetType()] = PropertyType.Decimal;
+                    propTypes[doubleType.GetType()] = PropertyType.Double;
+                    propTypes[int16Type.GetType()] = PropertyType.Int16;
+                    propTypes[int32Type.GetType()] = PropertyType.Int32;
+                    propTypes[int64Type.GetType()] = PropertyType.Int64;
+                    propTypes[sByteType.GetType()] = PropertyType.SByte;
+                    propTypes[singleType.GetType()] = PropertyType.Single;
+                    propTypes[stringType.GetType()] = PropertyType.String;
+                    propTypes[uInt16Type.GetType()] = PropertyType.UInt16;
+                    propTypes[uInt32Type.GetType()] = PropertyType.UInt32;
+                    propTypes[uInt64Type.GetType()] = PropertyType.UInt64;
+                    propTypes[versionType.GetType()] = PropertyType.Version;
+                    propTypes[dateTimeType.GetType()] = PropertyType.DateTime;
+                    propTypes[guidType.GetType()] = PropertyType.Guid;
+                    propTypes[uriType.GetType()] = PropertyType.Uri;
+                    propTypes[ipAddressType.GetType()] = PropertyType.IPAddress;
+                    propTypes[stringDictionaryType.GetType()] = PropertyType.StringDictionary;
+                    propTypes[objectDictionaryType.GetType()] = PropertyType.ObjectDictionary;
+                    propTypes[stringListType.GetType()] = PropertyType.StringList;
+                    propTypes[objectListType.GetType()] = PropertyType.ObjectList;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Write buffer to the WspBuffer
+        /// </summary>
+        /// <param name="value">Value object to be written</param>
         [CLSCompliantAttribute(false)]
         public void Write(UInt16 value)
         {
@@ -507,6 +708,49 @@ namespace Microsoft.WebSolutionsPlatform.Event
             {
                 Write(key);
                 Write(value[key]);
+            }
+        }
+
+        /// <summary>
+        /// Write buffer to the WspBuffer
+        /// </summary>
+        /// <param name="value">Value object to be written</param>
+        public void Write(Dictionary<string, object> value)
+        {
+            Write(value.Count);
+
+            foreach (string key in value.Keys)
+            {
+                Write(key);
+                Write(value[key]);
+            }
+        }
+
+        /// <summary>
+        /// Write buffer to the WspBuffer
+        /// </summary>
+        /// <param name="value">Value object to be written</param>
+        public void Write(List<string> value)
+        {
+            Write(value.Count);
+
+            for (int i = 0; i < value.Count; i++)
+            {
+                Write(value[i]);
+            }
+        }
+
+        /// <summary>
+        /// Write buffer to the WspBuffer
+        /// </summary>
+        /// <param name="value">Value object to be written</param>
+        public void Write(List<object> value)
+        {
+            Write(value.Count);
+
+            for (int i = 0; i < value.Count; i++)
+            {
+                Write(value[i]);
             }
         }
 
@@ -854,11 +1098,28 @@ namespace Microsoft.WebSolutionsPlatform.Event
         /// Read buffer from the WspBuffer
         /// </summary>
         /// <param name="value">Value object to be read</param>
+        [CLSCompliantAttribute(false)]
+        public bool Read(out SByte value)
+        {
+            bool rc;
+            byte byteOut = 0;
+
+            rc = GetByte(out byteOut);
+
+            value = (SByte) byteOut;
+
+            return rc;
+        }
+
+        /// <summary>
+        /// Read buffer from the WspBuffer
+        /// </summary>
+        /// <param name="value">Value object to be read</param>
         public bool Read(out Single value)
         {
             byte[] arrayOut;
 
-            if (GetBytes(8, out arrayOut) == false)
+            if (GetBytes(4, out arrayOut) == false)
             {
                 value = Single.MinValue;
                 return false;
@@ -900,6 +1161,115 @@ namespace Microsoft.WebSolutionsPlatform.Event
                 }
 
                 value[stringKey] = stringValue;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Read buffer from the WspBuffer
+        /// </summary>
+        /// <param name="value">Value object to be read</param>
+        public bool Read(out Dictionary<string, object> value)
+        {
+            int dictCount;
+            byte propType;
+            object objvalue;
+            string stringKey;
+
+            if (Read(out dictCount) == false)
+            {
+                value = new Dictionary<string, object>();
+                return false;
+            }
+
+            value = new Dictionary<string, object>(dictCount);
+
+            for (int i = 0; i < dictCount; i++)
+            {
+                if (Read(out stringKey) == false)
+                {
+                    return false;
+                }
+
+                if (Read(out propType) == false)
+                {
+                    return false;
+                }
+
+                if (Read((PropertyType)propType, out objvalue) == false)
+                {
+                    return false;
+                }
+
+                value[stringKey] = objvalue;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Read buffer from the WspBuffer
+        /// </summary>
+        /// <param name="value">Value object to be read</param>
+        public bool Read(out List<string> value)
+        {
+            int listCount;
+            string stringValue;
+
+            if (Read(out listCount) == false)
+            {
+                value = new List<string>();
+                return false;
+            }
+
+            value = new List<string>(listCount);
+
+            for (int i = 0; i < listCount; i++)
+            {
+                if (Read(out stringValue) == false)
+                {
+                    return false;
+                }
+
+                value.Add(stringValue);
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Read buffer from the WspBuffer
+        /// </summary>
+        /// <param name="value">Value object to be read</param>
+        public bool Read(out List<object> value)
+        {
+            int listCount;
+            byte propType;
+            object objvalue;
+
+            if (Read(out listCount) == false)
+            {
+                value = new List<object>();
+                return false;
+            }
+
+            value = new List<object>(listCount);
+
+            for (int i = 0; i < listCount; i++)
+            {
+
+                if (Read(out propType) == false)
+                {
+                    return false;
+                }
+
+                if (Read((PropertyType)propType, out objvalue) == false)
+                {
+                    return false;
+                }
+
+                value.Add(objvalue);
             }
 
             return true;
@@ -1027,6 +1397,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
             UInt16 uint16Value = 0;
             UInt32 uint32Value = 0;
             UInt64 uint64Value = 0;
+            SByte sByteValue = 0;
             Single singleValue = 0;
             Double doubleValue = 0;
             Decimal decimalValue = 0;
@@ -1036,6 +1407,9 @@ namespace Microsoft.WebSolutionsPlatform.Event
             IPAddress ipAddressValue = null;
             Uri uriValue = null;
             Dictionary<string, string> stringDictionaryValue = null;
+            Dictionary<string, object> objectDictionaryValue = null;
+            List<string> stringListValue = null;
+            List<object> objectListValue = null;
 
             value = null;
 
@@ -1106,6 +1480,11 @@ namespace Microsoft.WebSolutionsPlatform.Event
                     value = int16Value;
                     break;
 
+                case PropertyType.SByte:
+                    rc = Read(out sByteValue);
+                    value = sByteValue;
+                    break;
+
                 case PropertyType.Single:
                     rc = Read(out singleValue);
                     value = singleValue;
@@ -1141,9 +1520,24 @@ namespace Microsoft.WebSolutionsPlatform.Event
                     value = charArrayValue;
                     break;
 
-                case PropertyType.Dictionary:
+                case PropertyType.StringDictionary:
                     rc = Read(out stringDictionaryValue);
                     value = stringDictionaryValue;
+                    break;
+
+                case PropertyType.ObjectDictionary:
+                    rc = Read(out objectDictionaryValue);
+                    value = objectDictionaryValue;
+                    break;
+
+                case PropertyType.StringList:
+                    rc = Read(out stringListValue);
+                    value = stringListValue;
+                    break;
+
+                case PropertyType.ObjectList:
+                    rc = Read(out objectListValue);
+                    value = objectListValue;
                     break;
 
                 default:
@@ -1356,6 +1750,21 @@ namespace Microsoft.WebSolutionsPlatform.Event
         /// </summary>
         /// <param name="key">Key of the element being added</param>
         /// <param name="value">Value of the element being added</param>
+        [CLSCompliantAttribute(false)]
+        public void AddElement(string key, SByte value)
+        {
+            Write(key);
+
+            Write((byte)PropertyType.SByte);
+
+            Write(value);
+        }
+
+        /// <summary>
+        /// Method to add element buffer to the SerializationData object.
+        /// </summary>
+        /// <param name="key">Key of the element being added</param>
+        /// <param name="value">Value of the element being added</param>
         public void AddElement(string key, Version value)
         {
             Write(key);
@@ -1509,7 +1918,49 @@ namespace Microsoft.WebSolutionsPlatform.Event
         {
             Write(key);
 
-            Write((byte)PropertyType.Dictionary);
+            Write((byte)PropertyType.StringDictionary);
+
+            Write(value);
+        }
+
+        /// <summary>
+        /// Method to add element buffer to the SerializationData object.
+        /// </summary>
+        /// <param name="key">Key of the element being added</param>
+        /// <param name="value">Value of the element being added</param>
+        public void AddElement(string key, Dictionary<string, object> value)
+        {
+            Write(key);
+
+            Write((byte)PropertyType.ObjectDictionary);
+
+            Write(value);
+        }
+
+        /// <summary>
+        /// Method to add element buffer to the SerializationData object.
+        /// </summary>
+        /// <param name="key">Key of the element being added</param>
+        /// <param name="value">Value of the element being added</param>
+        public void AddElement(string key, List<string> value)
+        {
+            Write(key);
+
+            Write((byte)PropertyType.StringList);
+
+            Write(value);
+        }
+
+        /// <summary>
+        /// Method to add element buffer to the SerializationData object.
+        /// </summary>
+        /// <param name="key">Key of the element being added</param>
+        /// <param name="value">Value of the element being added</param>
+        public void AddElement(string key, List<object> value)
+        {
+            Write(key);
+
+            Write((byte)PropertyType.ObjectList);
 
             Write(value);
         }

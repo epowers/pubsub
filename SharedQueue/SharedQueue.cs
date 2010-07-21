@@ -202,21 +202,21 @@ namespace Microsoft.WebSolutionsPlatform.Common
                 throw new ArgumentOutOfRangeException("size", rm.GetString("MinValue"));
             }
 
-            if (averageItemSize > UInt32.MaxValue)
+            if (averageItemSize > (Int32.MaxValue - headerSize))
             {
                 ResourceManager rm = new ResourceManager("WspSharedQueue.WspSharedQueue", Assembly.GetExecutingAssembly());
 
-                throw new ArgumentOutOfRangeException("averageItemSize", rm.GetString("MaxValue") + int.MaxValue.ToString());
+                throw new ArgumentOutOfRangeException("averageItemSize", rm.GetString("MaxValue") + (Int32.MaxValue - headerSize).ToString());
             }
 
-            if (averageItemSize > size)
+            if (averageItemSize > (size - headerSize))
             {
                 ResourceManager rm = new ResourceManager("WspSharedQueue.WspSharedQueue", Assembly.GetExecutingAssembly());
 
                 throw new ArgumentOutOfRangeException("averageItemSize", rm.GetString("NotExceedQueueSize"));
             }
 
-            if (averageItemSize > (int.MaxValue - headerSize))
+            if (averageItemSize > (UInt32)(int.MaxValue - headerSize))
             {
                 buffer = new byte[int.MaxValue];
             }
@@ -336,7 +336,7 @@ namespace Microsoft.WebSolutionsPlatform.Common
         /// Dispose the SharedQueue object to release the unmanaged resources.
         /// </summary>
         /// <param name="disposing"></param>
-        protected virtual void Dispose(bool disposing) 
+        protected virtual void Dispose(bool disposing)
         {
             if (!disposed)
             {
