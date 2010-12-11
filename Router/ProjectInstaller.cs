@@ -10,16 +10,16 @@ using System.IO;
 
 namespace Microsoft.WebSolutionsPlatform.Event
 {
-    [RunInstaller(true)]
-    public partial class ProjectInstaller : Installer
-    {
+	[RunInstaller(true)]
+	public partial class ProjectInstaller : Installer
+	{
         /// <summary>
         /// Constructor
         /// </summary>
-        public ProjectInstaller()
-        {
+		public ProjectInstaller()
+		{
             InitializeComponent();
-        }
+		}
 
         /// <summary>
         /// Override 'Uninstall' method of Installer class.

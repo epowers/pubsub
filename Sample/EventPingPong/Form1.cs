@@ -24,6 +24,8 @@ namespace Microsoft.Sample.EventPingPong
         private static SubscriptionManager.Callback subCallback;
         private static SubscriptionManager.Callback pubCallback;
 
+        delegate void SetTextCallback(TextBox tb, string text);
+
         public Form1()
         {
             InitializeComponent();
@@ -68,7 +70,7 @@ namespace Microsoft.Sample.EventPingPong
 
             pubEvent.EventNum = 0;
 
-            subMgr = new SubscriptionManager(pubCallback);
+            subMgr = new SubscriptionManager(1, pubCallback);
             subMgr.ListenForEvents = true;
             subMgr.AddSubscription(pubEvent.InstanceId, false);
 
@@ -82,20 +84,26 @@ namespace Microsoft.Sample.EventPingPong
                 }
                 catch
                 {
-                    Thread.Sleep(2000);
+                    Thread.Sleep(2);
                 }
             }
         }
 
         public void StopPublish()
         {
-            timer1.Stop();
-
-            if (subMgr != null)
+            try
             {
-                subMgr.RemoveSubscription(pubEvent.InstanceId);
-                subMgr.ListenForEvents = false;
-                subMgr = null;
+                timer1.Stop();
+
+                if (subMgr != null)
+                {
+                    subMgr.RemoveSubscription(pubEvent.InstanceId);
+                    subMgr.ListenForEvents = false;
+                    subMgr = null;
+                }
+            }
+            catch
+            {
             }
         }
 
@@ -106,20 +114,26 @@ namespace Microsoft.Sample.EventPingPong
 
             timer1.Start();
 
-            subMgr = new SubscriptionManager(subCallback);
+            subMgr = new SubscriptionManager(1, subCallback);
             subMgr.ListenForEvents = true;
             subMgr.AddSubscription(pubEvent.EventType, false);
         }
 
         public void StopSubscribe()
         {
-            timer1.Stop();
-
-            if (subMgr != null)
+            try
             {
-                subMgr.RemoveSubscription(pubEvent.EventType);
-                subMgr.ListenForEvents = false;
-                subMgr = null;
+                timer1.Stop();
+
+                if (subMgr != null)
+                {
+                    subMgr.RemoveSubscription(pubEvent.EventType);
+                    subMgr.ListenForEvents = false;
+                    subMgr = null;
+                }
+            }
+            catch
+            {
             }
         }
 
@@ -154,6 +168,29 @@ namespace Microsoft.Sample.EventPingPong
             Application.Exit();
         }
 
+        private void SetTextbox(TextBox tb, string text)
+        {
+            try
+            {
+                if (this.InvokeRequired)
+                {
+                    SetTextCallback d = new SetTextCallback(SetTextbox);
+
+                    this.Invoke(d, new object[] { tb, text });
+                }
+                else
+                {
+                    tb.Text = text;
+                }
+            }
+            catch (ObjectDisposedException)
+            {
+                // This may happen when you Quit
+            }
+        }
+
+
+
         public void SubscriptionCallback(Guid eventType, byte[] serializedEvent)
         {
             PublishEvent localEvent;
@@ -180,13 +217,12 @@ namespace Microsoft.Sample.EventPingPong
                     }
                     catch
                     {
-                        Thread.Sleep(2000);
+                        Thread.Sleep(2);
                     }
                 }
             }
 
-            eventNumberSent.Text = counter.ToString();
-            eventNumberSent.Show();
+            SetTextbox(eventNumberSent, counter.ToString());
         }
 
         public void PublishCallback(Guid eventType, byte[] serializedEvent)
@@ -215,21 +251,12 @@ namespace Microsoft.Sample.EventPingPong
                         }
                         catch
                         {
-                            Thread.Sleep(2000);
+                            Thread.Sleep(2);
                         }
                     }
                 }
 
-                eventNumberSent.Text = counter.ToString();
-
-                try
-                {
-                    eventNumberSent.Show();
-                }
-                catch
-                {
-                    // Just ignore any error
-                }
+                SetTextbox(eventNumberSent, counter.ToString());
             }
         }
 
@@ -237,9 +264,7 @@ namespace Microsoft.Sample.EventPingPong
         {
             totalTime = new TimeSpan(DateTime.Now.Ticks - startTime.Ticks);
 
-            roundtripRate.Text = ((double)(counter / totalTime.TotalSeconds)).ToString();
-
-            roundtripRate.Show();
+            SetTextbox(roundtripRate, ((double)(counter / totalTime.TotalSeconds)).ToString());
         }
     }
 }

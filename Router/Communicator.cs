@@ -126,7 +126,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                                     }
                                 }
 
-                                for (i = 0; i + parentConnections.Count < parentRoute.NumConnections; i++)
+                                for(i = 0; i + parentConnections.Count < parentRoute.NumConnections; i++)
                                 {
                                     if (string.IsNullOrEmpty(parentRoute.RouterName) == true)
                                     {
