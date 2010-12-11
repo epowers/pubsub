@@ -26,16 +26,16 @@ namespace Microsoft.WebSolutionsPlatform.Common
         {
             private const string SharedMemoryMgr = "SharedMemoryMgrx86.dll";
 
-            [DllImport(SharedMemoryMgr, ExactSpelling = true, CharSet = CharSet.Ansi)]
+            [DllImport(SharedMemoryMgr, ExactSpelling = true, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
             internal static extern ReturnCode InitMemoryMgr(
                 String sharedMemoryName,
                 UInt32 sharedMemorySize,
                 ref IntPtr commBuffer);
 
-            [DllImport(SharedMemoryMgr, ExactSpelling = true)]
+            [DllImport(SharedMemoryMgr, ExactSpelling = true, CallingConvention = CallingConvention.Cdecl)]
             internal static extern ReturnCode ReleaseMemoryMgr(ref IntPtr commBuffer);
 
-            [DllImport(SharedMemoryMgr, ExactSpelling = true, CharSet = CharSet.Ansi)]
+            [DllImport(SharedMemoryMgr, ExactSpelling = true, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
             internal static extern ReturnCode JoinMemoryMgr(
                 String sharedMemoryName,
                 ref IntPtr commBuffer);
@@ -43,14 +43,14 @@ namespace Microsoft.WebSolutionsPlatform.Common
             [DllImport(SharedMemoryMgr, ExactSpelling = true)]
             internal static extern UInt32 GetQueueSize(ref IntPtr commBuffer);
 
-            [DllImport(SharedMemoryMgr, ExactSpelling = true)]
+            [DllImport(SharedMemoryMgr, ExactSpelling = true, CallingConvention = CallingConvention.Cdecl)]
             internal static extern ReturnCode PutBuffer(
                 [Out] byte[] eventBuffer,
                 UInt32 eventLength,
                 UInt32 timeOut,
                 ref IntPtr commBuffer);
 
-            [DllImport(SharedMemoryMgr, ExactSpelling = true)]
+            [DllImport(SharedMemoryMgr, ExactSpelling = true, CallingConvention = CallingConvention.Cdecl)]
             internal static extern ReturnCode GetBuffer(
                 [In, Out] byte[] eventBuffer,
                 UInt32 eventBufferLength,
@@ -63,16 +63,16 @@ namespace Microsoft.WebSolutionsPlatform.Common
         {
             private const string SharedMemoryMgr = "SharedMemoryMgrx64.dll";
 
-            [DllImport(SharedMemoryMgr, ExactSpelling = true, CharSet = CharSet.Ansi)]
+            [DllImport(SharedMemoryMgr, ExactSpelling = true, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
             internal static extern ReturnCode InitMemoryMgr(
                 String sharedMemoryName,
                 UInt32 sharedMemorySize,
                 ref IntPtr commBuffer);
 
-            [DllImport(SharedMemoryMgr, ExactSpelling = true)]
+            [DllImport(SharedMemoryMgr, ExactSpelling = true, CallingConvention = CallingConvention.Cdecl)]
             internal static extern ReturnCode ReleaseMemoryMgr(ref IntPtr commBuffer);
 
-            [DllImport(SharedMemoryMgr, ExactSpelling = true, CharSet = CharSet.Ansi)]
+            [DllImport(SharedMemoryMgr, ExactSpelling = true, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
             internal static extern ReturnCode JoinMemoryMgr(
                 String sharedMemoryName,
                 ref IntPtr commBuffer);
@@ -80,14 +80,14 @@ namespace Microsoft.WebSolutionsPlatform.Common
             [DllImport(SharedMemoryMgr, ExactSpelling = true)]
             internal static extern UInt32 GetQueueSize(ref IntPtr commBuffer);
 
-            [DllImport(SharedMemoryMgr, ExactSpelling = true)]
+            [DllImport(SharedMemoryMgr, ExactSpelling = true, CallingConvention = CallingConvention.Cdecl)]
             internal static extern ReturnCode PutBuffer(
                 [Out] byte[] eventBuffer,
                 UInt32 eventLength,
                 UInt32 timeOut,
                 ref IntPtr commBuffer);
 
-            [DllImport(SharedMemoryMgr, ExactSpelling = true)]
+            [DllImport(SharedMemoryMgr, ExactSpelling = true, CallingConvention = CallingConvention.Cdecl)]
             internal static extern ReturnCode GetBuffer(
                 [In, Out] byte[] eventBuffer,
                 UInt32 eventBufferLength,
@@ -216,7 +216,7 @@ namespace Microsoft.WebSolutionsPlatform.Common
                 throw new ArgumentOutOfRangeException("averageItemSize", rm.GetString("NotExceedQueueSize"));
             }
 
-            if (averageItemSize > (UInt32)(int.MaxValue - headerSize))
+            if (averageItemSize > (UInt32) (int.MaxValue - headerSize))
             {
                 buffer = new byte[int.MaxValue];
             }
@@ -336,7 +336,7 @@ namespace Microsoft.WebSolutionsPlatform.Common
         /// Dispose the SharedQueue object to release the unmanaged resources.
         /// </summary>
         /// <param name="disposing"></param>
-        protected virtual void Dispose(bool disposing)
+        protected virtual void Dispose(bool disposing) 
         {
             if (!disposed)
             {

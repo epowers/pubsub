@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -358,6 +359,8 @@ namespace Microsoft.WebSolutionsPlatform.Event.PubSubManager
 
             try
             {
+                Thread.CurrentThread.Priority = ThreadPriority.Highest;
+
                 byte[] buffer = null;
 
                 localRouterName = Dns.GetHostName();

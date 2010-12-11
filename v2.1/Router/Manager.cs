@@ -16,16 +16,16 @@ using System.Xml.XPath;
 
 namespace Microsoft.WebSolutionsPlatform.Event
 {
-    public partial class Router : ServiceBase
-    {
-        internal class Manager : ServiceThread
-        {
+	public partial class Router : ServiceBase
+	{
+		internal class Manager : ServiceThread
+		{
             public static Semaphore ThreadInitialize = new Semaphore(0, 1);
 
             static RequestListenMgr requestListener;
-
-            public override void Start()
-            {
+            
+			public override void Start()
+			{
                 string servicePrefix;
                 char[] sep = new Char[] { '/' };
 
@@ -49,7 +49,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         requestListener = null;
                     }
 
-                    while (autoConfig == true && mgmtGroup == Guid.Empty)
+                    while(autoConfig == true && mgmtGroup == Guid.Empty)
                     {
                         try
                         {
@@ -130,7 +130,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         RequestListenMgr.listener.Close();
                     }
                 }
-            }
-        }
-    }
+			}
+		}
+	}
 }

@@ -444,6 +444,15 @@ extern INT32 __cdecl GetBuffer(LPCSTR pEventBuffer, DWORD dwEventBufferLength, D
 	UINT64 iEventNum;
 	PCOMMBUFFER CommBuffer = *CommBufferIn;
 
+	if(CommBuffer->bSharedMemoryOwner == TRUE)
+	{
+		//SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_BELOW_NORMAL);
+	}
+	else
+	{
+		SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+	}
+
 	pEventStartLocation = &(CommBuffer->gpBuf->bEventBuffer) + CommBuffer->dwNextReadOffset;
 
 	if(CommBuffer->gpBuf->iLastEventNumWritten > CommBuffer->iLastEventNumRead)

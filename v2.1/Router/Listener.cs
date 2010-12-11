@@ -18,22 +18,22 @@ using Microsoft.WebSolutionsPlatform.Common;
 
 namespace Microsoft.WebSolutionsPlatform.Event
 {
-    public partial class Router : ServiceBase
-    {
-        internal class Listener : ServiceThread
-        {
-            public override void Start()
-            {
+	public partial class Router : ServiceBase
+	{
+		internal class Listener : ServiceThread
+		{
+			public override void Start()
+			{
                 if (eventQueue == null)
                 {
                     eventQueue = new SharedQueue(eventQueueName, eventQueueSize, (uint)averageEventSize);
                 }
 
                 ListenToEvents();
-            }
+			}
 
             public static void ListenToEvents()
-            {
+			{
                 Guid eventType;
                 string originatingRouterName;
                 string inRouterName;
@@ -54,7 +54,9 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                     while (true)
                     {
-                        buffer = eventQueue.Dequeue((UInt32)thisTimeout);
+                        Thread.Sleep(0);
+
+                        buffer = eventQueue.Dequeue((UInt32) thisTimeout);
 
                         if (buffer == null)
                         {
@@ -192,13 +194,13 @@ namespace Microsoft.WebSolutionsPlatform.Event
                 }
 
                 catch (ThreadAbortException)
-                {
-                    // Another thread has signalled that this worker
-                    // thread must terminate.  Typically, this occurs when
-                    // the main service thread receives a service stop 
-                    // command.
-                }
-            }
-        }
-    }
+				{
+					// Another thread has signalled that this worker
+					// thread must terminate.  Typically, this occurs when
+					// the main service thread receives a service stop 
+					// command.
+				}
+			}
+		}
+	}
 }

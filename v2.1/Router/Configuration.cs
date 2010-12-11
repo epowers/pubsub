@@ -19,8 +19,8 @@ using Microsoft.WebSolutionsPlatform.Event.PubSubManager;
 
 namespace Microsoft.WebSolutionsPlatform.Event
 {
-    public partial class Router : ServiceBase
-    {
+	public partial class Router : ServiceBase
+	{
         internal class Configurator : ServiceThread
         {
             internal class ConfigEvent : Event
@@ -174,14 +174,14 @@ namespace Microsoft.WebSolutionsPlatform.Event
         }
 
         internal static void LoadConfiguration()
-        {
-            string configValueIn;
+		{
+			string configValueIn;
             string machineNameIn;
             string nodeName;
             int numConnections;
-            int portIn;
-            int bufferSizeIn;
-            int timeoutIn;
+			int portIn;
+			int bufferSizeIn;
+			int timeoutIn;
 
             string configFile;
 
@@ -375,7 +375,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                     }
                 }
             }
-        }
+		}
 
         internal static void SaveNewConfigFile(string originConfig)
         {
@@ -904,5 +904,5 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
             return delimeterOut;
         }
-    }
+	}
 }

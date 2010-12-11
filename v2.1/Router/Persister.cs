@@ -42,7 +42,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
             internal char StringDelimiter;
             internal char EscapeCharacter;
             internal Subscription subscription;
-
+            
             internal Guid persistEventType;
             internal Guid PersistEventType
             {
