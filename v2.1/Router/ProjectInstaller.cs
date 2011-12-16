@@ -10,16 +10,16 @@ using System.IO;
 
 namespace Microsoft.WebSolutionsPlatform.Event
 {
-	[RunInstaller(true)]
-	public partial class ProjectInstaller : Installer
-	{
+    [RunInstaller(true)]
+    public partial class ProjectInstaller : Installer
+    {
         /// <summary>
         /// Constructor
         /// </summary>
-		public ProjectInstaller()
-		{
+        public ProjectInstaller()
+        {
             InitializeComponent();
-		}
+        }
 
         /// <summary>
         /// Override 'Uninstall' method of Installer class.
@@ -197,7 +197,11 @@ namespace Microsoft.WebSolutionsPlatform.Event
         }
     }
 
-    internal class PerformanceCounterSetup
+    /// <summary>
+    /// This exposes the class to manually install and remove the performance counter categories which need to be 
+    /// done if the msi is not used to install the application
+    /// </summary>
+    public class PerformanceCounterSetup
     {
         internal static string categoryName;
         internal static string communicationCategoryName;
@@ -220,7 +224,11 @@ namespace Microsoft.WebSolutionsPlatform.Event
         internal static PerformanceCounter eventsProcessed;
         internal static PerformanceCounter eventsProcessedBytes;
 
-        internal void Init(string arg)
+        /// <summary>
+        /// Installs/Uninstalls the perforance counters used by the application
+        /// </summary>
+        /// <param name="arg">Argument should be "uninstall" to remove the performance counters</param>
+        public void Init(string arg)
         {
             CounterCreationDataCollection CCDC;
 

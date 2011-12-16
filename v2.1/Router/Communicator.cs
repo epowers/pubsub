@@ -126,7 +126,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                                     }
                                 }
 
-                                for(i = 0; i + parentConnections.Count < parentRoute.NumConnections; i++)
+                                for (i = 0; i + parentConnections.Count < parentRoute.NumConnections; i++)
                                 {
                                     if (string.IsNullOrEmpty(parentRoute.RouterName) == true)
                                     {
@@ -799,9 +799,9 @@ namespace Microsoft.WebSolutionsPlatform.Event
                 {
                     try
                     {
-                        if (Communicator.threadQueues.TryGetValue(clientRouterName, out threadQueue) == false)
+                        lock (Communicator.threadQueuesLock)
                         {
-                            lock (Communicator.threadQueuesLock)
+                            if (Communicator.threadQueues.TryGetValue(clientRouterName, out threadQueue) == false)
                             {
                                 threadQueueCounter = new PerformanceCounter();
                                 threadQueueCounter.InstanceLifetime = PerformanceCounterInstanceLifetime.Process;
@@ -816,12 +816,9 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                                 threadQueue.InUse = true;
 
-                                SubscriptionMgr.ResendSubscriptions(clientRouterName);
+                                //SubscriptionMgr.ResendSubscriptions(clientRouterName);
                             }
-                        }
-                        else
-                        {
-                            lock (Communicator.threadQueuesLock)
+                            else
                             {
                                 if (threadQueue.InUse != true)
                                 {
@@ -832,7 +829,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                                         Communicator.deadThreadQueues.Remove(clientRouterName);
                                     }
 
-                                    SubscriptionMgr.ResendSubscriptions(clientRouterName);
+                                    //SubscriptionMgr.ResendSubscriptions(clientRouterName);
                                 }
                             }
                         }
@@ -1288,7 +1285,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                                 element.InRouterName = string.Empty;
                             }
 
-                            if (element.EventType == Event.SubscriptionEvent || element.EventType == mgmtGroup)
+                            if (element.EventType == Event.SubscriptionEvent || element.EventType == mgmtGroup || element.EventType == cmdGroup)
                             {
                                 lock (Communicator.threadQueuesLock)
                                 {
