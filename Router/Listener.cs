@@ -18,22 +18,22 @@ using Microsoft.WebSolutionsPlatform.Common;
 
 namespace Microsoft.WebSolutionsPlatform.Event
 {
-	public partial class Router : ServiceBase
-	{
-		internal class Listener : ServiceThread
-		{
-			public override void Start()
-			{
+    public partial class Router : ServiceBase
+    {
+        internal class Listener : ServiceThread
+        {
+            public override void Start()
+            {
                 if (eventQueue == null)
                 {
                     eventQueue = new SharedQueue(eventQueueName, eventQueueSize, (uint)averageEventSize);
                 }
 
                 ListenToEvents();
-			}
+            }
 
             public static void ListenToEvents()
-			{
+            {
                 Guid eventType;
                 string originatingRouterName;
                 string inRouterName;
@@ -56,7 +56,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                     {
                         Thread.Sleep(0);
 
-                        buffer = eventQueue.Dequeue((UInt32) thisTimeout);
+                        buffer = eventQueue.Dequeue((UInt32)thisTimeout);
 
                         if (buffer == null)
                         {
@@ -160,6 +160,34 @@ namespace Microsoft.WebSolutionsPlatform.Event
                             }
                         }
 
+                        if (eventType == cmdGroup)
+                        {
+                            QueueElement element = new QueueElement();
+
+                            element.SerializedEvent = buffer;
+                            element.SerializedLength = buffer.Length;
+                            element.EventType = eventType;
+                            element.OriginatingRouterName = originatingRouterName;
+
+                            if (channelDictionary.TryGetValue(element.OriginatingRouterName, out element.InRouterName) == false)
+                            {
+                                element.InRouterName = string.Empty;
+                            }
+
+                            for (i = 0; i < 10; i++)
+                            {
+                                try
+                                {
+                                    cmdQueue.Enqueue(element);
+                                    break;
+                                }
+                                catch (System.TimeoutException)
+                                {
+                                    continue;
+                                }
+                            }
+                        }
+
                         if (Persister.persistEvents.ContainsKey(eventType) == true)
                         {
                             if (Persister.persistEvents[eventType].InUse == true)
@@ -194,13 +222,13 @@ namespace Microsoft.WebSolutionsPlatform.Event
                 }
 
                 catch (ThreadAbortException)
-				{
-					// Another thread has signalled that this worker
-					// thread must terminate.  Typically, this occurs when
-					// the main service thread receives a service stop 
-					// command.
-				}
-			}
-		}
-	}
+                {
+                    // Another thread has signalled that this worker
+                    // thread must terminate.  Typically, this occurs when
+                    // the main service thread receives a service stop 
+                    // command.
+                }
+            }
+        }
+    }
 }

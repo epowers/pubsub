@@ -208,7 +208,6 @@ extern INT32 __cdecl JoinMemoryMgr(LPCTSTR SharedMemoryNameIn, PCOMMBUFFER *Comm
 	strcat_s((char*)lpSharedMemoryName, iSize, SharedMemoryNameIn);
 
 	CommBuffer = malloc(sizeof(COMMBUFFER));
-	*CommBufferIn = CommBuffer;
 
 	InitEvent(CommBuffer);
 
@@ -327,6 +326,8 @@ extern INT32 __cdecl JoinMemoryMgr(LPCTSTR SharedMemoryNameIn, PCOMMBUFFER *Comm
 	CommBuffer->dwNextReadOffset = CommBuffer->gpBuf->dwNextReadOffset;
 
 	free((char*)lpSharedMemoryName);
+
+	*CommBufferIn = CommBuffer;
 
 	return SUCCESS;
 }
@@ -788,7 +789,7 @@ LPCSTR GetWspEvent(PWSPEVENT pWspEvent, PCOMMBUFFER CommBuffer, DWORD dwStartOff
 			&(CommBuffer->gpBuf->bEventBuffer), dwEventHeaderSize - dwSegmentLength);
 
 		// Starting location for event
-		pStart = ((BYTE *) &(CommBuffer->gpBuf->bEventBuffer)) + dwEventHeaderSize - dwSegmentLength;
+		pStart = (LPCSTR) (((BYTE *) &(CommBuffer->gpBuf->bEventBuffer)) + dwEventHeaderSize - dwSegmentLength);
 	}
 	else
 	{
@@ -796,7 +797,7 @@ LPCSTR GetWspEvent(PWSPEVENT pWspEvent, PCOMMBUFFER CommBuffer, DWORD dwStartOff
 		memcpy_s(pWspEvent, dwEventHeaderSize, 
 			((BYTE *) &(CommBuffer->gpBuf->bEventBuffer)) + dwStartOffset, dwEventHeaderSize);
 
-		pStart = ((BYTE *) &(CommBuffer->gpBuf->bEventBuffer)) + dwStartOffset + dwEventHeaderSize;
+		pStart = (LPCSTR) (((BYTE *) &(CommBuffer->gpBuf->bEventBuffer)) + dwStartOffset + dwEventHeaderSize);
 	}
 
 	return pStart;

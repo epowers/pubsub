@@ -19,8 +19,8 @@ using Microsoft.WebSolutionsPlatform.Event.PubSubManager;
 
 namespace Microsoft.WebSolutionsPlatform.Event
 {
-	public partial class Router : ServiceBase
-	{
+    public partial class Router : ServiceBase
+    {
         internal class Configurator : ServiceThread
         {
             internal class ConfigEvent : Event
@@ -135,7 +135,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                             elementRetrieved = false;
                         }
 
-                        if (string.Compare(role, @"origin", true) != 0 && elementRetrieved == true)
+                        if (autoConfig == true && string.Compare(role, @"origin", true) != 0 && elementRetrieved == true)
                         {
                             try
                             {
@@ -174,14 +174,15 @@ namespace Microsoft.WebSolutionsPlatform.Event
         }
 
         internal static void LoadConfiguration()
-		{
-			string configValueIn;
+        {
+            string modifiedRoleName;
+            string configValueIn;
             string machineNameIn;
             string nodeName;
             int numConnections;
-			int portIn;
-			int bufferSizeIn;
-			int timeoutIn;
+            int portIn;
+            int bufferSizeIn;
+            int timeoutIn;
 
             string configFile;
 
@@ -219,6 +220,12 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         if (configValueIn.Length != 0)
                             mgmtGroup = new Guid(configValueIn);
 
+                        configValueIn = iterator.Current.GetAttribute(@"cmdGroup", String.Empty);
+                        if (configValueIn.Length != 0)
+                            cmdGroup = new Guid(configValueIn);
+                        else
+                            cmdGroup = Guid.NewGuid();
+
                         configValueIn = iterator.Current.GetAttribute(@"role", String.Empty);
                         if (configValueIn.Length != 0)
                         {
@@ -237,6 +244,11 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                         mgmtGroup = Guid.NewGuid();
                     }
+
+                    if (cmdGroup == Guid.Empty)
+                    {
+                        cmdGroup = Guid.NewGuid();
+                    }
                 }
 
                 if (autoConfig == true && mgmtGroup == Guid.Empty)
@@ -249,7 +261,30 @@ namespace Microsoft.WebSolutionsPlatform.Event
                 }
                 else
                 {
-                    nodeName = @"/configuration/eventRouterSettings/" + role + @"RoleInfo/";
+                    try
+                    {
+                        if (Router.LocalRouterName.Length >= 3)
+                        {
+                            modifiedRoleName = Router.LocalRouterName.Substring(0, 3).ToLower() + role;
+                        }
+                        else
+                        {
+                            modifiedRoleName = role;
+                        }
+
+                        nodeName = @"/configuration/eventRouterSettings/" + modifiedRoleName + @"RoleInfo/";
+
+                        iterator = navigator.Select(@"/configuration/eventRouterSettings/" + modifiedRoleName + @"RoleInfo");
+
+                        if (iterator.Count == 0)
+                        {
+                            nodeName = @"/configuration/eventRouterSettings/" + role + @"RoleInfo/";
+                        }
+                    }
+                    catch
+                    {
+                        nodeName = @"/configuration/eventRouterSettings/" + role + @"RoleInfo/";
+                    }
 
                     try
                     {
@@ -375,7 +410,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                     }
                 }
             }
-		}
+        }
 
         internal static void SaveNewConfigFile(string originConfig)
         {
@@ -904,5 +939,5 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
             return delimeterOut;
         }
-	}
+    }
 }

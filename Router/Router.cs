@@ -25,7 +25,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
     /// Enum for different types of worker threads
     /// </summary>
     public enum WorkerThreadType : int
-	{
+    {
         /// <summary>
         /// Not defined
         /// </summary>
@@ -42,21 +42,21 @@ namespace Microsoft.WebSolutionsPlatform.Event
         /// This is the thread that takes incoming events from a parent/child machine and 
         /// publishes them to this machine.
         /// </summary>
-		RePublisherThread = 3,
+        RePublisherThread = 3,
         /// <summary>
         /// This is the thread that manages the subscription routing table
         /// </summary>
-		SubscriptionMgrThread = 4,
+        SubscriptionMgrThread = 4,
         /// <summary>
         /// This is the thread that persists events to the file system
         /// </summary>
-		PersisterThread = 5,
+        PersisterThread = 5,
         /// <summary>
         /// This is the thread that monitors the health of the other threads and restarts threads as 
         /// needed
         /// </summary>
-		ManagerThread = 6
-	}
+        ManagerThread = 6
+    }
 
     internal enum Role : int
     {
@@ -106,13 +106,13 @@ namespace Microsoft.WebSolutionsPlatform.Event
         }
     }
 
-	internal struct QueueElement
-	{
-		internal Guid EventType;
-		internal Event Event;
-		internal byte[] SerializedEvent;
+    internal struct QueueElement
+    {
+        internal Guid EventType;
+        internal Event Event;
+        internal byte[] SerializedEvent;
         internal int SerializedLength;
-		internal string OriginatingRouterName;
+        internal string OriginatingRouterName;
         internal string InRouterName;
     }
 
@@ -120,12 +120,12 @@ namespace Microsoft.WebSolutionsPlatform.Event
     /// Abstract class for worker threads
     /// </summary>
     public abstract class ServiceThread
-	{
+    {
         /// <summary>
         /// The Start method is used to start the thread.
         /// </summary>
-		public abstract void Start();
-	}
+        public abstract void Start();
+    }
 
     /// <summary>
     /// Main class for the Event Router
@@ -136,6 +136,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
         internal static bool autoConfig = false;
         internal static string bootstrapUrl = string.Empty;
         internal static Guid mgmtGroup = Guid.Empty;
+        internal static Guid cmdGroup = Guid.Empty;
         internal static string role = @"client";
 
         internal static UInt32 eventQueueSize;
@@ -195,6 +196,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
         internal static Persister persister;
         internal static Communicator communicator;
         internal static Configurator configurator;
+        internal static CommandProcessor commandProcessor;
         internal static Manager manager;
 
         internal static SynchronizationQueue<QueueElement> subscriptionMgrQueue;
@@ -202,6 +204,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
         internal static SynchronizationQueue<QueueElement> persisterQueue;
         internal static SynchronizationQueue<QueueElement> forwarderQueue;
         internal static SynchronizationQueue<QueueElement> mgmtQueue;
+        internal static SynchronizationQueue<QueueElement> cmdQueue;
 
         internal static Dictionary<string, string> channelDictionary; //RouterName, OutRouterName (channel)
 
@@ -291,6 +294,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
             persister = new Persister();
             communicator = new Communicator();
             configurator = new Configurator();
+            commandProcessor = new CommandProcessor();
             manager = new Manager();
 
             subscriptionMgrQueue = new SynchronizationQueue<QueueElement>(2000, subscriptionQueueSize);
@@ -298,6 +302,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
             persisterQueue = new SynchronizationQueue<QueueElement>(2000, persisterQueueSize);
             forwarderQueue = new SynchronizationQueue<QueueElement>(2000, forwarderQueueSize);
             mgmtQueue = new SynchronizationQueue<QueueElement>(100);
+            cmdQueue = new SynchronizationQueue<QueueElement>(100);
 
             workerThreads = new Dictionary<Type, Thread>();
 
@@ -307,6 +312,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
             workerThreads.Add(persister.GetType(), null);
             workerThreads.Add(communicator.GetType(), null);
             workerThreads.Add(configurator.GetType(), null);
+            workerThreads.Add(commandProcessor.GetType(), null);
             workerThreads.Add(manager.GetType(), null);
 
             channelDictionary = new Dictionary<string, string>(StringComparer.CurrentCultureIgnoreCase);
@@ -401,19 +407,19 @@ namespace Microsoft.WebSolutionsPlatform.Event
         }
     }
 
-	internal class Route : IComparable<Route>
-	{
+    internal class Route : IComparable<Route>
+    {
         private string routerName;
         /// <summary>
         /// Name of the router
         /// </summary>
         public string RouterName
         {
-			get
-			{
+            get
+            {
                 return routerName;
-			}
-		}
+            }
+        }
 
         private int numConnections;
         /// <summary>
@@ -431,91 +437,91 @@ namespace Microsoft.WebSolutionsPlatform.Event
             }
         }
 
-		private int port;
-		/// <summary>
-		/// TCP port for route
-		/// </summary>
-		public int Port
-		{
-			get
-			{
-				return port;
-			}
-			internal set
-			{
-				port = value;
-			}
-		}
+        private int port;
+        /// <summary>
+        /// TCP port for route
+        /// </summary>
+        public int Port
+        {
+            get
+            {
+                return port;
+            }
+            internal set
+            {
+                port = value;
+            }
+        }
 
-		private int bufferSize;
-		/// <summary>
-		/// Buffer size used for the TCP port for route
-		/// </summary>
-		public int BufferSize
-		{
-			get
-			{
-				return bufferSize;
-			}
-			internal set
-			{
-				bufferSize = value;
-			}
-		}
+        private int bufferSize;
+        /// <summary>
+        /// Buffer size used for the TCP port for route
+        /// </summary>
+        public int BufferSize
+        {
+            get
+            {
+                return bufferSize;
+            }
+            internal set
+            {
+                bufferSize = value;
+            }
+        }
 
-		private int timeout;
-		/// <summary>
-		/// Timeout used for TCP calls
-		/// </summary>
-		public int Timeout
-		{
-			get
-			{
-				return timeout;
-			}
-			internal set
-			{
-				timeout = value;
-			}
-		}
+        private int timeout;
+        /// <summary>
+        /// Timeout used for TCP calls
+        /// </summary>
+        public int Timeout
+        {
+            get
+            {
+                return timeout;
+            }
+            internal set
+            {
+                timeout = value;
+            }
+        }
 
-		private DateTime expirationTime;
-		/// <summary>
-		/// Expiration time for route
-		/// </summary>
-		public DateTime ExpirationTime
-		{
-			get
-			{
-				return expirationTime;
-			}
-			internal set
-			{
-				expirationTime = value;
-			}
-		}
+        private DateTime expirationTime;
+        /// <summary>
+        /// Expiration time for route
+        /// </summary>
+        public DateTime ExpirationTime
+        {
+            get
+            {
+                return expirationTime;
+            }
+            internal set
+            {
+                expirationTime = value;
+            }
+        }
 
-		/// <summary>
-		/// Used to create a Route used by RouteMgr
-		/// </summary>
+        /// <summary>
+        /// Used to create a Route used by RouteMgr
+        /// </summary>
         /// <param name="routerName">Name of the router</param>
         /// <param name="numConnections">Number of socket connections to open to routerName</param>
-		/// <param name="port">TCP port used by the router</param>
-		/// <param name="bufferSize">Buffer size used for the TCP port for route</param>
-		/// <param name="timeout">Timeout used for TCP calls</param>
+        /// <param name="port">TCP port used by the router</param>
+        /// <param name="bufferSize">Buffer size used for the TCP port for route</param>
+        /// <param name="timeout">Timeout used for TCP calls</param>
         public Route(string routerName, int numConnections, int port, int bufferSize, int timeout)
-		{
+        {
             this.routerName = routerName;
             this.numConnections = numConnections;
             this.port = port;
-			this.bufferSize = bufferSize;
-			this.timeout = timeout;
-			this.expirationTime = DateTime.UtcNow.AddMinutes(5);
-		}
+            this.bufferSize = bufferSize;
+            this.timeout = timeout;
+            this.expirationTime = DateTime.UtcNow.AddMinutes(5);
+        }
 
-		public int CompareTo( Route otherRoute )
-		{
+        public int CompareTo(Route otherRoute)
+        {
             return RouterName.CompareTo(otherRoute.RouterName);
         }
-	}
+    }
 }
