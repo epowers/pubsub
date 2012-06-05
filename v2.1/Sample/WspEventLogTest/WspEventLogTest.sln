@@ -1,0 +1,20 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WspEventLogTest", "WspEventLogTest.csproj", "{7A74862E-689B-402F-8BFC-F20BA355549C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7A74862E-689B-402F-8BFC-F20BA355549C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7A74862E-689B-402F-8BFC-F20BA355549C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7A74862E-689B-402F-8BFC-F20BA355549C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7A74862E-689B-402F-8BFC-F20BA355549C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
