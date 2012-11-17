@@ -3,9 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 using Microsoft.WebSolutionsPlatform.Event;
-using Microsoft.WebSolutionsPlatform.Event.PubSubManager;
-
-[assembly: CLSCompliant(true)]
+using Microsoft.WebSolutionsPlatform.PubSubManager;
 
 namespace WspEventListenTest
 {
@@ -55,23 +53,22 @@ namespace WspEventListenTest
         }
     }
 
-    class WorkerClass : ISubscriptionCallback
+    class WorkerClass : IObserver<Microsoft.WebSolutionsPlatform.PubSubManager.WspEvent>
     {
-        SubscriptionManager subMgr;
-        SubscriptionManager.Callback subCallback;
+        WspEventObservable sub;
 
         internal void Run()
         {
             int input;
             char ch;
             WebpageEvent webPageEvent = new WebpageEvent();
+            IDisposable eventDispose = null;
 
             try
             {
-                subCallback = new SubscriptionManager.Callback(SubscriptionCallback);
+                sub = new WspEventObservable(webPageEvent.EventType, true);
 
-                subMgr = new SubscriptionManager(subCallback);
-                subMgr.AddSubscription(webPageEvent.EventType, true);
+                eventDispose = sub.Subscribe(this);
 
                 while (true)
                 {
@@ -91,19 +88,20 @@ namespace WspEventListenTest
             }
             finally
             {
-                subMgr.RemoveSubscription(webPageEvent.EventType);
-
-                subMgr.ListenForEvents = false;
+                if (eventDispose != null)
+                {
+                    eventDispose.Dispose();
+                }
 
                 Thread.CurrentThread.Abort();
             }
         }
 
-        public void SubscriptionCallback(Guid eventType, byte[] serializedEvent)
+        public void OnNext(WspEvent wspEvent)
         {
             WebpageEvent localEvent;
 
-            localEvent = new WebpageEvent(serializedEvent);
+            localEvent = new WebpageEvent(wspEvent.Body);
 
             lock (Program.obj)
             {
@@ -111,6 +109,14 @@ namespace WspEventListenTest
             }
 
             return;
+        }
+
+        public void OnCompleted()
+        {
+        }
+
+        public void OnError(Exception e)
+        {
         }
     }
 }

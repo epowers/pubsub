@@ -112,10 +112,10 @@
     <value>2.0</value>
   </resheader>
   <resheader name="reader">
-    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <resheader name="writer">
-    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="BaseInstance" xml:space="preserve">
     <value>BaseInstance</value>
@@ -125,6 +125,9 @@
   </data>
   <data name="CategoryName" xml:space="preserve">
     <value>WspEventRouter</value>
+  </data>
+  <data name="CmdQueueSizeName" xml:space="preserve">
+    <value>CmdQueueSize</value>
   </data>
   <data name="CommunicationCategoryHelp" xml:space="preserve">
     <value>WspEventRouter counters showing communication queues to other machines</value>
@@ -140,6 +143,9 @@
   </data>
   <data name="ForwarderQueueSizeName" xml:space="preserve">
     <value>ForwarderQueueSize</value>
+  </data>
+  <data name="MgmtQueueSizeName" xml:space="preserve">
+    <value>MgmtQueueSize</value>
   </data>
   <data name="PersisterQueueSizeName" xml:space="preserve">
     <value>PersisterQueueSize</value>

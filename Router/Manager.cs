@@ -14,7 +14,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Xml.XPath;
 
-namespace Microsoft.WebSolutionsPlatform.Event
+namespace Microsoft.WebSolutionsPlatform.Router
 {
 	public partial class Router : ServiceBase
 	{
@@ -34,10 +34,10 @@ namespace Microsoft.WebSolutionsPlatform.Event
                     Type[] workerThreadTypes = new Type[workerThreads.Count];
                     workerThreads.Keys.CopyTo(workerThreadTypes, 0);
 
-                    if (string.Compare(role, @"origin", true) == 0)
+                    if (string.Compare(configSettings.EventRouterSettings.Role, @"hub", true) == 0 &&
+                        string.Compare(configSettings.EventRouterSettings.BootstrapUrl, @"GetConfig", true) == 0)
                     {
-                        string[] subs = bootstrapUrl.Split(sep, 4);
-                        servicePrefix = @"http://*:80/" + subs[3];
+                        servicePrefix = @"http://*:80/" + configSettings.EventRouterSettings.BootstrapUrl;
                         servicePrefix = servicePrefix.TrimEnd(sep);
                         servicePrefix = servicePrefix + @"/";
 
@@ -49,15 +49,16 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         requestListener = null;
                     }
 
-                    while(autoConfig == true && mgmtGroup == Guid.Empty)
+                    while (configSettings.EventRouterSettings.AutoConfig == true && configSettings.EventRouterSettings.MgmtGuid == Guid.Empty)
                     {
+                        Thread.Sleep(10000);
+
                         try
                         {
-                            LoadConfiguration();
+                            Router.Configurator.LoadConfiguration();
                         }
                         catch
                         {
-                            Thread.Sleep(60000);
                         }
                     }
 

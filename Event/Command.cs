@@ -144,7 +144,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
         public CommandRequest() :
             base()
         {
-            EventVersion = new Version(@"2.0.0.0");
+            EventVersion = new Version(@"3.0");
             Arguments = new List<object>();
         }
 
@@ -325,7 +325,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
         public CommandResponse() :
             base()
         {
-            EventVersion = new Version(@"2.0.0.0");
+            EventVersion = new Version(@"3.0");
             Results = new Dictionary<string, object>();
             ResponseException = null;
             ReturnCode = 0;
@@ -338,7 +338,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
         public CommandResponse(CommandRequest commandRequest) :
             base()
         {
-            EventVersion = new Version(@"2.0.0.0");
+            EventVersion = new Version(@"3.0");
             Results = new Dictionary<string, object>();
             ResponseException = null;
             ReturnCode = 0;

@@ -370,7 +370,7 @@ namespace Microsoft.WebSolutionsPlatform.Common
         /// <param name="item">Item being added to the queue</param>
         /// <param name="timeout">Timeout for the operation</param>
         [CLSCompliant(false)]
-        public void Enqueue(ref byte[] item, UInt32 timeout)
+        public void Enqueue(byte[] item, UInt32 timeout)
         {
             ReturnCode rc;
 

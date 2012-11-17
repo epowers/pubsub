@@ -9,7 +9,7 @@ using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Web;
 
-namespace Microsoft.WebSolutionsPlatform.Event
+namespace Microsoft.WebSolutionsPlatform.Router
 {
     class RequestListenMgr
     {

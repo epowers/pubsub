@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Net;
 using System.Threading;
 using System.Resources;
 using System.Reflection;
@@ -8,35 +9,43 @@ using System.Runtime.Serialization;
 using Microsoft.WebSolutionsPlatform.Common;
 
 [assembly: CLSCompliant(true)]
-namespace Microsoft.WebSolutionsPlatform.Event.PubSubManager
+
+namespace Microsoft.WebSolutionsPlatform.PubSubManager
 {
     /// <summary>
+    /// This class is used to publish Wsp events using Rx
+    /// </summary>
+    public class WspEventPublish : IObserver<WspEvent>
+    {
+        private static PublishManager pubMgr = new PublishManager();
+
+        /// <summary>
+        /// The OnCompleted is not used for publishing events
+        /// </summary>
+        public void OnCompleted()
+        {
+        }
+
+        /// <summary>
+        /// The OnError is not used for publishing events
+        /// </summary>
+        /// <param name="error">Error exception</param>
+        public void OnError(Exception error)
+        {
+        }
+
+        /// <summary>
+        /// The OnNext is used to publish events using Rx
+        /// </summary>
+        /// <param name="wspEvent">The WspEvent being published</param>
+        public void OnNext(WspEvent wspEvent)
+        {
+            pubMgr.PublishNew(wspEvent.SerializedEvent);
+        }
+    }
+
+    /// <summary>
     /// PublishManager is used by applcations to publish events.
-    /// <code>
-    /// class WorkerClass
-    /// {
-    ///     private static PublishManager pubMgr;
-    ///
-    ///     public WorkerClass()
-    ///     {
-    ///         pubMgr = new PublishManager(10000);
-    ///     }
-    ///
-    ///     public void DoWork()
-    ///     {
-    ///         ...
-    ///
-    ///         WebpageEvent localEvent = new WebpageEvent();
-    ///         localEvent.EventName = @"Test Event";
-    ///
-    ///         ...
-    ///
-    ///         pubMgr.Publish(localEvent.Serialize());
-    ///
-    ///         ...
-    ///     }
-    /// }
-    /// </code>
     /// </summary>
     public class PublishManager : IDisposable
     {
@@ -160,23 +169,62 @@ namespace Microsoft.WebSolutionsPlatform.Event.PubSubManager
         /// <summary>
         /// Publishes an event to the event service
         /// </summary>
-        /// <param name="serializedEvent">Serialized version of the event</param>
-        public void Publish(byte[] serializedEvent)
+        /// <param name="eventType">Guid for the event</param>
+        /// <param name="serializedBody">Serialized version of the event</param>
+        public void Publish(Guid eventType, byte[] serializedBody)
         {
-            int tries = 0;
+            Publish(eventType, null, serializedBody);
+        }
 
-            if (serializedEvent == null || serializedEvent.Length == 0)
+        /// <summary>
+        /// Publishes an event to the event service
+        /// </summary>
+        /// <param name="eventType">Guid for the event</param>
+        /// <param name="extendedHeaders">Dictionary of user headers</param>
+        /// <param name="serializedBody">Serialized version of the event</param>
+        public void Publish(Guid eventType, Dictionary<byte, string> extendedHeaders, byte[] serializedBody)
+        {
+            if (serializedBody == null || serializedBody.Length == 0)
             {
                 ResourceManager rm = new ResourceManager("PubSubMgr.PubSubMgr", Assembly.GetExecutingAssembly());
 
                 throw new ArgumentException(rm.GetString("InvalidArgumentValue"), "serializedEvent");
             }
 
+            if (eventType == Guid.Empty)
+            {
+                ResourceManager rm = new ResourceManager("PubSubMgr.PubSubMgr", Assembly.GetExecutingAssembly());
+
+                throw new ArgumentException(rm.GetString("InvalidArgumentValue"), "eventType");
+            }
+
+            WspEvent wspEvent = new WspEvent(eventType, extendedHeaders, serializedBody);
+
+            PublishNew(wspEvent.SerializedEvent);
+        }
+
+        /// <summary>
+        /// Publishes an event to the event service
+        /// </summary>
+        /// <param name="wspEvent">The WspEvent object to be published</param>
+        public void Publish(WspEvent wspEvent)
+        {
+            PublishNew(wspEvent.SerializedEvent);
+        }
+
+        /// <summary>
+        /// Publishes an event to the event service
+        /// </summary>
+        /// <param name="serializedEvent">A serialized WspEvent object</param>
+        public void PublishNew(byte[] serializedEvent)
+        {
+            int tries = 0;
+
             while (true)
             {
                 try
                 {
-                    eventQueue.Enqueue(ref serializedEvent, timeout);
+                    eventQueue.Enqueue(serializedEvent, timeout);
 
                     tries = 0;
 

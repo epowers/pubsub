@@ -16,16 +16,15 @@ using System.Reflection.Emit;
 using System.Xml.XPath;
 
 using Microsoft.WebSolutionsPlatform.Common;
+using Microsoft.WebSolutionsPlatform.PubSubManager;
 
-[assembly: CLSCompliant(true)]
-
-namespace Microsoft.WebSolutionsPlatform.Event
+namespace Microsoft.WebSolutionsPlatform.Router
 {
     /// <summary>
     /// Enum for different types of worker threads
     /// </summary>
     public enum WorkerThreadType : int
-    {
+	{
         /// <summary>
         /// Not defined
         /// </summary>
@@ -42,21 +41,21 @@ namespace Microsoft.WebSolutionsPlatform.Event
         /// This is the thread that takes incoming events from a parent/child machine and 
         /// publishes them to this machine.
         /// </summary>
-        RePublisherThread = 3,
+		RePublisherThread = 3,
         /// <summary>
         /// This is the thread that manages the subscription routing table
         /// </summary>
-        SubscriptionMgrThread = 4,
+		SubscriptionMgrThread = 4,
         /// <summary>
         /// This is the thread that persists events to the file system
         /// </summary>
-        PersisterThread = 5,
+		PersisterThread = 5,
         /// <summary>
         /// This is the thread that monitors the health of the other threads and restarts threads as 
         /// needed
         /// </summary>
-        ManagerThread = 6
-    }
+		ManagerThread = 6
+	}
 
     internal enum Role : int
     {
@@ -106,56 +105,65 @@ namespace Microsoft.WebSolutionsPlatform.Event
         }
     }
 
-    internal struct QueueElement
+    internal enum EventSource : int
     {
-        internal Guid EventType;
-        internal Event Event;
-        internal byte[] SerializedEvent;
-        internal int SerializedLength;
-        internal string OriginatingRouterName;
-        internal string InRouterName;
+        FromLocal = 0,
+        FromNode = 1,
+        FromHub = 2,
+        FromPeer = 3
+    }
+
+	internal class QueueElement
+	{
+        internal Microsoft.WebSolutionsPlatform.PubSubManager.WspEvent WspEvent { get; set; }
+        internal EventSource Source{get; set;}
+        internal object BodyEvent { get; set; }
+
+        internal QueueElement()
+        {
+        }
     }
 
     /// <summary>
     /// Abstract class for worker threads
     /// </summary>
     public abstract class ServiceThread
-    {
+	{
         /// <summary>
         /// The Start method is used to start the thread.
         /// </summary>
-        public abstract void Start();
-    }
+		public abstract void Start();
+	}
 
     /// <summary>
     /// Main class for the Event Router
     /// </summary>
     public partial class Router : ServiceBase
     {
+        internal static bool hubRole = false;
         internal static object configFileLock = new object();
-        internal static bool autoConfig = false;
+        internal static ConfigSettings configSettings = new ConfigSettings();
+        internal static SubscriptionManagement subscriptionManagement = new SubscriptionManagement();
+        internal static OutputCommunicationQueues outputCommunicationQueues = new OutputCommunicationQueues();
+        internal static LocalPublish localPublish = new LocalPublish();
         internal static string bootstrapUrl = string.Empty;
-        internal static Guid mgmtGroup = Guid.Empty;
-        internal static Guid cmdGroup = Guid.Empty;
-        internal static string role = @"client";
-
-        internal static UInt32 eventQueueSize;
-        internal static Int32 averageEventSize;
-
-        internal static string eventQueueName;
-
         internal static SharedQueue eventQueue;
 
-        internal static uint subscriptionRefreshIncrement = 3; // in minutes
-        internal static uint subscriptionExpirationIncrement = 10; // in minutes
+        private static string version = "3.0";
+        private static byte[] versionEncodedPriv;
+        internal static byte[] versionEncoded
+        {
+            get
+            {
+                if (versionEncodedPriv == null)
+                {
+                    UTF8Encoding uniEncoding = new UTF8Encoding();
+                    versionEncodedPriv = uniEncoding.GetBytes(version);
+                }
 
-        internal static string thisNic;
-        internal static int thisPort;
-        internal static int thisBufferSize;
-        internal static int thisTimeout; //Timeout in milliseconds (1000 = 1 second)
-
-        internal static int thisOutQueueMaxSize = 102400000; // in bytes
-        internal static int thisOutQueueMaxTimeout = 600; // in seconds
+                return versionEncodedPriv;
+            }
+        }
 
         private static string localRouterName = string.Empty;
         internal static string LocalRouterName
@@ -178,7 +186,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
             {
                 if (routerNameEncodedPriv == null)
                 {
-                    UnicodeEncoding uniEncoding = new UnicodeEncoding();
+                    UTF8Encoding uniEncoding = new UTF8Encoding();
                     routerNameEncodedPriv = uniEncoding.GetBytes(Dns.GetHostName());
                 }
 
@@ -186,7 +194,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
             }
         }
 
-        internal static Route parentRoute;
+        internal static Route parentRoute = null;
 
         internal static Dictionary<Type, Thread> workerThreads;
 
@@ -206,7 +214,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
         internal static SynchronizationQueue<QueueElement> mgmtQueue;
         internal static SynchronizationQueue<QueueElement> cmdQueue;
 
-        internal static Dictionary<string, string> channelDictionary; //RouterName, OutRouterName (channel)
+        //internal static Dictionary<string, string> channelDictionary; //RouterName, OutRouterName (channel)
 
         internal static string categoryName;
         internal static string communicationCategoryName;
@@ -216,6 +224,8 @@ namespace Microsoft.WebSolutionsPlatform.Event
         internal static string rePublisherQueueSizeName;
         internal static string persisterQueueSizeName;
         internal static string forwarderQueueSizeName;
+        internal static string mgmtQueueSizeName;
+        internal static string cmdQueueSizeName;
         internal static string subscriptionEntriesName;
         internal static string eventsProcessedName;
         internal static string eventsProcessedBytesName;
@@ -225,6 +235,8 @@ namespace Microsoft.WebSolutionsPlatform.Event
         internal static PerformanceCounter rePublisherQueueSize;
         internal static PerformanceCounter persisterQueueSize;
         internal static PerformanceCounter forwarderQueueSize;
+        internal static PerformanceCounter mgmtQueueSize;
+        internal static PerformanceCounter cmdQueueSize;
         internal static PerformanceCounter subscriptionEntries;
         internal static PerformanceCounter eventsProcessed;
         internal static PerformanceCounter eventsProcessedBytes;
@@ -236,7 +248,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
         {
             CounterCreationDataCollection CCDC;
 
-            ResourceManager rm = new ResourceManager("Router.WspEventRouter", Assembly.GetExecutingAssembly());
+            ResourceManager rm = new ResourceManager("Microsoft.WebSolutionsPlatform.Router.WspEventRouter", Assembly.GetExecutingAssembly());
 
             categoryName = rm.GetString("CategoryName");
             communicationCategoryName = rm.GetString("CommunicationCategoryName");
@@ -246,6 +258,8 @@ namespace Microsoft.WebSolutionsPlatform.Event
             rePublisherQueueSizeName = rm.GetString("RePublisherQueueSizeName");
             persisterQueueSizeName = rm.GetString("PersisterQueueSizeName");
             forwarderQueueSizeName = rm.GetString("ForwarderQueueSizeName");
+            mgmtQueueSizeName = rm.GetString("MgmtQueueSizeName");
+            cmdQueueSizeName = rm.GetString("CmdQueueSizeName");
             subscriptionEntriesName = rm.GetString("SubscriptionEntriesName");
             eventsProcessedName = rm.GetString("EventsProcessedName");
             eventsProcessedBytesName = rm.GetString("EventsProcessedBytesName");
@@ -254,6 +268,8 @@ namespace Microsoft.WebSolutionsPlatform.Event
             subscriptionQueueSize = new PerformanceCounter(categoryName, subscriptionQueueSizeName, string.Empty, false);
             rePublisherQueueSize = new PerformanceCounter(categoryName, rePublisherQueueSizeName, string.Empty, false);
             persisterQueueSize = new PerformanceCounter(categoryName, persisterQueueSizeName, string.Empty, false);
+            mgmtQueueSize = new PerformanceCounter(categoryName, mgmtQueueSizeName, string.Empty, false);
+            cmdQueueSize = new PerformanceCounter(categoryName, cmdQueueSizeName, string.Empty, false);
             subscriptionEntries = new PerformanceCounter(categoryName, subscriptionEntriesName, string.Empty, false);
             eventsProcessed = new PerformanceCounter(categoryName, eventsProcessedName, string.Empty, false);
             eventsProcessedBytes = new PerformanceCounter(categoryName, eventsProcessedBytesName, string.Empty, false);
@@ -277,16 +293,18 @@ namespace Microsoft.WebSolutionsPlatform.Event
             rePublisherQueueSize.RawValue = 0;
             persisterQueueSize.RawValue = 0;
             forwarderQueueSize.RawValue = 0;
+            mgmtQueueSize.RawValue = 0;
+            cmdQueueSize.RawValue = 0;
             subscriptionEntries.RawValue = 0;
             eventsProcessed.RawValue = 0;
             eventsProcessedBytes.RawValue = 0;
-            eventQueueSize = 10240;
-            averageEventSize = 10240;
+            //eventQueueSize = 10240;
+            //averageEventSize = 10240;
 
-            eventQueueName = @"WspEventQueue";
+            //eventQueueName = @"WspEventQueue";
 
-            thisBufferSize = 1024000;
-            thisTimeout = 10000;
+            //thisBufferSize = 1024000;
+            //thisTimeout = 10000;
 
             listener = new Listener();
             rePublisher = new RePublisher();
@@ -301,8 +319,8 @@ namespace Microsoft.WebSolutionsPlatform.Event
             rePublisherQueue = new SynchronizationQueue<QueueElement>(2000, rePublisherQueueSize);
             persisterQueue = new SynchronizationQueue<QueueElement>(2000, persisterQueueSize);
             forwarderQueue = new SynchronizationQueue<QueueElement>(2000, forwarderQueueSize);
-            mgmtQueue = new SynchronizationQueue<QueueElement>(100);
-            cmdQueue = new SynchronizationQueue<QueueElement>(100);
+            mgmtQueue = new SynchronizationQueue<QueueElement>(100, mgmtQueueSize);
+            cmdQueue = new SynchronizationQueue<QueueElement>(100, cmdQueueSize);
 
             workerThreads = new Dictionary<Type, Thread>();
 
@@ -315,11 +333,9 @@ namespace Microsoft.WebSolutionsPlatform.Event
             workerThreads.Add(commandProcessor.GetType(), null);
             workerThreads.Add(manager.GetType(), null);
 
-            channelDictionary = new Dictionary<string, string>(StringComparer.CurrentCultureIgnoreCase);
-
             try
             {
-                LoadConfiguration();
+                Configurator.LoadConfiguration();
             }
             catch
             {
@@ -407,19 +423,19 @@ namespace Microsoft.WebSolutionsPlatform.Event
         }
     }
 
-    internal class Route : IComparable<Route>
-    {
+	internal class Route : IComparable<Route>
+	{
         private string routerName;
         /// <summary>
         /// Name of the router
         /// </summary>
         public string RouterName
         {
-            get
-            {
+			get
+			{
                 return routerName;
-            }
-        }
+			}
+		}
 
         private int numConnections;
         /// <summary>
@@ -437,91 +453,91 @@ namespace Microsoft.WebSolutionsPlatform.Event
             }
         }
 
-        private int port;
-        /// <summary>
-        /// TCP port for route
-        /// </summary>
-        public int Port
-        {
-            get
-            {
-                return port;
-            }
-            internal set
-            {
-                port = value;
-            }
-        }
+		private int port;
+		/// <summary>
+		/// TCP port for route
+		/// </summary>
+		public int Port
+		{
+			get
+			{
+				return port;
+			}
+			internal set
+			{
+				port = value;
+			}
+		}
 
-        private int bufferSize;
-        /// <summary>
-        /// Buffer size used for the TCP port for route
-        /// </summary>
-        public int BufferSize
-        {
-            get
-            {
-                return bufferSize;
-            }
-            internal set
-            {
-                bufferSize = value;
-            }
-        }
+		private int bufferSize;
+		/// <summary>
+		/// Buffer size used for the TCP port for route
+		/// </summary>
+		public int BufferSize
+		{
+			get
+			{
+				return bufferSize;
+			}
+			internal set
+			{
+				bufferSize = value;
+			}
+		}
 
-        private int timeout;
-        /// <summary>
-        /// Timeout used for TCP calls
-        /// </summary>
-        public int Timeout
-        {
-            get
-            {
-                return timeout;
-            }
-            internal set
-            {
-                timeout = value;
-            }
-        }
+		private int timeout;
+		/// <summary>
+		/// Timeout used for TCP calls
+		/// </summary>
+		public int Timeout
+		{
+			get
+			{
+				return timeout;
+			}
+			internal set
+			{
+				timeout = value;
+			}
+		}
 
-        private DateTime expirationTime;
-        /// <summary>
-        /// Expiration time for route
-        /// </summary>
-        public DateTime ExpirationTime
-        {
-            get
-            {
-                return expirationTime;
-            }
-            internal set
-            {
-                expirationTime = value;
-            }
-        }
+		private DateTime expirationTime;
+		/// <summary>
+		/// Expiration time for route
+		/// </summary>
+		public DateTime ExpirationTime
+		{
+			get
+			{
+				return expirationTime;
+			}
+			internal set
+			{
+				expirationTime = value;
+			}
+		}
 
-        /// <summary>
-        /// Used to create a Route used by RouteMgr
-        /// </summary>
+		/// <summary>
+		/// Used to create a Route used by RouteMgr
+		/// </summary>
         /// <param name="routerName">Name of the router</param>
         /// <param name="numConnections">Number of socket connections to open to routerName</param>
-        /// <param name="port">TCP port used by the router</param>
-        /// <param name="bufferSize">Buffer size used for the TCP port for route</param>
-        /// <param name="timeout">Timeout used for TCP calls</param>
+		/// <param name="port">TCP port used by the router</param>
+		/// <param name="bufferSize">Buffer size used for the TCP port for route</param>
+		/// <param name="timeout">Timeout used for TCP calls</param>
         public Route(string routerName, int numConnections, int port, int bufferSize, int timeout)
-        {
+		{
             this.routerName = routerName;
             this.numConnections = numConnections;
             this.port = port;
-            this.bufferSize = bufferSize;
-            this.timeout = timeout;
-            this.expirationTime = DateTime.UtcNow.AddMinutes(5);
-        }
+			this.bufferSize = bufferSize;
+			this.timeout = timeout;
+			this.expirationTime = DateTime.UtcNow.AddMinutes(5);
+		}
 
-        public int CompareTo(Route otherRoute)
-        {
+		public int CompareTo( Route otherRoute )
+		{
             return RouterName.CompareTo(otherRoute.RouterName);
         }
-    }
+	}
 }

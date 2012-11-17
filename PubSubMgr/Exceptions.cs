@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Runtime.InteropServices;
 
-namespace Microsoft.WebSolutionsPlatform.Event.PubSubManager
+namespace Microsoft.WebSolutionsPlatform.PubSubManager
 {
     /// <summary>
     /// The exception that is thrown when an error occurs during publish/subscribe. See 

@@ -62,13 +62,13 @@ extern INT32 __cdecl InitMemoryMgr(LPCTSTR SharedMemoryNameIn, DWORD SharedMemor
 	SetSecurityDescriptorDacl(&sd, TRUE, NULL, FALSE);
 
 	iSize = strlen(GLOBALPREPEND) + strlen(SharedMemoryNameIn) + 1;
-	lpSharedMemoryName = malloc(iSize);
+	lpSharedMemoryName = (LPCTSTR) malloc(iSize);
 	strcpy_s((char*)lpSharedMemoryName, iSize, (char*)GLOBALPREPEND);
 	strcat_s((char*)lpSharedMemoryName, iSize, (char*)SharedMemoryNameIn);
 
 	bFileExists = FALSE;
 
-	CommBuffer = malloc(sizeof(COMMBUFFER));
+	CommBuffer = (PCOMMBUFFER) malloc(sizeof(COMMBUFFER));
 	*CommBufferIn = CommBuffer;
 
 	InitEvent(CommBuffer);

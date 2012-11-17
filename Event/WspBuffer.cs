@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Text;
 using System.Net;
 
+[assembly: CLSCompliant(true)]
+
 namespace Microsoft.WebSolutionsPlatform.Event
 {
     /// <summary>
@@ -197,6 +199,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                 return false;
             }
         }
+
         /// <summary>
         /// Method returns the event's header properties.
         /// </summary>

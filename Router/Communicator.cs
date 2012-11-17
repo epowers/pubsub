@@ -15,36 +15,159 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Xml.XPath;
 
-namespace Microsoft.WebSolutionsPlatform.Event
+using Microsoft.WebSolutionsPlatform.PubSubManager;
+
+namespace Microsoft.WebSolutionsPlatform.Router
 {
     public partial class Router : ServiceBase
     {
-        internal class ParentConnection
+        internal class SocketInfo
         {
-            internal Thread parentInConnection;
-            internal Thread parentOutConnection;
-
-            internal ParentConnection()
+            private List<Socket> sockets;
+            /// <summary>
+            /// List of inbound sockets to this node
+            /// </summary>
+            public List<Socket> Sockets
             {
+                get
+                {
+                    return sockets;
+                }
+            }
+
+            private string routerName;
+            /// <summary>
+            /// Name of the event router
+            /// </summary>
+            public string RouterName
+            {
+                get
+                {
+                    return routerName;
+                }
+
+                set
+                {
+                    routerName = value;
+                }
+            }
+
+            private byte[] routerNameEncodedPriv = null;
+            internal byte[] routerNameEncoded
+            {
+                get
+                {
+                    if (routerNameEncodedPriv == null && string.IsNullOrEmpty(RouterName) == false)
+                    {
+                        UTF8Encoding uniEncoding = new UTF8Encoding();
+                        routerNameEncodedPriv = uniEncoding.GetBytes(RouterName);
+                    }
+
+                    return routerNameEncodedPriv;
+                }
+            }
+
+            private string group;
+            /// <summary>
+            /// Group which the event router belongs to
+            /// </summary>
+            public string Group
+            {
+                get
+                {
+                    return group;
+                }
+
+                set
+                {
+                    group = value;
+                }
+            }
+
+            private bool hub;
+            /// <summary>
+            /// True if this router is a hub
+            /// </summary>
+            public bool Hub
+            {
+                get
+                {
+                    return hub;
+                }
+
+                set
+                {
+                    hub = value;
+                }
+            }
+
+            private bool useToSend;
+            /// <summary>
+            /// True if router should send events via these sockets
+            /// </summary>
+            public bool UseToSend
+            {
+                get
+                {
+                    return useToSend;
+                }
+
+                set
+                {
+                    useToSend = value;
+                }
+            }
+
+            /// <summary>
+            /// Base constructor to create a new SocketInfo
+            /// </summary>
+            public SocketInfo()
+            {
+                routerName = string.Empty;
+                useToSend = true;
+                sockets = new List<Socket>();
+            }
+
+            public static SocketInfo Clone(SocketInfo socketInfoIn)
+            {
+                SocketInfo socketInfoOut = new SocketInfo();
+
+                socketInfoOut.Group = socketInfoIn.Group;
+                socketInfoOut.Hub = socketInfoIn.Hub;
+                socketInfoOut.UseToSend = socketInfoIn.useToSend;
+                socketInfoOut.RouterName = socketInfoIn.RouterName;
+
+                for (int i = 0; i < socketInfoIn.Sockets.Count; i++)
+                {
+                    socketInfoOut.Sockets.Add(socketInfoIn.Sockets[i]);
+                }
+
+                return socketInfoOut;
             }
         }
 
         internal class Communicator : ServiceThread
         {
-            internal static Thread receiveServerThread;
+            internal static Thread serverListenThread;
             internal static bool abortParent = false;
-            internal static List<ParentConnection> parentConnections = new List<ParentConnection>();
+            //internal static SocketInfo parentSocketInfo = new SocketInfo();
+            internal static string parentRouterName = string.Empty;
             internal static Thread distributeThread;
 
-            internal static object threadQueuesLock = new object();
+            internal static Dictionary<string, RefCount> serverSendThreads = new Dictionary<string, RefCount>();
+            internal static object sendThreadQueueLock = new object();
 
-            internal static Dictionary<string, List<Thread>> commInThreads = new Dictionary<string, List<Thread>>(StringComparer.CurrentCultureIgnoreCase);
-            internal static Dictionary<string, List<Thread>> commOutThreads = new Dictionary<string, List<Thread>>(StringComparer.CurrentCultureIgnoreCase);
+            internal static object socketQueuesLock = new object();
 
-            internal static Dictionary<string, SynchronizationQueue<QueueElement>> threadQueues =
+            internal static Dictionary<string, SocketInfo> commSockets = new Dictionary<string, SocketInfo>(StringComparer.CurrentCultureIgnoreCase);
+            internal static Dictionary<string, SocketInfo> peerSockets = new Dictionary<string, SocketInfo>(StringComparer.CurrentCultureIgnoreCase);
+
+            internal static Dictionary<string, SynchronizationQueue<QueueElement>> socketQueues =
                 new Dictionary<string, SynchronizationQueue<QueueElement>>(StringComparer.CurrentCultureIgnoreCase);
 
-            internal static Dictionary<string, object> deadThreadQueues = new Dictionary<string, object>(StringComparer.CurrentCultureIgnoreCase);
+            internal static Dictionary<string, SocketInfo> deadSocketQueues = new Dictionary<string, SocketInfo>(StringComparer.CurrentCultureIgnoreCase);
+
+            internal static SynchronizationQueue<SendState> sendStateObjects = new SynchronizationQueue<SendState>();
 
             public Communicator()
             {
@@ -52,32 +175,10 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
             public override void Start()
             {
-                int i;
-                List<string> removeRouters = new List<string>();
-                List<KeyValuePair<string, Thread>> removeThreads = new List<KeyValuePair<string, Thread>>();
-                long currentTickTimeout;
-                PerformanceCounter threadQueueCounter;
-
                 while (true)
                 {
                     try
                     {
-                        if (thisPort != 0)
-                        {
-                            if (receiveServerThread == null || receiveServerThread.ThreadState == System.Threading.ThreadState.Stopped)
-                            {
-                                if (receiveServerThread != null &&
-                                    receiveServerThread.ThreadState == System.Threading.ThreadState.Stopped)
-                                {
-                                    receiveServerThread.Abort();
-                                }
-
-                                receiveServerThread = new Thread(new ThreadStart(new ReceiveServer().Start));
-
-                                receiveServerThread.Start();
-                            }
-                        }
-
                         if (distributeThread == null || distributeThread.ThreadState == System.Threading.ThreadState.Stopped)
                         {
                             if (distributeThread != null && distributeThread.ThreadState == System.Threading.ThreadState.Stopped)
@@ -90,231 +191,25 @@ namespace Microsoft.WebSolutionsPlatform.Event
                             distributeThread.Start();
                         }
 
-                        if (Router.parentRoute != null)
+                        if (hubRole == true)
                         {
-                            try
-                            {
-                                for (i = 0; i < parentConnections.Count; i++)
-                                {
-                                    ParentConnection parentConnection = parentConnections[i];
-
-                                    if (parentConnection.parentInConnection == null || parentConnection.parentOutConnection == null)
-                                    {
-                                        abortParent = true;
-                                    }
-
-                                    if (abortParent == true ||
-                                        (parentConnection.parentInConnection != null &&
-                                            parentConnection.parentInConnection.ThreadState == System.Threading.ThreadState.Stopped) ||
-                                        (parentConnection.parentOutConnection != null &&
-                                            parentConnection.parentOutConnection.ThreadState == System.Threading.ThreadState.Stopped))
-                                    {
-                                        if (parentConnection.parentInConnection != null)
-                                        {
-                                            parentConnection.parentInConnection.Abort();
-                                            parentConnection.parentInConnection = null;
-                                        }
-
-                                        if (parentConnection.parentOutConnection != null)
-                                        {
-                                            parentConnection.parentOutConnection.Abort();
-                                            parentConnection.parentOutConnection = null;
-                                        }
-
-                                        parentConnections.RemoveAt(i);
-                                        i--;
-                                    }
-                                }
-
-                                for (i = 0; i + parentConnections.Count < parentRoute.NumConnections; i++)
-                                {
-                                    if (string.IsNullOrEmpty(parentRoute.RouterName) == true)
-                                    {
-                                        continue;
-                                    }
-
-                                    Socket parentSocket = OpenParentSocket();
-
-                                    if (parentSocket != null)
-                                    {
-                                        ParentConnection parentConnection = new ParentConnection();
-
-                                        parentConnection.parentInConnection =
-                                            new Thread(new ThreadStart(new CommunicationHandler(parentSocket, parentRoute.RouterName, null).ConnectionInStart));
-
-                                        parentConnection.parentInConnection.Start();
-
-                                        ManualResetEvent startEvent = new ManualResetEvent(false);
-                                        startEvent.Reset();
-
-                                        parentConnection.parentOutConnection =
-                                            new Thread(new ThreadStart(new CommunicationHandler(parentSocket, parentRoute.RouterName, startEvent).ConnectionOutStart));
-
-                                        lock (threadQueuesLock)
-                                        {
-                                            List<Thread> threads;
-
-                                            if (Communicator.commOutThreads.TryGetValue(parentRoute.RouterName, out threads) == false)
-                                            {
-                                                Communicator.commOutThreads[parentRoute.RouterName] = new List<Thread>();
-                                            }
-
-                                            Communicator.commOutThreads[parentRoute.RouterName].Add(parentConnection.parentOutConnection);
-                                        }
-
-                                        parentConnection.parentOutConnection.Start();
-
-                                        startEvent.WaitOne(10000, false);
-
-                                        parentConnections.Add(parentConnection);
-                                    }
-                                }
-                            }
-                            catch
-                            {
-                            }
+                            ManageHub();
+                        }
+                        else
+                        {
+                            ManageNode();
                         }
 
-                        lock (threadQueuesLock)
+                        CleanupQueues();
+
+                        if (hubRole == true)
                         {
-                            foreach (string routerName in commInThreads.Keys)
-                            {
-                                foreach (Thread thread in commInThreads[routerName])
-                                {
-                                    if (thread.ThreadState == System.Threading.ThreadState.Stopped)
-                                    {
-                                        removeThreads.Add(new KeyValuePair<string, Thread>(routerName, thread));
-                                        removeRouters.Add(routerName);
-                                    }
-                                }
-                            }
-
-                            if (removeThreads.Count > 0)
-                            {
-                                for (i = 0; i < removeThreads.Count; i++)
-                                {
-                                    removeThreads[i].Value.Abort();
-
-                                    commInThreads[removeThreads[i].Key].Remove(removeThreads[i].Value);
-                                }
-
-                                removeThreads.Clear();
-                            }
-
-                            if (removeRouters.Count > 0)
-                            {
-                                List<Thread> threads;
-
-                                for (i = 0; i < removeRouters.Count; i++)
-                                {
-                                    commInThreads.TryGetValue(removeRouters[i], out threads);
-
-                                    if (threads != null && commInThreads[removeRouters[i]].Count == 0)
-                                    {
-                                        commInThreads.Remove(removeRouters[i]);
-                                    }
-                                }
-
-                                removeRouters.Clear();
-                            }
-
-                            foreach (string routerName in commOutThreads.Keys)
-                            {
-                                foreach (Thread thread in commOutThreads[routerName])
-                                {
-                                    if (thread.ThreadState == System.Threading.ThreadState.Stopped)
-                                    {
-                                        removeThreads.Add(new KeyValuePair<string, Thread>(routerName, thread));
-                                        removeRouters.Add(routerName);
-                                    }
-                                }
-                            }
-
-                            if (removeThreads.Count > 0)
-                            {
-                                for (i = 0; i < removeThreads.Count; i++)
-                                {
-                                    removeThreads[i].Value.Abort();
-
-                                    commOutThreads[removeThreads[i].Key].Remove(removeThreads[i].Value);
-                                }
-
-                                removeThreads.Clear();
-                            }
-
-                            if (removeRouters.Count > 0)
-                            {
-                                for (i = 0; i < removeRouters.Count; i++)
-                                {
-                                    if (commOutThreads.ContainsKey(removeRouters[i]) == true)
-                                    {
-                                        if (commOutThreads[removeRouters[i]].Count == 0)
-                                        {
-                                            threadQueues[removeRouters[i]].InUse = false;
-                                            threadQueues[removeRouters[i]].LastUsedTick = DateTime.Now.Ticks;
-
-                                            Communicator.deadThreadQueues[removeRouters[i]] = null;
-
-                                            commOutThreads.Remove(removeRouters[i]);
-                                        }
-                                    }
-                                }
-
-                                removeRouters.Clear();
-                            }
-
-                            if (deadThreadQueues.Count > 0)
-                            {
-                                currentTickTimeout = DateTime.Now.Ticks - (((long)thisOutQueueMaxTimeout) * 10000000);
-
-                                removeRouters.Clear();
-
-                                foreach (string threadQueueName in deadThreadQueues.Keys)
-                                {
-                                    try
-                                    {
-                                        if (threadQueues[threadQueueName].LastUsedTick < currentTickTimeout ||
-                                            threadQueues[threadQueueName].Size > thisOutQueueMaxSize)
-                                        {
-                                            removeRouters.Add(threadQueueName);
-                                        }
-                                    }
-                                    catch
-                                    {
-                                        removeRouters.Add(threadQueueName);
-                                    }
-                                }
-
-                                if (removeRouters.Count > 0)
-                                {
-                                    for (i = 0; i < removeRouters.Count; i++)
-                                    {
-                                        try
-                                        {
-                                            threadQueueCounter = new PerformanceCounter();
-                                            threadQueueCounter.InstanceLifetime = PerformanceCounterInstanceLifetime.Process;
-                                            threadQueueCounter.CategoryName = communicationCategoryName;
-                                            threadQueueCounter.CounterName = forwarderQueueSizeName;
-                                            threadQueueCounter.InstanceName = removeRouters[i];
-                                            threadQueueCounter.ReadOnly = false;
-
-                                            threadQueueCounter.RemoveInstance();
-
-                                            Communicator.threadQueues[removeRouters[i]].Clear();
-                                            Communicator.threadQueues.Remove(removeRouters[i]);
-                                        }
-                                        finally
-                                        {
-                                            deadThreadQueues.Remove(removeRouters[i]);
-                                        }
-                                    }
-
-                                    removeRouters.Clear();
-                                }
-                            }
+                            Thread.Sleep(configSettings.HubRoleSettings.PeerRouter.Timeout);
                         }
-
-                        Thread.Sleep(10000);
+                        else
+                        {
+                            Thread.Sleep(configSettings.NodeRoleSettings.ParentRouter.Timeout);
+                        }
                     }
 
                     catch (ThreadAbortException)
@@ -337,26 +232,556 @@ namespace Microsoft.WebSolutionsPlatform.Event
                 }
             }
 
-            internal Socket OpenParentSocket()
+            internal void ManageHub()
             {
-                Socket socket = null;
-                SocketError socketError;
-                string clientRouterName = string.Empty;
-                byte[] preamble;
-                byte[] inResponse = new byte[1];
-
-                uint dummy = 0;
-                byte[] inOptionValues = new byte[Marshal.SizeOf(dummy) * 3];
-
-                BitConverter.GetBytes((uint)1).CopyTo(inOptionValues, 0);
-                BitConverter.GetBytes((uint)(Router.parentRoute.Timeout / 1000)).CopyTo(inOptionValues, Marshal.SizeOf(dummy));
-                BitConverter.GetBytes((uint)10).CopyTo(inOptionValues, Marshal.SizeOf(dummy) * 2);
+                Dictionary<string, Hub> hubs;
+                Dictionary<string, string> peers;
+                string groupName;
 
                 try
                 {
-                    clientRouterName = Router.parentRoute.RouterName;
+                    if (configSettings.HubRoleSettings.ThisRouter.Port != 0)
+                    {
+                        if (serverListenThread == null || serverListenThread.ThreadState == System.Threading.ThreadState.Stopped)
+                        {
+                            if (serverListenThread != null &&
+                                serverListenThread.ThreadState == System.Threading.ThreadState.Stopped)
+                            {
+                                serverListenThread.Abort();
+                            }
 
-                    socket = ConnectSocket(Router.parentRoute.RouterName, Router.parentRoute.Port);
+                            serverListenThread = new Thread(new ThreadStart(new ListenHandler().Start));
+
+                            serverListenThread.Start();
+                        }
+                    }
+
+                    hubs = GetHubList(out groupName);
+
+                    ConnectToGroup(hubs, groupName);
+
+                    peers = GetPeerList(groupName);
+
+                    ConnectToPeers(peers, groupName);
+                }
+                catch (ThreadAbortException e)
+                {
+                    throw e;
+                }
+                catch
+                {
+                }
+            }
+
+            internal Dictionary<string, Hub> GetHubList(out string groupName)
+            {
+                Group currGroup = null;
+                groupName = configSettings.EventRouterSettings.Group;
+
+                while (currGroup == null)
+                {
+                    if (configSettings.GroupSettings.Groups.TryGetValue(groupName, out currGroup) == true)
+                    {
+                        if (string.IsNullOrEmpty(currGroup.UseGroup) == false)
+                        {
+                            groupName = currGroup.UseGroup;
+                            currGroup = null;
+                            continue;
+                        }
+                        else
+                        {
+                            continue;
+                        }
+                    }
+                    else
+                    {
+                        if (string.Compare(groupName, "default", true) != 0)
+                        {
+                            return new Dictionary<string, Hub>();
+                        }
+
+                        groupName = "default";
+                        currGroup = null;
+                    }
+                }
+
+                return currGroup.Hubs;
+            }
+
+            internal Dictionary<string, string> GetPeerList(string groupName)
+            {
+                Dictionary<string, string> peers = new Dictionary<string, string>();
+
+                foreach (Group group in configSettings.GroupSettings.Groups.Values)
+                {
+                    if (string.IsNullOrEmpty(group.UseGroup) == false || string.Compare(group.Name, groupName, true) == 0)
+                    {
+                        continue;
+                    }
+
+                    if (peerSockets.ContainsKey(group.Name) == false)
+                    {
+                        Random randObj = new Random();
+                        int item = randObj.Next(group.Hubs.Count);
+                        int i = 0;
+
+                        foreach (string name in group.Hubs.Keys)
+                        {
+                            if (i == item)
+                            {
+                                peers[group.Name] = name;
+                                break;
+                            }
+
+                            i++;
+                        }
+                    }
+                }
+
+                return peers;
+            }
+
+            internal void ConnectToGroup(Dictionary<string, Hub> hubs, string groupName)
+            {
+                SocketInfo socketInfo;
+
+                foreach (Hub hub in hubs.Values)
+                {
+                    if (string.Compare(hub.Name, LocalRouterName, true) == 0)
+                    {
+                        continue;
+                    }
+
+                    if(commSockets.TryGetValue(hub.Name, out socketInfo) == false)
+                    {
+                        socketInfo = new SocketInfo();
+                        socketInfo.Group = groupName;
+                        socketInfo.Hub = true;
+                        socketInfo.RouterName = hub.Name;
+                    }
+
+                    int numConnections = configSettings.HubRoleSettings.PeerRouter.NumConnections - socketInfo.Sockets.Count;
+
+                    if (numConnections > 0)
+                    {
+                        CreateConnections(hub.Name, groupName, configSettings.HubRoleSettings.PeerRouter.Port, configSettings.HubRoleSettings.PeerRouter.Timeout,
+                            configSettings.HubRoleSettings.PeerRouter.NumConnections, socketInfo);
+                    }
+                }
+            }
+
+            internal void ConnectToPeers(Dictionary<string, string> peers, string groupName)
+            {
+                SocketInfo socketInfo;
+
+                foreach (string peerGroupName in peers.Keys)
+                {
+                    if (commSockets.TryGetValue(peers[peerGroupName], out socketInfo) == true)
+                    {
+                        if (socketInfo.UseToSend == false)
+                        {
+                            socketInfo.UseToSend = true;
+                            peerSockets[peers[peerGroupName]] = socketInfo;
+                        }
+                    }
+                    else
+                    {
+                        socketInfo = new SocketInfo();
+                        socketInfo.Group = peerGroupName;
+                        socketInfo.Hub = true;
+                        socketInfo.RouterName = peers[peerGroupName];
+                        socketInfo.UseToSend = true;
+                    }
+
+                    int numConnections = configSettings.HubRoleSettings.PeerRouter.NumConnections - socketInfo.Sockets.Count;
+
+                    if (numConnections > 0)
+                    {
+                        CreateConnections(peers[peerGroupName], groupName, configSettings.HubRoleSettings.PeerRouter.Port, configSettings.HubRoleSettings.PeerRouter.Timeout,
+                            configSettings.HubRoleSettings.PeerRouter.NumConnections, socketInfo);
+                    }
+                }
+            }
+
+            internal void ManageNode()
+            {
+                int i;
+
+                try
+                {
+                    if (parentRoute != null && commSockets[parentRoute.RouterName].Sockets.Count == 0)
+                    {
+                        if (commSockets.ContainsKey(parentRoute.RouterName) == true)
+                        {
+                            commSockets.Remove(parentRoute.RouterName);
+                        }
+
+                        parentRoute = null;
+                    }
+
+                    if (parentRoute == null)
+                    {
+                        SocketInfo socketInfo = new SocketInfo();
+
+                        parentRoute = SetParentRoute(socketInfo);
+
+                        parentRouterName = parentRoute.RouterName;
+
+                        commSockets[parentRouterName] = socketInfo;
+                    }
+
+                    lock (socketQueuesLock)
+                    {
+                        for (i = 0; i < commSockets[parentRouterName].Sockets.Count; i++)
+                        {
+                            Socket parentSocket = commSockets[parentRouterName].Sockets[i];
+
+                            if (parentSocket == null || parentSocket.Connected == false)
+                            {
+                                commSockets[parentRouterName].Sockets.RemoveAt(i);
+                                i--;
+                            }
+                        }
+                    }
+
+                    if (commSockets.Count == 0)
+                    {
+                        string oldParentName = parentRouterName;
+
+                        parentRoute = SetParentRoute(commSockets[parentRouterName]);
+
+                        parentRouterName = parentRoute.RouterName;
+
+                        if (string.Compare(oldParentName, parentRouterName, true) != 0)
+                        {
+                            if (commSockets.ContainsKey(oldParentName) == true)
+                            {
+                                commSockets[parentRouterName] = commSockets[oldParentName];
+                                commSockets.Remove(oldParentName);
+                            }
+                        }
+                    }
+
+                    int startingSocketCount = commSockets[parentRouterName].Sockets.Count;
+
+                    int numConnections = parentRoute.NumConnections - commSockets[parentRouterName].Sockets.Count;
+
+                    if (numConnections > 0)
+                    {
+                        CreateConnections(parentRoute.RouterName, commSockets[parentRouterName].Group, parentRoute.Port, parentRoute.Timeout,
+                            numConnections, commSockets[parentRouterName]);
+                    }
+
+                    if (startingSocketCount == 0 && commSockets[parentRouterName].Sockets.Count > 0)
+                    {
+                        SubscriptionMgr.ResendSubscriptions(parentRoute.RouterName);
+                    }
+                }
+                catch (ThreadAbortException e)
+                {
+                    throw e;
+                }
+                catch
+                {
+                }
+            }
+
+            private void CreateConnections(string routerName, string currGroupName, int port, int timeout, int numConnections, SocketInfo socketInfo)
+            {
+                PerformanceCounter threadSocketCounter;
+                SynchronizationQueue<QueueElement> socketQueue;
+
+                if (string.IsNullOrEmpty(routerName) == true)
+                {
+                    return;
+                }
+
+                for (int i = 0; i < numConnections; i++)
+                {
+                    Socket socket = OpenConnection(routerName, port, timeout);
+
+                    if (socket != null)
+                    {
+                        lock (socketQueuesLock)
+                        {
+                            if (hubRole == true)
+                            {
+                                if (commSockets.ContainsKey(routerName) == false)
+                                {
+                                    socketInfo.Sockets.Add(socket);
+                                    commSockets[routerName] = socketInfo;
+
+                                    if (socketInfo.UseToSend == true)
+                                    {
+                                        peerSockets[routerName] = socketInfo;
+                                    }
+                                }
+                                else
+                                {
+                                    commSockets[routerName].Sockets.Add(socket);
+                                }
+                            }
+                            else
+                            {
+                                commSockets[parentRouterName].Sockets.Add(socket);
+                            }
+
+                            if (socketQueues.TryGetValue(routerName, out socketQueue) == false)
+                            {
+                                threadSocketCounter = new PerformanceCounter();
+                                threadSocketCounter.InstanceLifetime = PerformanceCounterInstanceLifetime.Process;
+                                threadSocketCounter.CategoryName = communicationCategoryName;
+                                threadSocketCounter.CounterName = forwarderQueueSizeName;
+                                threadSocketCounter.InstanceName = routerName;
+                                threadSocketCounter.ReadOnly = false;
+
+                                socketQueue = new SynchronizationQueue<QueueElement>(threadSocketCounter);
+
+                                socketQueues[routerName] = socketQueue;
+
+                                socketQueue.InUse = true;
+                            }
+                            else
+                            {
+                                if (socketQueue.InUse != true)
+                                {
+                                    socketQueue.InUse = true;
+
+                                    if (deadSocketQueues.ContainsKey(routerName) == true)
+                                    {
+                                        deadSocketQueues.Remove(routerName);
+                                    }
+                                }
+                            }
+                        }
+
+                        Thread inConnection =
+                            new Thread(new ThreadStart(new CommunicationHandler(socket, socketInfo, socketQueue).ConnectionInStart));
+
+                        inConnection.Start();
+
+                        if (socketInfo.UseToSend == true || string.Compare(socketInfo.Group, currGroupName, true) == 0)
+                        {
+                            Thread outConnection =
+                                new Thread(new ThreadStart(new CommunicationHandler(socket, socketInfo, socketQueue).ConnectionOutStart));
+
+                            outConnection.Start();
+                        }
+                    }
+                }
+
+                return;
+            }
+
+            internal void CleanupQueues()
+            {
+                int i;
+                long currentTickTimeout;
+                PerformanceCounter socketQueueCounter;
+                List<string> removeRouters = new List<string>();
+                List<KeyValuePair<string, Socket>> removeSockets = new List<KeyValuePair<string, Socket>>();
+
+                lock (socketQueuesLock)
+                {
+                    foreach (string routerName in commSockets.Keys)
+                    {
+                        foreach (Socket socket in commSockets[routerName].Sockets)
+                        {
+                            if (socket.Connected == false)
+                            {
+                                removeSockets.Add(new KeyValuePair<string, Socket>(routerName, socket));
+                                removeRouters.Add(routerName);
+                            }
+                        }
+                    }
+
+                    if (removeSockets.Count > 0)
+                    {
+                        for (i = 0; i < removeSockets.Count; i++)
+                        {
+                            commSockets[removeSockets[i].Key].Sockets.Remove(removeSockets[i].Value);
+                        }
+
+                        removeSockets.Clear();
+                    }
+
+                    if (removeRouters.Count > 0)
+                    {
+                        for (i = 0; i < removeRouters.Count; i++)
+                        {
+                            if (commSockets.ContainsKey(removeRouters[i]) == true)
+                            {
+                                if (commSockets[removeRouters[i]].Sockets.Count == 0)
+                                {
+                                    socketQueues[removeRouters[i]].InUse = false;
+                                    socketQueues[removeRouters[i]].LastUsedTick = DateTime.Now.Ticks;
+
+                                    deadSocketQueues[removeRouters[i]] = commSockets[removeRouters[i]];
+
+                                    if (commSockets[removeRouters[i]].UseToSend == true)
+                                    {
+                                        commSockets[removeRouters[i]].UseToSend = false;
+                                        peerSockets.Remove(removeRouters[i]);
+                                    }
+
+                                    commSockets.Remove(removeRouters[i]);
+                                }
+                            }
+                        }
+
+                        removeRouters.Clear();
+                    }
+
+                    if (deadSocketQueues.Count > 0)
+                    {
+                        currentTickTimeout = DateTime.Now.Ticks - (((long)outputCommunicationQueues.MaxTimeout) * 10000000);
+
+                        removeRouters.Clear();
+
+                        foreach (string threadQueueName in deadSocketQueues.Keys)
+                        {
+                            try
+                            {
+                                if (socketQueues[threadQueueName].LastUsedTick < currentTickTimeout ||
+                                    socketQueues[threadQueueName].Size > outputCommunicationQueues.MaxQueueSize)
+                                {
+                                    removeRouters.Add(threadQueueName);
+                                }
+                            }
+                            catch
+                            {
+                                removeRouters.Add(threadQueueName);
+                            }
+                        }
+
+                        if (removeRouters.Count > 0)
+                        {
+                            for (i = 0; i < removeRouters.Count; i++)
+                            {
+                                try
+                                {
+                                    socketQueueCounter = new PerformanceCounter();
+                                    socketQueueCounter.InstanceLifetime = PerformanceCounterInstanceLifetime.Process;
+                                    socketQueueCounter.CategoryName = communicationCategoryName;
+                                    socketQueueCounter.CounterName = forwarderQueueSizeName;
+                                    socketQueueCounter.InstanceName = removeRouters[i];
+                                    socketQueueCounter.ReadOnly = false;
+
+                                    socketQueueCounter.RemoveInstance();
+
+                                    socketQueues[removeRouters[i]].Clear();
+                                    socketQueues.Remove(removeRouters[i]);
+                                }
+                                finally
+                                {
+                                    deadSocketQueues.Remove(removeRouters[i]);
+                                }
+                            }
+
+                            removeRouters.Clear();
+                        }
+                    }
+                }
+            }
+
+            internal Route SetParentRoute(SocketInfo socketInfo)
+            {
+                string parentName = string.Empty;
+                string groupName = configSettings.EventRouterSettings.Group;
+                Group group;
+
+                while (true)
+                {
+                    if (configSettings.GroupSettings.Groups.TryGetValue(groupName, out group) == true)
+                    {
+                        if (string.IsNullOrEmpty(group.UseGroup) == false)
+                        {
+                            if (string.Compare(groupName, group.UseGroup, true) != 0)
+                            {
+                                groupName = group.UseGroup;
+                                continue;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (string.Compare(groupName, "default", true) == 0)
+                        {
+                            return new Route(string.Empty,
+                                configSettings.NodeRoleSettings.ParentRouter.NumConnections,
+                                configSettings.NodeRoleSettings.ParentRouter.Port,
+                                configSettings.NodeRoleSettings.ParentRouter.BufferSize,
+                                configSettings.NodeRoleSettings.ParentRouter.Timeout);
+                        }
+                        else
+                        {
+                            groupName = "default";
+                            continue;
+                        }
+                    }
+
+                    if (group.Hubs.Count > 0)
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        if (string.Compare(groupName, "default", true) == 0)
+                        {
+                            return new Route(string.Empty,
+                                configSettings.NodeRoleSettings.ParentRouter.NumConnections,
+                                configSettings.NodeRoleSettings.ParentRouter.Port,
+                                configSettings.NodeRoleSettings.ParentRouter.BufferSize,
+                                configSettings.NodeRoleSettings.ParentRouter.Timeout);
+                        }
+                        else
+                        {
+                            Thread.Sleep(10000);
+
+                            groupName = "default";
+
+                            continue;
+                        }
+                    }
+                }
+
+                Random randObj = new Random();
+                int item = randObj.Next(group.Hubs.Count);
+                int i = 0;
+
+                foreach (string name in group.Hubs.Keys)
+                {
+                    if (i == item)
+                    {
+                        parentName = name;
+                        break;
+                    }
+
+                    i++;
+                }
+
+                socketInfo.RouterName = parentName;
+                socketInfo.Hub = true;
+                socketInfo.UseToSend = true;
+                socketInfo.Group = groupName;
+
+                return new Route(parentName, 
+                    configSettings.NodeRoleSettings.ParentRouter.NumConnections, 
+                    configSettings.NodeRoleSettings.ParentRouter.Port,
+                    configSettings.NodeRoleSettings.ParentRouter.BufferSize,
+                    configSettings.NodeRoleSettings.ParentRouter.Timeout);
+            }
+
+            internal Socket OpenConnection(string routerName, int port, int timeout)
+            {
+                Socket socket = null;
+                SocketError socketError;
+                byte[] preamble;
+                byte[] inResponse = new byte[1];
+
+                try
+                {
+                    socket = ConnectSocket(routerName, port);
 
                     if (socket == null)
                     {
@@ -364,27 +789,49 @@ namespace Microsoft.WebSolutionsPlatform.Event
                     }
 
                     socket.NoDelay = true;
-                    socket.ReceiveTimeout = Router.parentRoute.Timeout;
-                    socket.SendTimeout = Router.parentRoute.Timeout;
+                    socket.ReceiveTimeout = timeout;
+                    socket.SendTimeout = timeout;
 
-                    //socket.IOControl(IOControlCode.KeepAliveValues, inOptionValues, null);
-                    //socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+                    Int32 preambleLength = 0;
+                    preambleLength += sizeof(Int32);
+                    preambleLength += 1;
+                    preambleLength += versionEncoded.Length + sizeof(Int32);
+                    preambleLength += configSettings.EventRouterSettings.GroupEncoded.Length + sizeof(Int32);
+                    preambleLength += routerNameEncoded.Length + sizeof(Int32);
 
-                    preamble = new byte[routerNameEncoded.Length + 4];
+                    preamble = new byte[preambleLength];
 
-                    Buffer.BlockCopy(BitConverter.GetBytes((Int32)preamble.Length), 0, preamble, 0, 4);
-                    Buffer.BlockCopy(routerNameEncoded, 0, preamble, 4, routerNameEncoded.Length);
+                    int location = 0;
 
-                    socket.Send(preamble, 0, preamble.Length, SocketFlags.None, out socketError);
+                    Buffer.BlockCopy(BitConverter.GetBytes((Int32)preambleLength), 0, preamble, location, sizeof(Int32));
+                    location += sizeof(Int32);
+
+                    Buffer.BlockCopy(BitConverter.GetBytes(hubRole), 0, preamble, location, 1);
+                    location += 1;
+
+                    Buffer.BlockCopy(BitConverter.GetBytes((Int32)versionEncoded.Length), 0, preamble, location, sizeof(Int32));
+                    location += sizeof(Int32);
+
+                    Buffer.BlockCopy(versionEncoded, 0, preamble, location, versionEncoded.Length);
+                    location += versionEncoded.Length;
+
+                    Buffer.BlockCopy(BitConverter.GetBytes((Int32)configSettings.EventRouterSettings.GroupEncoded.Length), 0, preamble, location, sizeof(Int32));
+                    location += sizeof(Int32);
+
+                    Buffer.BlockCopy(configSettings.EventRouterSettings.GroupEncoded, 0, preamble, location, configSettings.EventRouterSettings.GroupEncoded.Length);
+                    location += configSettings.EventRouterSettings.GroupEncoded.Length;
+
+                    Buffer.BlockCopy(BitConverter.GetBytes((Int32)routerNameEncoded.Length), 0, preamble, location, sizeof(Int32));
+                    location += sizeof(Int32);
+
+                    Buffer.BlockCopy(routerNameEncoded, 0, preamble, location, routerNameEncoded.Length);
+
+                    socket.Send(preamble, 0, preambleLength, SocketFlags.None, out socketError);
 
                     if (socketError != SocketError.Success)
                     {
-                        CloseSocket(socket, clientRouterName);
+                        CloseSocket(socket, routerName);
                         socket = null;
-
-                        //EventLog.WriteEntry("WspEventRouter", 
-                        //    "Send failed to parent router " + clientRouterName + " with bad return code: " + socketError.ToString(), 
-                        //    EventLogEntryType.Warning);
 
                         return null;
                     }
@@ -393,12 +840,8 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                     if (socketError != SocketError.Success || inResponse[0] != 1)
                     {
-                        CloseSocket(socket, clientRouterName);
+                        CloseSocket(socket, routerName);
                         socket = null;
-
-                        //EventLog.WriteEntry("WspEventRouter", 
-                        //    "Receive failed to parent router " + clientRouterName + " with bad return code: " + socketError.ToString(), 
-                        //    EventLogEntryType.Warning);
 
                         return null;
                     }
@@ -415,24 +858,13 @@ namespace Microsoft.WebSolutionsPlatform.Event
             {
                 Socket socket;
                 IPHostEntry hostEntry = null;
+                IPAddress addressIn = null;
 
-                // Get host related information.
-                hostEntry = Dns.GetHostEntry(server);
-
-                // Loop through the AddressList to obtain the supported AddressFamily. This is to avoid
-                // an exception that occurs when the host IP Address is not compatible with the address family
-                // (typical in the IPv6 case).
-                foreach (IPAddress address in hostEntry.AddressList)
+                if (IPAddress.TryParse(server, out addressIn) == true)
                 {
-                    // Only use IPv4
-                    if (address.AddressFamily == AddressFamily.InterNetworkV6)
-                    {
-                        continue;
-                    }
-
                     try
                     {
-                        IPEndPoint ipe = new IPEndPoint(address, port);
+                        IPEndPoint ipe = new IPEndPoint(addressIn, port);
 
                         socket = new Socket(ipe.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
 
@@ -448,6 +880,41 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         // Intentionally left empty, just loop to next.
                     }
                 }
+                else
+                {
+                    // Get host related information.
+                    hostEntry = Dns.GetHostEntry(server);
+
+                    // Loop through the AddressList to obtain the supported AddressFamily. This is to avoid
+                    // an exception that occurs when the host IP Address is not compatible with the address family
+                    // (typical in the IPv6 case).
+                    foreach (IPAddress address in hostEntry.AddressList)
+                    {
+                        // Only use IPv4
+                        if (address.AddressFamily == AddressFamily.InterNetworkV6)
+                        {
+                            continue;
+                        }
+
+                        try
+                        {
+                            IPEndPoint ipe = new IPEndPoint(address, port);
+
+                            socket = new Socket(ipe.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+
+                            socket.Connect(ipe);
+
+                            if (socket.Connected)
+                            {
+                                return socket;
+                            }
+                        }
+                        catch
+                        {
+                            // Intentionally left empty, just loop to next.
+                        }
+                    }
+                }
 
                 return null;
             }
@@ -458,6 +925,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                 {
                     try
                     {
+                        socket.Shutdown(SocketShutdown.Both);
                         socket.Close();
                     }
                     catch (Exception e)
@@ -469,95 +937,11 @@ namespace Microsoft.WebSolutionsPlatform.Event
             }
         }
 
-        internal class ReceiveServer : ServiceThread
-        {
-            private IPAddress thisAddress;
-            private IPEndPoint thisEndPoint;
-
-            public ReceiveServer()
-            {
-                if (thisNic == string.Empty)
-                {
-                    thisAddress = IPAddress.Any;
-                }
-                else
-                {
-                    IPHostEntry iph = Dns.GetHostEntry(thisNic);
-
-                    thisAddress = null;
-
-                    for (int i = 0; i < iph.AddressList.Length; i++)
-                    {
-                        if (thisNic == iph.AddressList[i].ToString())
-                        {
-                            thisAddress = iph.AddressList[i];
-
-                            break;
-                        }
-                    }
-
-                    if (thisAddress == null)
-                    {
-                        thisAddress = iph.AddressList[iph.AddressList.Length - 1];
-                    }
-                }
-
-                thisEndPoint = new IPEndPoint(thisAddress, thisPort);
-            }
-
-            public override void Start()
-            {
-                Socket server = null;
-                string clientRouterName = string.Empty;
-                Thread commThread;
-
-                uint dummy = 0;
-                byte[] inOptionValues = new byte[Marshal.SizeOf(dummy) * 3];
-
-                BitConverter.GetBytes((uint)1).CopyTo(inOptionValues, 0);
-                BitConverter.GetBytes((uint)(thisTimeout / 1000)).CopyTo(inOptionValues, Marshal.SizeOf(dummy));
-                BitConverter.GetBytes((uint)10).CopyTo(inOptionValues, Marshal.SizeOf(dummy) * 2);
-
-                try
-                {
-                    server = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                    server.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-                    server.NoDelay = true;
-                    server.Bind(thisEndPoint);
-                    server.Listen(20);
-
-                    while (true)
-                    {
-                        clientRouterName = string.Empty;
-
-                        Socket socket = server.Accept();
-
-                        socket.NoDelay = true;
-                        socket.ReceiveTimeout = thisTimeout;
-                        socket.SendTimeout = thisTimeout;
-
-                        //socket.IOControl(IOControlCode.KeepAliveValues, inOptionValues, null);
-                        //socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, inOptionValues);
-
-                        commThread = new Thread(new ThreadStart(new CommunicationHandler(socket, clientRouterName, null).AcceptConnection));
-                        commThread.Start();
-                    }
-                }
-
-                catch
-                {
-                    if (server != null)
-                    {
-                        Communicator.CloseSocket(server, clientRouterName);
-                    }
-                }
-            }
-        }
-
-        internal class ReceiveStateObject
+        internal class ReceiveState
         {
             public Socket socket;
             public SocketError socketError;
+            public SynchronizationQueue<QueueElement> socketQueue;
             public byte[] buffer;
             public ArrayList buffers;
             public int totalBytesRead;
@@ -566,17 +950,15 @@ namespace Microsoft.WebSolutionsPlatform.Event
             public byte[] currentReceiveLengthBytes;
             public int currentReceiveLengthBytesRead;
             public int currentProcessedLength;
-            public string clientRouterName = string.Empty;
-            public bool blocking;
+            public SocketInfo socketInfo;
 
-            internal ReceiveStateObject()
+            internal ReceiveState()
             {
                 socketError = SocketError.TryAgain;
-                buffer = new byte[averageEventSize];
+                buffer = new byte[localPublish.AverageEventSize];
                 buffers = new ArrayList(10);
                 receiveDone = new ManualResetEvent(false);
                 currentReceiveLengthBytes = new byte[4];
-                blocking = false;
             }
 
             internal void Reset()
@@ -592,124 +974,356 @@ namespace Microsoft.WebSolutionsPlatform.Event
             }
         }
 
-        internal class CommunicationHandler : ServiceThread
+        internal class RefCount
         {
-            private static ManualResetEvent sendDone = new ManualResetEvent(false);
+            internal int Count = 0;
 
-            private Socket socket;
-            private string clientRouterName;
-
-            public ManualResetEvent startEvent;
-            public ManualResetEvent parentStartEvent;
-
-            internal PerformanceCounter threadQueueCounter;
-
-            internal SynchronizationQueue<QueueElement> threadQueue;
-
-            public CommunicationHandler(Socket socket, string clientRouterName, ManualResetEvent parentStartEvent)
+            internal RefCount()
             {
-                this.socket = socket;
-                this.clientRouterName = clientRouterName;
-                this.parentStartEvent = parentStartEvent;
             }
 
-            public override void Start()
+            internal static void Decrement(string routerName)
             {
-                throw new Exception("The method or operation is not implemented.");
+                RefCount refCount;
+
+                if (Communicator.serverSendThreads.TryGetValue(routerName, out refCount) == true)
+                {
+                    Interlocked.Decrement(ref refCount.Count);
+                }
+            }
+        }
+
+        internal class SendState
+        {
+            private static QueueElement defaultElement = default(QueueElement);
+            public SocketInfo socketInfo;
+            public SynchronizationQueue<QueueElement> socketQueue;
+            public QueueElement element;
+            public Socket socket;
+
+            internal SendState()
+            {
+                Reset();
             }
 
-            public void AcceptConnection()
+            internal static SendState Create(SocketInfo socketInfoIn)
             {
-                Thread commThread;
+                SendState state = Communicator.sendStateObjects.Dequeue(10);
 
+                if (state == null)
+                {
+                    state = new SendState();
+                }
+
+                if (Communicator.socketQueues.TryGetValue(socketInfoIn.RouterName, out state.socketQueue) == false)
+                {
+                    return null;
+                }
+
+                if (Communicator.commSockets.TryGetValue(socketInfoIn.RouterName, out state.socketInfo) == false)
+                {
+                    return null;
+                }
+
+                state.socketInfo = socketInfoIn;
+
+                return state;
+            }
+
+            internal static SendState Create(string routerName)
+            {
+                SendState state = Communicator.sendStateObjects.Dequeue(10);
+
+                if (state == null)
+                {
+                    state = new SendState();
+                }
+
+                if (Communicator.socketQueues.TryGetValue(routerName, out state.socketQueue) == false)
+                {
+                    Recycle(state);
+                    return null;
+                }
+
+                if (Communicator.commSockets.TryGetValue(routerName, out state.socketInfo) == false)
+                {
+                    state.socketInfo = new SocketInfo();
+                    state.socketInfo.RouterName = routerName;
+                }
+
+                return state;
+            }
+
+            internal static SendState Clone(SendState stateIn)
+            {
+                SendState stateOut = Communicator.sendStateObjects.Dequeue(10);
+
+                if (stateOut == null)
+                {
+                    stateOut = new SendState();
+                }
+
+                stateOut.socketInfo = stateIn.socketInfo;
+                stateOut.socketQueue = stateIn.socketQueue;
+                stateOut.socketInfo = stateIn.socketInfo;
+
+                return stateOut;
+            }
+
+            internal static void Recycle(SendState state)
+            {
                 try
                 {
-                    lock (Communicator.threadQueuesLock)
+                    state.Reset();
+
+                    if (Communicator.sendStateObjects.Count < 1000)
                     {
-                        clientRouterName = InitConnection();
+                        Communicator.sendStateObjects.Enqueue(state);
                     }
                 }
                 catch
                 {
-                    Communicator.CloseSocket(socket, clientRouterName);
+                }
+            }
+
+            internal void Reset()
+            {
+                socketInfo = null;
+                socketQueue = null;
+                element = defaultElement;
+                socket = null;
+            }
+        }
+
+        internal class ListenHandler : ServiceThread
+        {
+            public ListenHandler()
+            {
+            }
+
+            public override void Start()
+            {
+                IPAddress thisAddress;
+                IPEndPoint thisEndPoint;
+
+                Socket socket;
+
+                Socket listenSocket = null;
+
+                string clientRouterName = string.Empty;
+
+                if (configSettings.HubRoleSettings.ThisRouter.Nic == string.Empty)
+                {
+                    thisAddress = IPAddress.Any;
+                }
+                else
+                {
+                    IPHostEntry iph = Dns.GetHostEntry(configSettings.HubRoleSettings.ThisRouter.Nic);
+
+                    thisAddress = null;
+
+                    for (int i = 0; i < iph.AddressList.Length; i++)
+                    {
+                        if (configSettings.HubRoleSettings.ThisRouter.Nic == iph.AddressList[i].ToString())
+                        {
+                            thisAddress = iph.AddressList[i];
+
+                            break;
+                        }
+                    }
+
+                    if (thisAddress == null)
+                    {
+                        thisAddress = iph.AddressList[iph.AddressList.Length - 1];
+                    }
+                }
+
+                thisEndPoint = new IPEndPoint(thisAddress, configSettings.HubRoleSettings.ThisRouter.Port);
+
+                try
+                {
+                    listenSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                    listenSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+                    listenSocket.NoDelay = true;
+                    listenSocket.Bind(thisEndPoint);
+                    listenSocket.Listen(20);
+
+                    while (true)
+                    {
+                        clientRouterName = string.Empty;
+
+                        socket = listenSocket.Accept();
+
+                        socket.NoDelay = true;
+                        socket.ReceiveTimeout = configSettings.HubRoleSettings.ThisRouter.Timeout;
+                        socket.SendTimeout = configSettings.HubRoleSettings.ThisRouter.Timeout;
+
+                        AcceptConnection(socket);
+                    }
+                }
+
+                catch
+                {
+                    if (listenSocket != null)
+                    {
+                        Communicator.CloseSocket(listenSocket, clientRouterName);
+                    }
+                }
+            }
+
+            public void AcceptConnection(Socket socket)
+            {
+                PerformanceCounter threadSocketCounter;
+                SynchronizationQueue<QueueElement> socketQueue;
+
+                SocketInfo socketInfoIn = null;
+                Thread commThread;
+
+                try
+                {
+                    lock (Communicator.socketQueuesLock)
+                    {
+                        socketInfoIn = InitConnection(socket);
+                    }
+                }
+                catch
+                {
+                    Communicator.CloseSocket(socket, "<unknown>");
 
                     socket = null;
                 }
 
                 if (socket != null)
                 {
-                    lock (Communicator.threadQueuesLock)
+                    lock (Communicator.socketQueuesLock)
                     {
-                        commThread = new Thread(new ThreadStart(new CommunicationHandler(socket, clientRouterName, null).ConnectionInStart));
+                        SocketInfo socketInfo;
 
-                        List<Thread> threads;
-
-                        if (Communicator.commInThreads.TryGetValue(clientRouterName, out threads) == false)
+                        if (Communicator.commSockets.TryGetValue(socketInfoIn.RouterName, out socketInfo) == true)
                         {
-                            Communicator.commInThreads[clientRouterName] = new List<Thread>();
+                            socketInfo.Sockets.Add(socket);
+                        }
+                        else
+                        {
+                            socketInfo = socketInfoIn;
+                            Communicator.commSockets[socketInfo.RouterName] = socketInfo;
                         }
 
-                        Communicator.commInThreads[clientRouterName].Add(commThread);
+                        if (Communicator.socketQueues.TryGetValue(socketInfo.RouterName, out socketQueue) == false)
+                        {
+                            threadSocketCounter = new PerformanceCounter();
+                            threadSocketCounter.InstanceLifetime = PerformanceCounterInstanceLifetime.Process;
+                            threadSocketCounter.CategoryName = communicationCategoryName;
+                            threadSocketCounter.CounterName = forwarderQueueSizeName;
+                            threadSocketCounter.InstanceName = socketInfo.RouterName;
+                            threadSocketCounter.ReadOnly = false;
+
+                            socketQueue = new SynchronizationQueue<QueueElement>(threadSocketCounter);
+
+                            Communicator.socketQueues[socketInfo.RouterName] = socketQueue;
+
+                            socketQueue.InUse = true;
+                        }
+                        else
+                        {
+                            if (socketQueue.InUse != true)
+                            {
+                                socketQueue.InUse = true;
+
+                                if (Communicator.deadSocketQueues.ContainsKey(socketInfo.RouterName) == true)
+                                {
+                                    Communicator.deadSocketQueues.Remove(socketInfo.RouterName);
+                                }
+                            }
+                        }
+
+                        commThread = new Thread(new ThreadStart(new CommunicationHandler(socket, socketInfo, socketQueue).ConnectionInStart));
 
                         commThread.Start();
 
-                        startEvent = new ManualResetEvent(false);
-                        startEvent.Reset();
-
-                        commThread = new Thread(new ThreadStart(new CommunicationHandler(socket, clientRouterName, startEvent).ConnectionOutStart));
-
-                        if (Communicator.commOutThreads.TryGetValue(clientRouterName, out threads) == false)
+                        if (socketInfo.UseToSend == true)
                         {
-                            Communicator.commOutThreads[clientRouterName] = new List<Thread>();
+                            commThread = new Thread(new ThreadStart(new CommunicationHandler(socket, socketInfo, socketQueue).ConnectionOutStart));
+
+                            commThread.Start();
                         }
 
-                        Communicator.commOutThreads[clientRouterName].Add(commThread);
-
-                        commThread.Start();
+                        if (socketInfo.Hub == false)
+                        {
+                            SubscriptionMgr.ResendSubscriptions(socketInfo.RouterName);
+                        }
                     }
-
-                    startEvent.WaitOne(10000, false);
                 }
             }
 
-            private string InitConnection()
+            private SocketInfo InitConnection(Socket socket)
             {
-                SocketError socketError;
-                string clientRouterName = string.Empty;
+                SocketInfo socketInfoOut = new SocketInfo();
+                SocketError socketError = SocketError.NoData;
+                int totalBytesRead = 0;
 
                 byte[] inResponse = new byte[1];
                 byte[] outResponse = new byte[1];
                 byte[] inBuffer = new byte[1000];
-                ReceiveStateObject receiveState = new ReceiveStateObject();
 
                 byte[] inStream = new byte[1000];
 
-                receiveState.socket = socket;
-                receiveState.clientRouterName = clientRouterName;
-                receiveState.buffer = inStream;
-                receiveState.receiveDone.Reset();
+                socketInfoOut.Sockets.Add(socket);
 
-                socket.BeginReceive(receiveState.buffer, 0, receiveState.buffer.Length, SocketFlags.None,
-                    InitialReceiveCallback, receiveState);
-
-                receiveState.receiveDone.WaitOne();
-
-                if (receiveState.socketError != SocketError.Success)
+                try
                 {
-                    Communicator.CloseSocket(socket, clientRouterName);
+                    totalBytesRead = socket.Receive(inStream, 0, inStream.Length, SocketFlags.None, out socketError);
+                }
+                catch (SocketException e)
+                {
+                    Communicator.CloseSocket(socket, "<unknown>");
                     socket = null;
 
-                    EventLog.WriteEntry("WspEventRouter", "Receive failed with bad return code: " + receiveState.socketError.ToString(), EventLogEntryType.Warning);
+                    EventLog.WriteEntry("WspEventRouter", "Receive had Socket Exception with error code: " + e.ErrorCode.ToString(), EventLogEntryType.Warning);
 
-                    return string.Empty;
+                    return socketInfoOut;
+                }
+                catch
+                {
                 }
 
-                int preambleLength = BitConverter.ToInt32(receiveState.buffer, 0);
+                if (socketError != SocketError.Success)
+                {
+                    Communicator.CloseSocket(socket, "<unknown>");
+                    socket = null;
 
-                UnicodeEncoding uniEncoding = new UnicodeEncoding();
-                clientRouterName = uniEncoding.GetString(receiveState.buffer, 4, preambleLength - 4);
+                    EventLog.WriteEntry("WspEventRouter", "Receive failed with bad return code: " + socketError.ToString(), EventLogEntryType.Warning);
 
-                if (preambleLength == receiveState.totalBytesRead)
+                    return socketInfoOut;
+                }
+
+                UTF8Encoding uniEncoding = new UTF8Encoding();
+                int position = 0;
+
+                int preambleLength = BitConverter.ToInt32(inStream, position);
+                position += sizeof(Int32);
+
+                socketInfoOut.Hub = BitConverter.ToBoolean(inStream, position);
+                position += sizeof(bool);
+
+                int versionLength = BitConverter.ToInt32(inStream, position);
+                position += sizeof(Int32);
+
+                string versionIn = uniEncoding.GetString(inStream, position, versionLength);
+                position += versionLength;
+
+                int groupLength = BitConverter.ToInt32(inStream, position);
+                position += sizeof(Int32);
+
+                socketInfoOut.Group = uniEncoding.GetString(inStream, position, groupLength);
+                position += groupLength;
+
+                int routerNameLength = BitConverter.ToInt32(inStream, position);
+                position += sizeof(Int32);
+
+                socketInfoOut.RouterName = uniEncoding.GetString(inStream, position, routerNameLength);
+
+                if (preambleLength == totalBytesRead && string.Compare(version, versionIn, true) == 0)
                 {
                     outResponse[0] = 1;
                 }
@@ -720,185 +1334,79 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                 socket.Send(outResponse, 0, 1, SocketFlags.None, out socketError);
 
+                if (socketInfoOut.Hub == false || string.Compare(socketInfoOut.Group, configSettings.EventRouterSettings.Group, true) == 0)
+                {
+                    socketInfoOut.UseToSend = true;
+                }
+                else
+                {
+                    socketInfoOut.UseToSend = false;
+                }
+
                 if (socketError != SocketError.Success || outResponse[0] == 0)
                 {
-                    Communicator.CloseSocket(socket, clientRouterName);
+                    Communicator.CloseSocket(socket, socketInfoOut.RouterName);
                     socket = null;
 
-                    //if (socketError != SocketError.Success)
-                    //{
-                    //    EventLog.WriteEntry("WspEventRouter", "Send failed with bad return code: " + socketError.ToString(), EventLogEntryType.Warning);
-                    //}
-                    //else
-                    //{
-                    //    EventLog.WriteEntry("WspEventRouter", "Connection was rejected by parent with false return code", EventLogEntryType.Warning);
-                    //}
-
-                    return clientRouterName;
+                    return socketInfoOut;
                 }
 
-                return clientRouterName;
+                return socketInfoOut;
+            }
+        }
+
+        internal class CommunicationHandler : ServiceThread
+        {
+            private Socket socket;
+            private SocketInfo clientSocketInfo;
+            private SynchronizationQueue<QueueElement> socketQueue;
+
+            public CommunicationHandler(Socket socket, SocketInfo clientSocketInfo, SynchronizationQueue<QueueElement> socketQueue)
+            {
+                this.socket = socket;
+                this.clientSocketInfo = clientSocketInfo;
+                this.socketQueue = socketQueue;
             }
 
-            private static void InitialReceiveCallback(IAsyncResult ar)
+            public override void Start()
             {
-                ReceiveStateObject receiveState = null;
-
-                try
-                {
-                    receiveState = (ReceiveStateObject)ar.AsyncState;
-
-                    Socket socket = receiveState.socket;
-
-                    receiveState.totalBytesRead = socket.EndReceive(ar, out receiveState.socketError);
-                }
-                finally
-                {
-                    if (receiveState != null)
-                    {
-                        receiveState.receiveDone.Set();
-                    }
-                }
+                throw new Exception("The method or operation is not implemented.");
             }
 
             public void ConnectionInStart()
             {
-                try
-                {
-                    InHandler(new ReceiveStateObject());
-                }
-                catch
-                {
-                    // Intentionally left blank. Just end the thread and cleanup.
-                }
-                finally
-                {
-                    try
-                    {
-                        if (socket != null)
-                        {
-                            Communicator.CloseSocket(socket, clientRouterName);
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        EventLog.WriteEntry("WspEventRouter", e.ToString(), EventLogEntryType.Warning);
-                    }
-
-                    socket = null;
-                }
-
-                return;
-            }
-
-            public void ConnectionOutStart()
-            {
-                bool exitThread = false;
-
-                try
-                {
-                    try
-                    {
-                        lock (Communicator.threadQueuesLock)
-                        {
-                            if (Communicator.threadQueues.TryGetValue(clientRouterName, out threadQueue) == false)
-                            {
-                                threadQueueCounter = new PerformanceCounter();
-                                threadQueueCounter.InstanceLifetime = PerformanceCounterInstanceLifetime.Process;
-                                threadQueueCounter.CategoryName = communicationCategoryName;
-                                threadQueueCounter.CounterName = forwarderQueueSizeName;
-                                threadQueueCounter.InstanceName = clientRouterName;
-                                threadQueueCounter.ReadOnly = false;
-
-                                threadQueue = new SynchronizationQueue<QueueElement>(threadQueueCounter);
-
-                                Communicator.threadQueues[clientRouterName] = threadQueue;
-
-                                threadQueue.InUse = true;
-
-                                //SubscriptionMgr.ResendSubscriptions(clientRouterName);
-                            }
-                            else
-                            {
-                                if (threadQueue.InUse != true)
-                                {
-                                    threadQueue.InUse = true;
-
-                                    if (Communicator.deadThreadQueues.ContainsKey(clientRouterName) == true)
-                                    {
-                                        Communicator.deadThreadQueues.Remove(clientRouterName);
-                                    }
-
-                                    //SubscriptionMgr.ResendSubscriptions(clientRouterName);
-                                }
-                            }
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        EventLog.WriteEntry("WspEventRouter", e.ToString(), EventLogEntryType.Warning);
-
-                        exitThread = true;
-                    }
-                    finally
-                    {
-                        parentStartEvent.Set();
-                    }
-
-                    if (exitThread == false)
-                    {
-                        OutHandler();
-                    }
-                }
-                catch
-                {
-                    // Intentionally left blank. Just end the thread and cleanup.
-                }
-                finally
-                {
-                    try
-                    {
-                        Communicator.CloseSocket(socket, clientRouterName);
-                    }
-                    catch (Exception e)
-                    {
-                        EventLog.WriteEntry("WspEventRouter", e.ToString(), EventLogEntryType.Warning);
-                    }
-
-                    socket = null;
-                }
-
-                return;
-            }
-
-            private void InHandler(ReceiveStateObject state)
-            {
-                Thread receiveMonitorThread;
-
-                state.socket = this.socket;
-                state.clientRouterName = this.clientRouterName;
+                SocketAsyncEventArgs receiveEventArg;
+                ReceiveState state = new ReceiveState();
 
                 state.Reset();
 
-                state.blocking = true;
+                state.socket = this.socket;
+                state.socketInfo = this.clientSocketInfo;
+                state.socketQueue = this.socketQueue;
 
-                receiveMonitorThread = new Thread(new ThreadStart(new ReceiveMonitor(state, socket.ReceiveTimeout).Start));
+                receiveEventArg = new SocketAsyncEventArgs();
+                receiveEventArg.Completed += new EventHandler<SocketAsyncEventArgs>(receiveEventArg_Completed);
+                receiveEventArg.UserToken = state;
+                receiveEventArg.SetBuffer(state.buffer, 0, state.buffer.Length);
 
-                receiveMonitorThread.Start();
+                if (state.socket.ReceiveAsync(receiveEventArg) == false)
+                {
+                    ProcessReceive(receiveEventArg);
+                }
 
-                state.socket.BeginReceive(state.buffer, 0, averageEventSize, SocketFlags.None,
-                    new AsyncCallback(ReceiveCallback), state);
-
-                state.receiveDone.WaitOne();
-
-                state.blocking = false;
+                return;
             }
 
-            private static void ReceiveCallback(IAsyncResult ar)
+            private void receiveEventArg_Completed(object sender, SocketAsyncEventArgs receiveEventArg)
             {
-                ReceiveStateObject state = (ReceiveStateObject)ar.AsyncState;
+                ProcessReceive(receiveEventArg);
+            }
+
+            private static void ProcessReceive(SocketAsyncEventArgs receiveEventArg)
+            {
+                ReceiveState state = (ReceiveState)receiveEventArg.UserToken;
                 Socket socket = state.socket;
-                SocketError socketError;
+                SocketError socketError = receiveEventArg.SocketError;
 
                 Guid eventType = Guid.Empty;
                 string originatingRouterName = string.Empty;
@@ -908,157 +1416,81 @@ namespace Microsoft.WebSolutionsPlatform.Event
                 int bytesProcessed = 0;
                 int remainingLength = 0;
 
-                try
+                if (receiveEventArg.BytesTransferred <= 0 || receiveEventArg.SocketError != SocketError.Success)
                 {
-                    if (socket.Connected == true)
+                    Communicator.CloseSocket(socket, state.socketInfo.RouterName);
+
+                    return;
+                }
+
+                bytesRead = receiveEventArg.BytesTransferred;
+
+                while (bytesProcessed < bytesRead)
+                {
+                    if (state.currentReceiveLength == 0)
                     {
-                        try
-                        {
-                            bytesRead = socket.EndReceive(ar, out socketError);
+                        bytesProcessed += GetReceiveLength(state, bytesProcessed, bytesRead);
 
-                            if (socketError != SocketError.Success)
-                            {
-                                //EventLog.WriteEntry("WspEventRouter", "Receive failed with bad return code: " + socketError.ToString(), EventLogEntryType.Warning);
+                        continue;
+                    }
 
-                                state.receiveDone.Set();
-                                return;
-                            }
-                            else
-                            {
-                                if (bytesRead == 0)
-                                {
-                                    if (socket.Connected == false)
-                                    {
-                                        state.receiveDone.Set();
-                                        return;
-                                    }
+                    remainingLength = state.currentReceiveLength - state.currentProcessedLength;
 
-                                    socket.Blocking = false;
+                    if (bytesRead - bytesProcessed >= remainingLength)
+                    {
+                        byte[] inBuffer = new byte[remainingLength];
 
-                                    int bytes = socket.Receive(new byte[1], 0, 1, SocketFlags.Peek, out socketError);
+                        Buffer.BlockCopy(state.buffer, bytesProcessed, inBuffer, 0, remainingLength);
 
-                                    socket.Blocking = true;
+                        state.buffers.Add(inBuffer);
 
-                                    if (socketError == SocketError.WouldBlock)
-                                    {
-                                        // connection is still alive
-                                    }
-                                    else
-                                    {
-                                        if (socketError != SocketError.Success)
-                                        {
-                                            state.receiveDone.Set();
-                                            return;
-                                        }
-                                        else
-                                        {
-                                            if (bytes == 0)
-                                            {
-                                                state.receiveDone.Set();
-                                                return;
-                                            }
-                                            else
-                                            {
-                                                // have actual serializedEvent from the server ready to be received
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        catch (Exception e)
-                        {
-                            EventLog.WriteEntry("WspEventRouter", e.ToString(), EventLogEntryType.Warning);
+                        state.totalBytesRead = state.totalBytesRead + remainingLength;
 
-                            state.receiveDone.Set();
-                            return;
-                        }
+                        bytesProcessed = bytesProcessed + remainingLength;
+                        state.currentProcessedLength = state.currentProcessedLength + remainingLength;
                     }
                     else
                     {
-                        state.receiveDone.Set();
-                        return;
+                        byte[] inBuffer = new byte[bytesRead - bytesProcessed];
+
+                        Buffer.BlockCopy(state.buffer, bytesProcessed, inBuffer, 0, bytesRead - bytesProcessed);
+
+                        state.buffers.Add(inBuffer);
+
+                        state.totalBytesRead = state.totalBytesRead + bytesRead - bytesProcessed;
+
+                        state.currentProcessedLength = state.currentProcessedLength + bytesRead - bytesProcessed;
+                        bytesProcessed = bytesRead;
                     }
 
-                    while (bytesProcessed < bytesRead)
+                    if (state.currentProcessedLength == state.currentReceiveLength)
                     {
-                        if (state.currentReceiveLength == 0)
+                        byte[] serializedEvent = ConcatArrayList(state.buffers);
+
+                        WspEvent wspEvent = WspEvent.ChangeInRouterName(serializedEvent, state.socketInfo.routerNameEncoded, state.socketInfo.RouterName);
+
+                        if (String.Compare(wspEvent.OriginatingRouterName, Router.localRouterName, true) != 0)
                         {
-                            bytesProcessed += GetReceiveLength(state, bytesProcessed, bytesRead);
-                            continue;
+                            QueueElement element = new QueueElement();
+
+                            element.WspEvent = wspEvent;
+
+                            rePublisherQueue.Enqueue(element);
                         }
 
-                        remainingLength = state.currentReceiveLength - state.currentProcessedLength;
-
-                        if (bytesRead - bytesProcessed >= remainingLength)
-                        {
-                            byte[] inBuffer = new byte[remainingLength];
-
-                            Buffer.BlockCopy(state.buffer, bytesProcessed, inBuffer, 0, remainingLength);
-
-                            state.buffers.Add(inBuffer);
-
-                            state.totalBytesRead = state.totalBytesRead + remainingLength;
-
-                            bytesProcessed = bytesProcessed + remainingLength;
-                            state.currentProcessedLength = state.currentProcessedLength + remainingLength;
-                        }
-                        else
-                        {
-                            byte[] inBuffer = new byte[bytesRead - bytesProcessed];
-
-                            Buffer.BlockCopy(state.buffer, bytesProcessed, inBuffer, 0, bytesRead - bytesProcessed);
-
-                            state.buffers.Add(inBuffer);
-
-                            state.totalBytesRead = state.totalBytesRead + bytesRead - bytesProcessed;
-
-                            state.currentProcessedLength = state.currentProcessedLength + bytesRead - bytesProcessed;
-                            bytesProcessed = bytesRead;
-                        }
-
-                        if (state.currentProcessedLength == state.currentReceiveLength)
-                        {
-                            byte[] serializedEvent = ConcatArrayList(state.buffers);
-
-                            Event.GetHeader(serializedEvent, out originatingRouterName, out inRouterName, out eventType);
-
-                            if (String.Compare(originatingRouterName, Router.localRouterName, true) != 0)
-                            {
-                                Router.channelDictionary[originatingRouterName] = state.clientRouterName;
-
-                                QueueElement element = new QueueElement();
-
-                                element.SerializedEvent = serializedEvent;
-                                element.SerializedLength = state.totalBytesRead;
-                                element.EventType = eventType;
-                                element.OriginatingRouterName = originatingRouterName;
-                                element.InRouterName = state.clientRouterName;
-
-                                rePublisherQueue.Enqueue(element);
-                            }
-
-                            state.Reset();
-                        }
-                    }
-
-                    if (bytesRead > 0 || socket.Connected == true)
-                    {
-                        socket.BeginReceive(state.buffer, 0, averageEventSize, 0,
-                            new AsyncCallback(ReceiveCallback), state);
-                    }
-                    else
-                    {
-                        state.receiveDone.Set();
+                        state.Reset();
                     }
                 }
-                catch
+
+                if (state.socket.ReceiveAsync(receiveEventArg) == false)
                 {
-                    state.receiveDone.Set();
+                    ProcessReceive(receiveEventArg);
                 }
+
+                return;
             }
 
-            private static int GetReceiveLength(ReceiveStateObject state, int bytesProcessed, int bytesRead)
+            private static int GetReceiveLength(ReceiveState state, int bytesProcessed, int bytesRead)
             {
                 if (bytesRead - bytesProcessed < 4 - state.currentReceiveLengthBytesRead)
                 {
@@ -1082,148 +1514,209 @@ namespace Microsoft.WebSolutionsPlatform.Event
                 return returnLength;
             }
 
-            private void OutHandler()
+            public void ConnectionOutStart()
+            {
+                SendState state = SendState.Create(this.clientSocketInfo);
+                RefCount refCount;
+
+                if (state == null)
+                {
+                    return;
+                }
+
+                lock (Communicator.sendThreadQueueLock)
+                {
+                    if (Communicator.serverSendThreads.TryGetValue(this.clientSocketInfo.RouterName, out refCount) == false)
+                    {
+                        refCount = new RefCount();
+                        Communicator.serverSendThreads[this.clientSocketInfo.RouterName] = refCount;
+                    }
+                }
+
+                if (Interlocked.Increment(ref refCount.Count) > 2)
+                {
+                    Interlocked.Decrement(ref refCount.Count);
+                }
+                else
+                {
+                    ProcessSend(state);
+                }
+            }
+
+            /// <summary>
+            /// Callback by threadpool
+            /// </summary>
+            internal static void SendCallback(object routerName)
+            {
+                try
+                {
+                    SendState state = SendState.Create((string)routerName);
+
+                    if (state == null)
+                    {
+                        RefCount.Decrement((string)routerName);
+
+                        return;
+                    }
+
+                    ProcessSend(state);
+                }
+                catch
+                {
+                    RefCount.Decrement((string)routerName);
+                }
+            }
+
+            internal static void ProcessSend(SendState state)
             {
                 QueueElement element;
-                QueueElement defaultElement = default(QueueElement);
                 QueueElement newElement = new QueueElement();
                 bool elementRetrieved;
-                ArraySegment<byte> bufferLengthOut;
+                ArraySegment<byte> bufferLengthOut = new ArraySegment<byte>(BitConverter.GetBytes(0));
                 ArraySegment<byte> bufferDataOut;
                 List<ArraySegment<byte>> buffersOut;
-                SocketError socketError;
+                Socket currSocket;
+                string routerName = state.socketInfo.RouterName;
 
-                while (true)
+                try
                 {
-                    try
+                    while (true)
                     {
-                        if (socket.Connected == false)
+                        lock (Communicator.socketQueuesLock)
                         {
+                            if (state.socketInfo.Sockets.Count == 0)
+                            {
+                                currSocket = null;
+                            }
+                            else
+                            {
+                                if (state.socketInfo.Sockets.Count == 1)
+                                {
+                                    currSocket = state.socketInfo.Sockets[0];
+                                }
+                                else
+                                {
+                                    Random randObj = new Random();
+                                    currSocket = state.socketInfo.Sockets[randObj.Next(state.socketInfo.Sockets.Count)];
+                                }
+
+                                if (currSocket.Connected == false)
+                                {
+                                    currSocket = null;
+
+                                    for (int i = 0; i < state.socketInfo.Sockets.Count; i++)
+                                    {
+                                        if (state.socketInfo.Sockets[i].Connected == true)
+                                        {
+                                            currSocket = state.socketInfo.Sockets[i];
+
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        if (currSocket == null)
+                        {
+                            RefCount.Decrement(state.socketInfo.RouterName);
+                            SendState.Recycle(state);
                             return;
                         }
 
-                        element = threadQueue.Dequeue();
+                        try
+                        {
+                            if (currSocket.Connected == false)
+                            {
+                                RefCount.Decrement(state.socketInfo.RouterName);
+                                SendState.Recycle(state);
+                                return;
+                            }
 
-                        if (element.Equals(defaultElement) == true)
+                            element = state.socketQueue.Dequeue(10000);
+
+                            if (element == default(QueueElement))
+                            {
+                                element = newElement;
+                                elementRetrieved = false;
+                            }
+                            else
+                            {
+                                elementRetrieved = true;
+                            }
+                        }
+                        catch (InvalidOperationException)
                         {
                             element = newElement;
                             elementRetrieved = false;
                         }
-                        else
+
+                        if (elementRetrieved == true)
                         {
-                            elementRetrieved = true;
-                        }
-                    }
-                    catch (InvalidOperationException)
-                    {
-                        element = newElement;
-                        elementRetrieved = false;
-                    }
+                            state.element = element;
+                            state.socket = currSocket;
 
-                    if (elementRetrieved == true)
-                    {
-                        buffersOut = new List<ArraySegment<byte>>(2);
+                            buffersOut = new List<ArraySegment<byte>>(2);
 
-                        bufferLengthOut = new ArraySegment<byte>(BitConverter.GetBytes(element.SerializedEvent.Length));
-                        buffersOut.Add(bufferLengthOut);
+                            Buffer.BlockCopy(BitConverter.GetBytes(element.WspEvent.SerializedEvent.Length), 0, bufferLengthOut.Array, 0, sizeof(Int32));
+                            buffersOut.Add(bufferLengthOut);
 
-                        bufferDataOut = new ArraySegment<byte>(element.SerializedEvent);
-                        buffersOut.Add(bufferDataOut);
+                            bufferDataOut = new ArraySegment<byte>(element.WspEvent.SerializedEvent);
+                            buffersOut.Add(bufferDataOut);
 
-                        try
-                        {
-                            socket.Send(buffersOut, SocketFlags.None, out socketError);
-                        }
-                        catch (ObjectDisposedException)
-                        {
-                            try
+                            SocketAsyncEventArgs sendEventArg = sendEventArg = new SocketAsyncEventArgs();
+                            sendEventArg.Completed += new EventHandler<SocketAsyncEventArgs>(sendEventArg_Completed);
+
+                            sendEventArg.BufferList = buffersOut;
+                            sendEventArg.UserToken = state;
+
+                            SendState newState = SendState.Create(state.socketInfo);
+                            state = newState;
+
+                            bool willRaiseEvent = currSocket.SendAsync(sendEventArg);
+                            if (!willRaiseEvent)
                             {
-                                threadQueue.Enqueue(element);
+                                SendCompleted(sendEventArg);
                             }
-                            catch (Exception ee)
-                            {
-                                EventLog.WriteEntry("WspEventRouter", ee.ToString(), EventLogEntryType.Warning);
-                            }
-
-                            return;
-                        }
-                        catch (Exception e)
-                        {
-                            try
-                            {
-                                threadQueue.Enqueue(element);
-                            }
-                            catch (Exception ee)
-                            {
-                                EventLog.WriteEntry("WspEventRouter", ee.ToString(), EventLogEntryType.Warning);
-                            }
-
-                            EventLog.WriteEntry("WspEventRouter", e.ToString(), EventLogEntryType.Warning);
-
-                            return;
-                        }
-
-                        if (socketError != SocketError.Success)
-                        {
-                            try
-                            {
-                                threadQueue.Enqueue(element);
-                            }
-                            catch (Exception ee)
-                            {
-                                EventLog.WriteEntry("WspEventRouter", ee.ToString(), EventLogEntryType.Warning);
-                            }
-
-                            Communicator.CloseSocket(socket, clientRouterName);
-                            socket = null;
-
-                            //EventLog.WriteEntry("WspEventRouter", "Send failed with bad return code: " + socketError.ToString(), EventLogEntryType.Warning);
-
-                            return;
                         }
                     }
                 }
-            }
-        }
-
-        internal class ReceiveMonitor : ServiceThread
-        {
-            ReceiveStateObject state;
-            int timeout;
-
-            public ReceiveMonitor(ReceiveStateObject state, int timeout)
-            {
-                this.state = state;
-                this.timeout = timeout;
-            }
-
-            public override void Start()
-            {
-                while (true)
+                catch (Exception e)
                 {
-                    Thread.Sleep(timeout);
+                    EventLog.WriteEntry("WspEventRouter", e.ToString(), EventLogEntryType.Warning);
+                }
 
-                    if (state.blocking == false)
-                    {
-                        return;
-                    }
+                RefCount.Decrement(routerName);
+                SendState.Recycle(state);
+                return;
+            }
 
+            private static void sendEventArg_Completed(object sender, SocketAsyncEventArgs sendEventArg)
+            {
+                SendCompleted(sendEventArg);
+            }
+
+            private static void SendCompleted(SocketAsyncEventArgs sendEventArg)
+            {
+                SendState state = (SendState)sendEventArg.UserToken;
+
+                if (sendEventArg.SocketError != SocketError.Success)
+                {
                     try
                     {
-                        if (state.socket.Connected == true)
-                        {
-                            continue;
-                        }
+                        state.socketQueue.Enqueue(state.element);
                     }
-                    catch
+                    catch (Exception e)
                     {
-                        // If an exception occurs, we want to kill the current connection
+                        EventLog.WriteEntry("WspEventRouter", e.ToString(), EventLogEntryType.Warning);
                     }
 
-                    state.receiveDone.Set();
-
-                    return;
+                    Communicator.CloseSocket(state.socket, state.socketInfo.RouterName);
                 }
+
+                sendEventArg.Dispose();
+
+                SendState.Recycle(state);
             }
         }
 
@@ -1236,7 +1729,6 @@ namespace Microsoft.WebSolutionsPlatform.Event
             public override void Start()
             {
                 QueueElement element;
-                QueueElement defaultElement = default(QueueElement);
                 QueueElement newElement = new QueueElement();
                 bool elementRetrieved;
 
@@ -1257,7 +1749,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         {
                             element = forwarderQueue.Dequeue();
 
-                            if (element.Equals(defaultElement) == true)
+                            if (element == default(QueueElement))
                             {
                                 element = newElement;
                                 elementRetrieved = false;
@@ -1280,46 +1772,15 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                         if (elementRetrieved == true)
                         {
-                            if (channelDictionary.TryGetValue(element.OriginatingRouterName, out element.InRouterName) == false)
+                            if (element.WspEvent.EventType == Subscription.SubscriptionEvent ||
+                                element.WspEvent.EventType == configSettings.EventRouterSettings.MgmtGuid ||
+                                element.WspEvent.EventType == configSettings.EventRouterSettings.CmdGuid)
                             {
-                                element.InRouterName = string.Empty;
-                            }
-
-                            if (element.EventType == Event.SubscriptionEvent || element.EventType == mgmtGroup || element.EventType == cmdGroup)
-                            {
-                                lock (Communicator.threadQueuesLock)
-                                {
-                                    foreach (string routerName in Communicator.threadQueues.Keys)
-                                    {
-                                        if (string.Compare(element.InRouterName, routerName, true) != 0)
-                                        {
-                                            Communicator.threadQueues[routerName].Enqueue(element);
-                                        }
-                                    }
-                                }
+                                DistributeSpecialEvents(element);
                             }
                             else
                             {
-                                SubscriptionDetail subscriptionDetail;
-                                SynchronizationQueue<QueueElement> queue;
-
-                                if (SubscriptionMgr.subscriptions.TryGetValue(element.EventType, out subscriptionDetail) == true)
-                                {
-                                    lock (subscriptionDetail.SubscriptionDetailLock)
-                                    {
-                                        foreach (string routerName in subscriptionDetail.Routes.Keys)
-                                        {
-                                            if (string.Compare(routerName, Router.LocalRouterName, true) != 0 &&
-                                                string.Compare(routerName, element.InRouterName, true) != 0)
-                                            {
-                                                if (Communicator.threadQueues.TryGetValue(routerName, out queue) == true)
-                                                {
-                                                    queue.Enqueue(element);
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
+                                DistributeNormalEvents(element);
                             }
                         }
                     }
@@ -1331,6 +1792,206 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                     return;
                 }
+            }
+
+            private static void DistributeNormalEvents(QueueElement element)
+            {
+                SynchronizationQueue<QueueElement> queue;
+                SubscriptionDetail subscriptionDetail;
+                SocketInfo socketInfo;
+
+                if (SubscriptionMgr.subscriptions.TryGetValue(element.WspEvent.EventType, out subscriptionDetail) == true)
+                {
+                    lock (subscriptionDetail.SubscriptionDetailLock)
+                    {
+                        foreach (string routerName in subscriptionDetail.Routes.Keys)
+                        {
+                            if (string.IsNullOrEmpty(routerName) == false &&
+                                string.Compare(routerName, Router.LocalRouterName, true) != 0 &&
+                                string.Compare(routerName, element.WspEvent.InRouterName, true) != 0)
+                            {
+                                if (Router.hubRole == false)
+                                {
+                                    // forward all if this is a node
+                                }
+                                else
+                                {
+                                    if (Communicator.commSockets.ContainsKey(routerName) == true)
+                                    {
+                                        socketInfo = Communicator.commSockets[routerName];
+                                    }
+                                    else
+                                    {
+                                        if (Communicator.deadSocketQueues.ContainsKey(routerName) == true)
+                                        {
+                                            socketInfo = Communicator.deadSocketQueues[routerName];
+                                        }
+                                        else
+                                        {
+                                            continue;
+                                        }
+                                    }
+
+                                    if (socketInfo.Hub == false)
+                                    {
+                                        // forward to all nodes
+                                    }
+                                    else
+                                    {
+                                        if (element.Source == EventSource.FromLocal || element.Source == EventSource.FromNode)
+                                        {
+                                            if (string.Compare(socketInfo.Group, configSettings.EventRouterSettings.Group, true) == 0)
+                                            {
+                                                // forward to all hubs in group
+                                            }
+                                            else
+                                            {
+                                                if (socketInfo.UseToSend == true)
+                                                {
+                                                    // forward to these peers
+                                                }
+                                                else
+                                                {
+                                                    continue;  // don't forward to these peers
+                                                }
+                                            }
+                                        }
+                                        else
+                                        {
+                                            if (string.Compare(socketInfo.Group, configSettings.EventRouterSettings.Group, true) == 0)
+                                            {
+                                                if (element.Source == EventSource.FromPeer)
+                                                {
+                                                    // forward to all hubs in group
+                                                }
+                                                else
+                                                {
+                                                    continue;  // don't forward to other hubs
+                                                }
+                                            }
+                                            else
+                                            {
+                                                continue;  // don't forward to these peers
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if (Communicator.socketQueues.TryGetValue(routerName, out queue) == true)
+                                {
+                                    queue.Enqueue(element);
+
+                                    RefCount refCount;
+
+                                    if (Communicator.serverSendThreads.TryGetValue(routerName, out refCount) == false)
+                                    {
+                                        lock (Communicator.sendThreadQueueLock)
+                                        {
+                                            if (Communicator.serverSendThreads.ContainsKey(routerName) == false)
+                                            {
+                                                refCount = new RefCount();
+                                                Communicator.serverSendThreads[routerName] = refCount;
+                                            }
+                                        }
+                                    }
+
+                                    if (Interlocked.Increment(ref refCount.Count) > 2)
+                                    {
+                                        Interlocked.Decrement(ref refCount.Count);
+                                    }
+                                    else
+                                    {
+                                        ThreadPool.QueueUserWorkItem(new WaitCallback(CommunicationHandler.SendCallback), routerName);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                return;
+            }
+
+            private static void DistributeSpecialEvents(QueueElement element)
+            {
+                SynchronizationQueue<QueueElement> queue;
+                SocketInfo socketInfo;
+
+                lock (Communicator.socketQueuesLock)
+                {
+                    foreach (string routerName in Communicator.socketQueues.Keys)
+                    {
+                        if (string.Compare(element.WspEvent.InRouterName, routerName, true) != 0)
+                        {
+                            if (element.Source == EventSource.FromLocal || element.Source == EventSource.FromNode)
+                            {
+                                // forward to all
+                            }
+                            else
+                            {
+                                if (Communicator.commSockets.ContainsKey(routerName) == true)
+                                {
+                                    socketInfo = Communicator.commSockets[routerName];
+                                }
+                                else
+                                {
+                                    if (Communicator.deadSocketQueues.ContainsKey(routerName) == true)
+                                    {
+                                        socketInfo = Communicator.deadSocketQueues[routerName];
+                                    }
+                                    else
+                                    {
+                                        continue;
+                                    }
+                                }
+
+                                if (socketInfo.Hub == false)
+                                {
+                                    // forward to all nodes
+                                }
+                                else
+                                {
+                                    if (string.Compare(socketInfo.Group, configSettings.EventRouterSettings.Group, true) == 0 ||
+                                        element.Source == EventSource.FromPeer)
+                                    {
+                                        continue;  // don't forward to other hubs of same group or if source is from a peer
+                                    }
+                                    else
+                                    {
+                                        // forward to all peers
+                                    }
+                                }
+                            }
+
+                            queue = Communicator.socketQueues[routerName];
+
+                            queue.Enqueue(element);
+
+                            RefCount refCount;
+
+                            if (Communicator.serverSendThreads.TryGetValue(routerName, out refCount) == false)
+                            {
+                                lock (Communicator.sendThreadQueueLock)
+                                {
+                                    if (Communicator.serverSendThreads.ContainsKey(routerName) == false)
+                                    {
+                                        refCount = new RefCount();
+                                        Communicator.serverSendThreads[routerName] = refCount;
+                                    }
+                                }
+                            }
+
+                            if (Interlocked.Increment(ref refCount.Count) > 2)
+                            {
+                                Interlocked.Decrement(ref refCount.Count);
+                            }
+                            else
+                            {
+                                ThreadPool.QueueUserWorkItem(new WaitCallback(CommunicationHandler.SendCallback), routerName);
+                            }
+                        }
+                    }
+                }
+                return;
             }
         }
     }

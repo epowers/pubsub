@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Text;
 using System.Net;
 using Microsoft.WebSolutionsPlatform.Event;
-using Microsoft.WebSolutionsPlatform.Event.PubSubManager;
+using Microsoft.WebSolutionsPlatform.PubSubManager;
+
+[assembly: CLSCompliant(true)]
 
 namespace WspEventLogTest
 {
@@ -19,11 +21,15 @@ namespace WspEventLogTest
         public Int16 Int16Prop { get; set; }
         public Int32 Int32Prop { get; set; }
         public Int64 Int64Prop { get; set; }
+        [property: CLSCompliant(false)]
         public SByte SByteProp { get; set; }
         public Single SingleProp { get; set; }
         public String StringProp { get; set; }
+        [property: CLSCompliant(false)]
         public UInt16 UInt16Prop { get; set; }
+        [property: CLSCompliant(false)]
         public UInt32 UInt32Prop { get; set; }
+        [property: CLSCompliant(false)]
         public UInt64 UInt64Prop { get; set; }
         public Version VersionProp { get; set; }
         public DateTime DateTimeProp { get; set; }
@@ -133,7 +139,7 @@ namespace WspEventLogTest
 
             e2 = new LogEntry(eSerialized);
 
-            pubMgr.Publish(eSerialized);
+            pubMgr.Publish(e1.EventType, eSerialized);
         }
     }
 }

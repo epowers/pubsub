@@ -19,10 +19,10 @@ using System.Reflection.Emit;
 using System.Xml;
 using System.Xml.XPath;
 using Microsoft.WebSolutionsPlatform.Event;
-using Microsoft.WebSolutionsPlatform.Event.PubSubManager;
+using Microsoft.WebSolutionsPlatform.PubSubManager;
 using Microsoft.WebSolutionsPlatform.Common;
 
-namespace Microsoft.WebSolutionsPlatform.Event
+namespace Microsoft.WebSolutionsPlatform.Router
 {
     public partial class Router : ServiceBase
     {
@@ -55,7 +55,14 @@ namespace Microsoft.WebSolutionsPlatform.Event
                     {
                         try
                         {
-                            pubMgr = new PublishManager((uint)Router.thisTimeout);
+                            if (hubRole == true)
+                            {
+                                pubMgr = new PublishManager((uint)configSettings.HubRoleSettings.ThisRouter.Timeout);
+                            }
+                            else
+                            {
+                                pubMgr = new PublishManager((uint)configSettings.NodeRoleSettings.ParentRouter.Timeout);
+                            }
 
                             break;
                         }
@@ -71,7 +78,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         {
                             element = cmdQueue.Dequeue();
 
-                            if (element.Equals(defaultElement) == true)
+                            if (element == defaultElement)
                             {
                                 element = newElement;
                                 elementRetrieved = false;
@@ -91,7 +98,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         {
                             forwarderQueue.Enqueue(element);
 
-                            CommandRequest request = new CommandRequest(element.SerializedEvent);
+                            CommandRequest request = new CommandRequest(element.WspEvent.Body);
                             CommandResponse response = request.GetResponse();
 
                             if (string.IsNullOrEmpty(request.TargetMachineFilter) == false)
@@ -108,7 +115,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                             {
                                 targetFilter = new Regex(request.TargetRoleFilter, RegexOptions.IgnoreCase);
 
-                                if (targetFilter.IsMatch(role) == false)
+                                if (targetFilter.IsMatch(configSettings.EventRouterSettings.Role) == false)
                                 {
                                     continue;
                                 }
@@ -1480,7 +1487,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                             try
                             {
-                                pubMgr.Publish(response.Serialize());
+                                pubMgr.Publish(response.EventType, response.Serialize());
                             }
                             catch
                             {

@@ -4,7 +4,7 @@ using System.Text;
 using System.Threading;
 using System.Diagnostics;
 
-namespace Microsoft.WebSolutionsPlatform.Event
+namespace Microsoft.WebSolutionsPlatform.Router
 {
     /// <summary>
     /// A wrapper class of the Queue class to make the Queue class thread safe.
@@ -108,10 +108,13 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                     resetEvent.Set();
 
-                    this.size = this.size + ((QueueElement)((object)item)).SerializedLength + 40;
+                    if (item is QueueElement)
+                    {
+                        this.size = this.size + ((QueueElement)((object)item)).WspEvent.SerializedEvent.Length;
+                    }
 
                     if (performanceCounter != null)
-                        performanceCounter.RawValue = (long)this.Count;
+                        performanceCounter.RawValue = (long)Count;
                 }
                 finally
                 {
@@ -140,20 +143,33 @@ namespace Microsoft.WebSolutionsPlatform.Event
 		{
 			T item;
 
-            if (this.Count > 0 || resetEvent.WaitOne(timeoutIn, false) == true)
+            if (Count > 0 || resetEvent.WaitOne(timeoutIn, false) == true)
 			{
                 if (mut.WaitOne(timeoutIn, false) == true)
 				{
                     try
                     {
-                        item = base.Dequeue();
+                        if (base.Count > 0)
+                        {
+                            item = base.Dequeue();
+                        }
+                        else
+                        {
+                            resetEvent.Reset();
+                            mut.ReleaseMutex();
+
+                            return default(T);
+                        }
 
                         if (performanceCounter != null)
-                            performanceCounter.RawValue = (long)this.Count;
+                            performanceCounter.RawValue = (long)Count;
 
-                        this.size = this.size - ((QueueElement)((object)item)).SerializedLength + 40;
+                        if (item is QueueElement)
+                        {
+                            this.size = this.size - ((QueueElement)((object)item)).WspEvent.SerializedEvent.Length;
+                        }
 
-                        if (this.Count > 0)
+                        if (Count > 0)
                         {
                             resetEvent.Set();
                         }
