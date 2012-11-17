@@ -220,7 +220,7 @@ namespace Microsoft.WebSolutionsPlatform.Router
                                     subscription.Subscribe = true;
                                     subscription.SubscriptionEventType = subscriptionEventType;
 
-                                    WspEvent wspEvent = new WspEvent(Subscription.SubscriptionEvent, extendedHeaders, subscription.Serialize());
+                                    Microsoft.WebSolutionsPlatform.PubSubManager.WspEvent wspEvent = new Microsoft.WebSolutionsPlatform.PubSubManager.WspEvent(Subscription.SubscriptionEvent, extendedHeaders, subscription.Serialize());
 
                                     QueueElement element = new QueueElement();
 

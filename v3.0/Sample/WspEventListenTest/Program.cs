@@ -97,7 +97,7 @@ namespace WspEventListenTest
             }
         }
 
-        public void OnNext(WspEvent wspEvent)
+        public void OnNext(Microsoft.WebSolutionsPlatform.PubSubManager.WspEvent wspEvent)
         {
             WebpageEvent localEvent;
 
