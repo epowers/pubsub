@@ -4,10 +4,8 @@ using System.Text;
 using System.Net;
 using System.Web;
 using System.Threading;
-using Microsoft.WebSolutionsPlatform.Event.PubSubManager;
+using Microsoft.WebSolutionsPlatform.PubSubManager;
 using Microsoft.WebSolutionsPlatform.Event;
-
-[assembly: CLSCompliant(true)]
 
 namespace WspEventServiceTest
 {
@@ -81,13 +79,13 @@ namespace WspEventServiceTest
 
 		class WorkerClass
 		{
-            private PublishManager pubMgr;
+            private WspEventPublish eventPush;
 
 			public void SendEvents()
 			{
                 try
                 {
-                    pubMgr = new PublishManager();
+                    eventPush = new WspEventPublish();
                 }
                 catch(Exception e)
                 {
@@ -146,7 +144,7 @@ namespace WspEventServiceTest
                     {
                         try
                         {
-                            pubMgr.Publish(localEvent.Serialize());
+                            eventPush.OnNext(new Microsoft.WebSolutionsPlatform.PubSubManager.WspEvent(localEvent.EventType, null, localEvent.Serialize()));
                         }
                         catch // (Exception e)
                         {

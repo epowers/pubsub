@@ -13,10 +13,10 @@ using System.Text;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Xml.XPath;
-using Microsoft.WebSolutionsPlatform.Event.PubSubManager;
+using Microsoft.WebSolutionsPlatform.PubSubManager;
 using Microsoft.WebSolutionsPlatform.Common;
 
-namespace Microsoft.WebSolutionsPlatform.Event
+namespace Microsoft.WebSolutionsPlatform.Router
 {
 	public partial class Router : ServiceBase
 	{
@@ -26,7 +26,6 @@ namespace Microsoft.WebSolutionsPlatform.Event
 			{
                 PublishManager pubMgr = null;
 				QueueElement element;
-                QueueElement defaultElement = default(QueueElement);
                 QueueElement newElement = new QueueElement();
 				bool elementRetrieved;
 
@@ -45,7 +44,15 @@ namespace Microsoft.WebSolutionsPlatform.Event
                     {
                         try
                         {
-                            pubMgr = new PublishManager((uint)Router.thisTimeout);
+                            if (hubRole == true)
+                            {
+                                pubMgr = new PublishManager((uint)configSettings.HubRoleSettings.ThisRouter.Timeout);
+                            }
+                            else
+                            {
+                                pubMgr = new PublishManager((uint)configSettings.NodeRoleSettings.ParentRouter.Timeout);
+                            }
+
 
                             break;
                         }
@@ -61,7 +68,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         {
                             element = rePublisherQueue.Dequeue();
 
-                            if (element.Equals(defaultElement) == true)
+                            if (element == default(QueueElement))
                             {
                                 element = newElement;
                                 elementRetrieved = false;
@@ -81,7 +88,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         {
                             try
                             {
-                                pubMgr.Publish(element.SerializedEvent);
+                                pubMgr.PublishNew(element.WspEvent.SerializedEvent);
                             }
                             catch
                             {

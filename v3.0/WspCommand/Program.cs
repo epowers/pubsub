@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Reflection;
 using Microsoft.WebSolutionsPlatform.Event;
-using Microsoft.WebSolutionsPlatform.Event.PubSubManager;
+using Microsoft.WebSolutionsPlatform.PubSubManager;
 
 namespace WspCommand
 {
@@ -146,7 +146,7 @@ namespace WspCommand
                     else
                     {
                         if (commandRequest.Arguments.Count > 1 ||
-                            (string.Compare((string)commandRequest.Arguments[0], "true", true) != 0 && 
+                            (string.Compare((string)commandRequest.Arguments[0], "true", true) != 0 &&
                             string.Compare((string)commandRequest.Arguments[0], "false", true) != 0))
                         {
                             ConsoleColor currColor = Console.ForegroundColor;
@@ -225,7 +225,6 @@ namespace WspCommand
                 Console.Write("\t\tWsp_GetEventLogInfo\n");
                 Console.Write("\t\tWsp_GetFileVersionInfo <argsIn>\n");
                 Console.Write("\t\tWsp_GetNetworkInfo\n");
-                Console.Write("\t\tWsp_GetOperatingSystemInfo\n");
                 Console.Write("\t\tWsp_GetPerformanceCounters <argsIn>\n");
                 Console.Write("\t\tWsp_GetProcessInfo\n");
                 Console.Write("\t\tWsp_GetRegistryKeys <argsIn>\n");
@@ -240,7 +239,7 @@ namespace WspCommand
                 return;
             }
 
-            pubMgr.Publish(commandRequest.Serialize());
+            pubMgr.Publish(commandRequest.EventType, commandRequest.Serialize());
 
             Console.WriteLine();
 
@@ -258,11 +257,11 @@ namespace WspCommand
             return;
         }
 
-        static public void ResponseCallback(Guid eventType, byte[] serializedEvent)
+        static public void ResponseCallback(Guid eventType, Microsoft.WebSolutionsPlatform.PubSubManager.WspEvent wspEvent)
         {
             CommandResponse response;
 
-            response = new CommandResponse(serializedEvent);
+            response = new CommandResponse(wspEvent.Body);
 
             lock (lockObj)
             {
@@ -276,7 +275,7 @@ namespace WspCommand
                 Console.WriteLine("Message: " + response.Message);
                 Console.WriteLine("CorrelationID: " + response.CorrelationID.ToString());
 
-                if(response.ResponseException != null)
+                if (response.ResponseException != null)
                 {
                     Console.WriteLine("ResponseException: " + response.ResponseException.Message);
                 }
@@ -300,7 +299,7 @@ namespace WspCommand
 
         static public void WriteOutput(Dictionary<string, object> dictionary, string name, int level)
         {
-            for(int i = 0; i < level; i++)
+            for (int i = 0; i < level; i++)
             {
                 Console.Write('\t');
             }
@@ -329,7 +328,7 @@ namespace WspCommand
                         }
                         else
                         {
-                            WriteOutput((object) dictionary[key], key, level + 1);
+                            WriteOutput((object)dictionary[key], key, level + 1);
                         }
                     }
                 }
@@ -346,9 +345,9 @@ namespace WspCommand
 
             Console.Write(name + ": \n");
 
-            for(int i = 0; i < list.Count; i++)
+            for (int i = 0; i < list.Count; i++)
             {
-                WriteOutput((object) list[i], i.ToString(), level + 1);
+                WriteOutput((object)list[i], i.ToString(), level + 1);
             }
         }
 
@@ -361,7 +360,7 @@ namespace WspCommand
 
             Console.Write(name + ": \n");
 
-            for(int i = 0; i < list.Count; i++)
+            for (int i = 0; i < list.Count; i++)
             {
                 object obj = list[i];
 

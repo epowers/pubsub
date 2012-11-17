@@ -15,28 +15,30 @@ using System.Reflection.Emit;
 using System.Xml.XPath;
 
 using Microsoft.WebSolutionsPlatform.Common;
+using Microsoft.WebSolutionsPlatform.Event;
+using Microsoft.WebSolutionsPlatform.PubSubManager;
 
-namespace Microsoft.WebSolutionsPlatform.Event
+namespace Microsoft.WebSolutionsPlatform.Router
 {
-    public partial class Router : ServiceBase
-    {
-        internal class Listener : ServiceThread
-        {
-            public override void Start()
-            {
+	public partial class Router : ServiceBase
+	{
+		internal class Listener : ServiceThread
+		{
+			public override void Start()
+			{
                 if (eventQueue == null)
                 {
-                    eventQueue = new SharedQueue(eventQueueName, eventQueueSize, (uint)averageEventSize);
+                    eventQueue = new SharedQueue(localPublish.EventQueueName, localPublish.EventQueueSize, (uint)localPublish.AverageEventSize);
                 }
 
                 ListenToEvents();
-            }
+			}
 
             public static void ListenToEvents()
-            {
-                Guid eventType;
-                string originatingRouterName;
-                string inRouterName;
+			{
+                EventSource eventSource;
+                SocketInfo socketInfo;
+                WspEvent wspEvent;
 
                 try
                 {
@@ -56,31 +58,71 @@ namespace Microsoft.WebSolutionsPlatform.Event
                     {
                         Thread.Sleep(0);
 
-                        buffer = eventQueue.Dequeue((UInt32)thisTimeout);
+                        if (hubRole == true)
+                        {
+                            buffer = eventQueue.Dequeue((UInt32)configSettings.HubRoleSettings.ThisRouter.Timeout);
+                        }
+                        else
+                        {
+                            buffer = eventQueue.Dequeue((UInt32)configSettings.NodeRoleSettings.ParentRouter.Timeout);
+                        }
 
                         if (buffer == null)
                         {
                             continue;
                         }
 
-                        Event.GetHeader(buffer, out originatingRouterName, out inRouterName, out eventType);
+                        try
+                        {
+                            wspEvent = new WspEvent(buffer);
+                        }
+                        catch (Exception e)
+                        {
+                            EventLog.WriteEntry("WspEventRouter", "Event has invalid format:  " + e.ToString(), EventLogEntryType.Error);
+
+                            continue;
+                        }
 
                         eventsProcessed.Increment();
                         eventsProcessedBytes.IncrementBy((long)buffer.Length);
 
-                        if (eventType == Event.SubscriptionEvent)
+                        if (string.Compare(wspEvent.InRouterName, LocalRouterName, true) == 0)
+                        {
+                            eventSource = EventSource.FromLocal;
+                        }
+                        else
+                        {
+                            if (Communicator.commSockets.TryGetValue(wspEvent.InRouterName, out socketInfo) == true)
+                            {
+                                if (socketInfo.Hub == true)
+                                {
+                                    if (string.Compare(socketInfo.Group, configSettings.EventRouterSettings.Group, true) == 0)
+                                    {
+                                        eventSource = EventSource.FromHub;
+                                    }
+                                    else
+                                    {
+                                        eventSource = EventSource.FromPeer;
+                                    }
+                                }
+                                else
+                                {
+                                    eventSource = EventSource.FromNode;
+                                }
+                            }
+                            else
+                            {
+                                eventSource = EventSource.FromLocal;
+                            }
+                        }
+
+                        if (wspEvent.EventType == Subscription.SubscriptionEvent)
                         {
                             QueueElement element = new QueueElement();
 
-                            element.SerializedEvent = buffer;
-                            element.SerializedLength = buffer.Length;
-                            element.EventType = eventType;
-                            element.OriginatingRouterName = originatingRouterName;
-
-                            if (channelDictionary.TryGetValue(element.OriginatingRouterName, out element.InRouterName) == false)
-                            {
-                                element.InRouterName = string.Empty;
-                            }
+                            element.WspEvent = wspEvent;
+                            element.Source = eventSource;
+                            element.BodyEvent = new Subscription(wspEvent.Body);
 
                             for (i = 0; i < 10; i++)
                             {
@@ -100,19 +142,12 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                         try
                         {
-                            if (SubscriptionMgr.subscriptions.ContainsKey(eventType) == true)
+                            if (SubscriptionMgr.subscriptions.ContainsKey(wspEvent.EventType) == true)
                             {
                                 QueueElement element = new QueueElement();
 
-                                element.SerializedEvent = buffer;
-                                element.SerializedLength = buffer.Length;
-                                element.EventType = eventType;
-                                element.OriginatingRouterName = originatingRouterName;
-
-                                if (channelDictionary.TryGetValue(element.OriginatingRouterName, out element.InRouterName) == false)
-                                {
-                                    element.InRouterName = string.Empty;
-                                }
+                                element.WspEvent = wspEvent;
+                                element.Source = eventSource;
 
                                 for (i = 0; i < 10; i++)
                                 {
@@ -132,19 +167,12 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         {
                         }
 
-                        if (eventType == mgmtGroup)
+                        if (wspEvent.EventType == configSettings.EventRouterSettings.MgmtGuid)
                         {
                             QueueElement element = new QueueElement();
 
-                            element.SerializedEvent = buffer;
-                            element.SerializedLength = buffer.Length;
-                            element.EventType = eventType;
-                            element.OriginatingRouterName = originatingRouterName;
-
-                            if (channelDictionary.TryGetValue(element.OriginatingRouterName, out element.InRouterName) == false)
-                            {
-                                element.InRouterName = string.Empty;
-                            }
+                            element.WspEvent = wspEvent;
+                            element.Source = eventSource;
 
                             for (i = 0; i < 10; i++)
                             {
@@ -160,19 +188,12 @@ namespace Microsoft.WebSolutionsPlatform.Event
                             }
                         }
 
-                        if (eventType == cmdGroup)
+                        if (wspEvent.EventType == configSettings.EventRouterSettings.CmdGuid)
                         {
                             QueueElement element = new QueueElement();
 
-                            element.SerializedEvent = buffer;
-                            element.SerializedLength = buffer.Length;
-                            element.EventType = eventType;
-                            element.OriginatingRouterName = originatingRouterName;
-
-                            if (channelDictionary.TryGetValue(element.OriginatingRouterName, out element.InRouterName) == false)
-                            {
-                                element.InRouterName = string.Empty;
-                            }
+                            element.WspEvent = wspEvent;
+                            element.Source = eventSource;
 
                             for (i = 0; i < 10; i++)
                             {
@@ -188,21 +209,14 @@ namespace Microsoft.WebSolutionsPlatform.Event
                             }
                         }
 
-                        if (Persister.persistEvents.ContainsKey(eventType) == true)
+                        if (Persister.persistEvents.ContainsKey(wspEvent.EventType) == true)
                         {
-                            if (Persister.persistEvents[eventType].InUse == true)
+                            if (Persister.persistEvents[wspEvent.EventType].InUse == true)
                             {
                                 QueueElement element = new QueueElement();
 
-                                element.SerializedEvent = buffer;
-                                element.SerializedLength = buffer.Length;
-                                element.EventType = eventType;
-                                element.OriginatingRouterName = originatingRouterName;
-
-                                if (channelDictionary.TryGetValue(element.OriginatingRouterName, out element.InRouterName) == false)
-                                {
-                                    element.InRouterName = string.Empty;
-                                }
+                                element.WspEvent = wspEvent;
+                                element.Source = eventSource;
 
                                 for (i = 0; i < 10; i++)
                                 {
@@ -222,13 +236,13 @@ namespace Microsoft.WebSolutionsPlatform.Event
                 }
 
                 catch (ThreadAbortException)
-                {
-                    // Another thread has signalled that this worker
-                    // thread must terminate.  Typically, this occurs when
-                    // the main service thread receives a service stop 
-                    // command.
-                }
-            }
-        }
-    }
+				{
+					// Another thread has signalled that this worker
+					// thread must terminate.  Typically, this occurs when
+					// the main service thread receives a service stop 
+					// command.
+				}
+			}
+		}
+	}
 }

@@ -4,7 +4,7 @@ using System.ServiceProcess;
 using System.Diagnostics;
 using System.Text;
 
-namespace Microsoft.WebSolutionsPlatform.Event
+namespace Microsoft.WebSolutionsPlatform.Router
 {
 	static class Program
 	{

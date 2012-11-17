@@ -1,4 +1,4 @@
-namespace Microsoft.WebSolutionsPlatform.Event
+namespace Microsoft.WebSolutionsPlatform.Router
 {
     /// <summary>
     /// Class for installing the service.

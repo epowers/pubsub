@@ -21,7 +21,7 @@
     <OldToolsVersion>3.5</OldToolsVersion>
     <UpgradeBackupLocation>
     </UpgradeBackupLocation>
-    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <PublishUrl>publish\</PublishUrl>
     <Install>true</Install>
     <InstallFrom>Disk</InstallFrom>
@@ -85,6 +85,7 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Data" />
+    <Reference Include="System.Reactive, Version=1.1.11111.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
@@ -97,7 +98,9 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>PubSubMgr.resx</DependentUpon>
     </Compile>
+    <Compile Include="Subscription.cs" />
     <Compile Include="SubscriptionMgr.cs" />
+    <Compile Include="WspEvent.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="PubSubMgr.resx">
@@ -113,10 +116,6 @@
     <ProjectReference Include="..\SharedQueue\SharedQueue.csproj">
       <Project>{61FEA7C2-ED9D-4C66-B9CF-94E1A7692263}</Project>
       <Name>SharedQueue</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Event\Base.csproj">
-      <Project>{6A02FD1F-7F2B-434B-97E4-86411277CE29}</Project>
-      <Name>Base</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

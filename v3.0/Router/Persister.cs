@@ -14,9 +14,9 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Xml.XPath;
 using Microsoft.WebSolutionsPlatform.Event;
-using Microsoft.WebSolutionsPlatform.Event.PubSubManager;
+using Microsoft.WebSolutionsPlatform.PubSubManager;
 
-namespace Microsoft.WebSolutionsPlatform.Event
+namespace Microsoft.WebSolutionsPlatform.Router
 {
     public partial class Router : ServiceBase
     {
@@ -80,7 +80,6 @@ namespace Microsoft.WebSolutionsPlatform.Event
                 CreateEmptyFiles = false;
 
                 subscription = new Subscription();
-                subscription.SubscriptionId = Guid.NewGuid();
                 subscription.Subscribe = true;
             }
         }
@@ -107,7 +106,6 @@ namespace Microsoft.WebSolutionsPlatform.Event
             private string fileNameSuffix = string.Empty;
 
             private QueueElement element;
-            private QueueElement defaultElement = default(QueueElement);
 
             public Persister()
             {
@@ -127,10 +125,6 @@ namespace Microsoft.WebSolutionsPlatform.Event
                 PersistEventInfo eventInfo;
                 string eventFieldTerminator = @",";
                 StreamWriter eventStream;
-
-                string originatingRouterName;
-                string inRouterName;
-                Guid eventType; ;
 
                 string propName;
                 byte propType;
@@ -157,8 +151,8 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         {
                             nextConfigFileCheckTick = currentTick + 300000000;
 
-                            configFileTick = Router.GetConfigFileTick();
-                            localConfigFileTick = Router.GetLocalConfigFileTick();
+                            configFileTick = Configurator.GetConfigFileTick();
+                            localConfigFileTick = Configurator.GetLocalConfigFileTick();
 
                             if (configFileTick != lastConfigFileTick || localConfigFileTick != lastLocalConfigFileTick)
                             {
@@ -171,8 +165,8 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                                 lock (configFileLock)
                                 {
-                                    Router.LoadPersistConfig();
-                                    Router.LoadPersistLocalConfig();
+                                    Configurator.LoadLogSettings();
+                                    Configurator.LoadLocalLogSettings();
                                 }
 
                                 foreach (PersistEventInfo eInfo in persistEvents.Values)
@@ -183,7 +177,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                                         eInfo.NextCopyTick = currentTick - 1;
 
                                         eInfo.subscription.Subscribe = false;
-                                        pubMgr.Publish(eInfo.subscription.Serialize());
+                                        pubMgr.Publish(Subscription.SubscriptionEvent, eInfo.subscription.Serialize());
                                     }
                                 }
 
@@ -196,7 +190,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                                 if (eInfo.InUse == true)
                                 {
                                     eInfo.subscription.Subscribe = true;
-                                    pubMgr.Publish(eInfo.subscription.Serialize());
+                                    pubMgr.Publish(Subscription.SubscriptionEvent, eInfo.subscription.Serialize());
                                 }
                             }
                         }
@@ -205,7 +199,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         {
                             element = persisterQueue.Dequeue();
 
-                            if (element.Equals(defaultElement) == true)
+                            if (element == default(QueueElement))
                             {
                                 elementRetrieved = false;
                             }
@@ -271,7 +265,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                         if (elementRetrieved == true)
                         {
-                            eventInfo = persistEvents[element.EventType];
+                            eventInfo = persistEvents[element.WspEvent.EventType];
 
                             if (eventInfo.InUse == true)
                             {
@@ -302,21 +296,12 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                                 eventStream.Write(eventInfo.BeginObjectSeparator);
 
-                                //eventStream.Write(eventInfo.StringDelimiter.ToString());
-                                //eventStream.Write("EventType");
-                                //eventStream.Write(eventInfo.StringDelimiter.ToString());
-                                //eventStream.Write(eventInfo.KeyValueSeparator.ToString());
-                                //eventStream.Write(eventInfo.StringDelimiter.ToString());
-                                //eventStream.Write(CleanseString(element.EventType.ToString(), eventInfo));
-                                //eventStream.Write(eventInfo.StringDelimiter.ToString());
-                                //eventStream.Write(eventInfo.FieldTerminator.ToString());
-
                                 eventStream.Write(eventInfo.StringDelimiter.ToString());
                                 eventStream.Write("OriginatingRouterName");
                                 eventStream.Write(eventInfo.StringDelimiter.ToString());
                                 eventStream.Write(eventInfo.KeyValueSeparator.ToString());
                                 eventStream.Write(eventInfo.StringDelimiter.ToString());
-                                eventStream.Write(CleanseString(element.OriginatingRouterName, eventInfo));
+                                eventStream.Write(CleanseString(element.WspEvent.OriginatingRouterName, eventInfo));
                                 eventStream.Write(eventInfo.StringDelimiter.ToString());
                                 eventStream.Write(eventInfo.FieldTerminator.ToString());
 
@@ -325,15 +310,10 @@ namespace Microsoft.WebSolutionsPlatform.Event
                                 eventStream.Write(eventInfo.StringDelimiter.ToString());
                                 eventStream.Write(eventInfo.KeyValueSeparator.ToString());
                                 eventStream.Write(eventInfo.StringDelimiter.ToString());
-                                eventStream.Write(CleanseString(element.InRouterName, eventInfo));
+                                eventStream.Write(CleanseString(element.WspEvent.InRouterName, eventInfo));
                                 eventStream.Write(eventInfo.StringDelimiter.ToString());
 
-                                serializedEvent = new WspBuffer(element.SerializedEvent);
-
-                                if (serializedEvent.GetHeader(out originatingRouterName, out inRouterName, out eventType) == false)
-                                {
-                                    throw new EventDeserializationException("Error reading OriginatingRouterName from serializedEvent");
-                                }
+                                serializedEvent = new WspBuffer(element.WspEvent.Body);
 
                                 while (serializedEvent.Position < serializedEvent.Size)
                                 {
@@ -1084,7 +1064,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                 {
                     try
                     {
-                        pubMgr.Publish(persistFileEvent.Serialize());
+                        pubMgr.Publish(persistFileEvent.EventType, persistFileEvent.Serialize());
                         break;
                     }
                     catch

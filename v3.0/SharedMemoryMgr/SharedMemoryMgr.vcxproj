@@ -21,7 +21,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{7E26768D-A33E-40E9-B3E1-D83752B6EEB3}</ProjectGuid>
     <RootNamespace>SharedMemoryMgr</RootNamespace>
-    <SccProjectName>$/pubsub/v2.1/SharedMemoryMgr</SccProjectName>
+    <SccProjectName>$/pubsub/v3.0/SharedMemoryMgr</SccProjectName>
     <SccAuxPath>https://tfs.codeplex.com/tfs/tfs04</SccAuxPath>
     <SccLocalPath>.</SccLocalPath>
     <SccProvider>{4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}</SccProvider>

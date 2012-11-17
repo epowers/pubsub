@@ -6,7 +6,7 @@ using System.Drawing;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
-using Microsoft.WebSolutionsPlatform.Event.PubSubManager;
+using Microsoft.WebSolutionsPlatform.PubSubManager;
 
 namespace Microsoft.Sample.EventPingPong
 {
@@ -78,7 +78,7 @@ namespace Microsoft.Sample.EventPingPong
             {
                 try
                 {
-                    pubMgr.Publish(pubEvent.Serialize());
+                    pubMgr.Publish(pubEvent.EventType, pubEvent.Serialize());
 
                     break;
                 }
@@ -191,11 +191,11 @@ namespace Microsoft.Sample.EventPingPong
 
 
 
-        public void SubscriptionCallback(Guid eventType, byte[] serializedEvent)
+        public void SubscriptionCallback(Guid eventType, Microsoft.WebSolutionsPlatform.PubSubManager.WspEvent wspEvent)
         {
             PublishEvent localEvent;
 
-            localEvent = new PublishEvent(serializedEvent);
+            localEvent = new PublishEvent(wspEvent.Body);
 
             Thread.Sleep(0);
 
@@ -211,7 +211,7 @@ namespace Microsoft.Sample.EventPingPong
                 {
                     try
                     {
-                        pubMgr.Publish(subEvent.Serialize());
+                        pubMgr.Publish(subEvent.EventType, subEvent.Serialize());
 
                         break;
                     }
@@ -225,11 +225,11 @@ namespace Microsoft.Sample.EventPingPong
             SetTextbox(eventNumberSent, counter.ToString());
         }
 
-        public void PublishCallback(Guid eventType, byte[] serializedEvent)
+        public void PublishCallback(Guid eventType, Microsoft.WebSolutionsPlatform.PubSubManager.WspEvent wspEvent)
         {
             SubscribeEvent subscribeEvent;
 
-            subscribeEvent = new SubscribeEvent(serializedEvent);
+            subscribeEvent = new SubscribeEvent(wspEvent.Body);
 
             Thread.Sleep(0);
 
@@ -245,7 +245,7 @@ namespace Microsoft.Sample.EventPingPong
                     {
                         try
                         {
-                            pubMgr.Publish(pubEvent.Serialize());
+                            pubMgr.Publish(pubEvent.EventType, pubEvent.Serialize());
 
                             break;
                         }

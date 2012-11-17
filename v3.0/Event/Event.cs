@@ -10,7 +10,6 @@ using System.Net.Sockets;
 using System.Reflection;
 using System.Resources;
 
-[assembly: CLSCompliant(true)]
 namespace Microsoft.WebSolutionsPlatform.Event
 {
     /// <summary>
@@ -18,7 +17,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
     /// </summary>
     abstract public class Event
 	{
-        private static string baseVersion = @"2.0.0.0";
+        private static string baseVersion = @"3.0";
 
         private string originatingRouterName = string.Empty;
         /// <summary>
@@ -635,89 +634,5 @@ namespace Microsoft.WebSolutionsPlatform.Event
                 }
             }
 		}
-
-        /// <summary>
-        /// Method returns the event's header properties.
-        /// </summary>
-        /// <param name="buffer">Serialized event buffer</param>
-        /// <param name="originatingRouterName">Machine were event originated from</param>
-        /// <param name="inRouterName">Machine which passed the event to this machine</param>
-        /// <param name="eventType">Event type</param>
-        /// <returns>Number of bytes of the buffer which was the header</returns>
-        public static int GetHeader(byte[] buffer, out string originatingRouterName, out string inRouterName, out Guid eventType)
-        {
-            byte byteIn;
-            Int32 stringLength = 0;
-            Int32 shiftBits = 0;
-            Int32 position = 0;
-
-            do
-            {
-                byteIn = buffer[position++];
-
-                stringLength |= (byteIn & 0x7f) << shiftBits;
-
-                shiftBits += 7;
-            } while ((byteIn & 0x80) != 0);
-
-            if (stringLength > 0)
-            {
-                originatingRouterName = Encoding.UTF8.GetString(buffer, position, stringLength);
-            }
-            else
-            {
-                originatingRouterName = string.Empty;
-            }
-
-            position = position + stringLength;
-
-            stringLength = 0;
-            shiftBits = 0;
-
-            do
-            {
-                byteIn = buffer[position++];
-
-                stringLength |= (byteIn & 0x7f) << shiftBits;
-
-                shiftBits += 7;
-            } while ((byteIn & 0x80) != 0);
-
-            if (stringLength > 0)
-            {
-                inRouterName = Encoding.UTF8.GetString(buffer, position, stringLength);
-            }
-            else
-            {
-                inRouterName = string.Empty;
-            }
-
-            position = position + stringLength;
-
-            stringLength = 0;
-            shiftBits = 0;
-
-            do
-            {
-                byteIn = buffer[position++];
-
-                stringLength |= (byteIn & 0x7f) << shiftBits;
-
-                shiftBits += 7;
-            } while ((byteIn & 0x80) != 0);
-
-            if (stringLength > 0)
-            {
-                eventType = new Guid(Encoding.UTF8.GetString(buffer, position, stringLength));
-            }
-            else
-            {
-                eventType = Guid.Empty;
-            }
-
-            position = position + stringLength;
-
-            return position;
-        }
 	}
 }

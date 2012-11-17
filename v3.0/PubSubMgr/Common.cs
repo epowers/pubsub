@@ -3,7 +3,7 @@ using System.Runtime.Serialization;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Microsoft.WebSolutionsPlatform.Event.PubSubManager
+namespace Microsoft.WebSolutionsPlatform.PubSubManager
 {
     /// <summary>
     /// The exception that is thrown when the process cannot connect to the event system queue. Check 

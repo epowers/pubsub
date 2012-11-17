@@ -13,8 +13,9 @@ using System.Text;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Xml.XPath;
+using Microsoft.WebSolutionsPlatform.PubSubManager;
 
-namespace Microsoft.WebSolutionsPlatform.Event
+namespace Microsoft.WebSolutionsPlatform.Router
 {
     public partial class Router : ServiceBase
     {
@@ -30,119 +31,13 @@ namespace Microsoft.WebSolutionsPlatform.Event
             }
         }
 
-        internal class SubscriptionEntry : IComparable<SubscriptionEntry>
-        {
-            private Guid subscriptionId;
-            /// <summary>
-            /// ID for subscription
-            /// </summary>
-            public Guid SubscriptionId
-            {
-                get
-                {
-                    return subscriptionId;
-                }
-            }
-
-            private string routerName;
-            /// <summary>
-            /// RouterName where subscription is made
-            /// </summary>
-            public string RouterName
-            {
-                get
-                {
-                    return routerName;
-                }
-            }
-
-            private Guid eventType;
-            /// <summary>
-            /// Event type registering for
-            /// </summary>
-            public Guid EventType
-            {
-                get
-                {
-                    return eventType;
-                }
-            }
-
-            private bool localOnly;
-            /// <summary>
-            /// Defines if the subscription is only for the local machine
-            /// </summary>
-            public bool LocalOnly
-            {
-                get
-                {
-                    return localOnly;
-                }
-            }
-
-            private DateTime expirationTime;
-            /// <summary>
-            /// Expiration time for subscription
-            /// </summary>
-            public DateTime ExpirationTime
-            {
-                get
-                {
-                    return expirationTime;
-                }
-
-                internal set
-                {
-                    expirationTime = value;
-                }
-            }
-
-            private QueueElement eventQueueElement;
-            /// <summary>
-            /// EventQueueElement for subscription
-            /// </summary>
-            public QueueElement EventQueueElement
-            {
-                get
-                {
-                    return eventQueueElement;
-                }
-
-                internal set
-                {
-                    eventQueueElement = value;
-                }
-            }
-
-            /// <summary>
-            /// Used to create a SubscriptionEntry used by RouteMgr
-            /// </summary>
-            /// <param name="subscriptionId">ID of the subscription</param>
-            /// <param name="eventType">event being registered for the subscription</param>
-            /// <param name="routerName">routerName where subscription is made</param>
-            /// <param name="localOnly">Defines if subscription is for local machine only</param>
-            public SubscriptionEntry(Guid subscriptionId, Guid eventType, string routerName, bool localOnly)
-            {
-                this.subscriptionId = subscriptionId;
-                this.eventType = eventType;
-                this.routerName = routerName;
-                this.localOnly = localOnly;
-                this.expirationTime = DateTime.UtcNow.AddMinutes(5);
-            }
-
-            public int CompareTo(SubscriptionEntry otherSubscription)
-            {
-                return subscriptionId.CompareTo(otherSubscription.subscriptionId);
-            }
-        }
-
         internal class SubscriptionMgr : ServiceThread
         {
             internal static object subscriptionsLock = new object();
             internal static Dictionary<Guid, SubscriptionDetail> subscriptions = new Dictionary<Guid, SubscriptionDetail>();
 
-            private DateTime nextTimeout = DateTime.UtcNow.AddMinutes(subscriptionExpirationIncrement);
-            private DateTime nextPushSubscriptions = DateTime.UtcNow.AddMinutes(subscriptionRefreshIncrement);
+            private DateTime nextTimeout = DateTime.UtcNow.AddMinutes(subscriptionManagement.ExpirationIncrement);
+            private DateTime nextPushSubscriptions = DateTime.UtcNow.AddMinutes(subscriptionManagement.RefreshIncrement);
 
             public SubscriptionMgr()
             {
@@ -151,11 +46,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
             public override void Start()
             {
                 QueueElement element;
-                QueueElement defaultElement = default(QueueElement);
                 QueueElement newElement = new QueueElement();
-
-                newElement.OriginatingRouterName = string.Empty;
-                newElement.InRouterName = string.Empty;
 
                 Subscription subscriptionEvent;
 
@@ -178,7 +69,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         {
                             element = subscriptionMgrQueue.Dequeue();
 
-                            if (element.Equals(defaultElement) == true)
+                            if (element == default(QueueElement))
                             {
                                 element = newElement;
                                 elementRetrieved = false;
@@ -196,22 +87,15 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                         if (elementRetrieved == true)
                         {
-                            if (element.Event == null)
+                            if (element.BodyEvent == null)
                             {
-                                element.Event = new Subscription();
-
-                                element.Event.Deserialize(element.SerializedEvent);
+                                element.BodyEvent = new Subscription(element.WspEvent.Body);
                             }
 
-                            subscriptionEvent = (Subscription)element.Event;
+                            subscriptionEvent = (Subscription)element.BodyEvent;
 
                             if (subscriptionEvent.LocalOnly == false)
                             {
-                                if (element.OriginatingRouterName.Length == 0)
-                                {
-                                    element.OriginatingRouterName = subscriptionEvent.OriginatingRouterName;
-                                }
-
                                 if (subscriptionEvent.Subscribe == true)
                                 {
                                     SubscriptionDetail subscriptionDetail;
@@ -223,7 +107,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                                             if (subscriptions.TryGetValue(subscriptionEvent.SubscriptionEventType, out subscriptionDetail) == false)
                                             {
                                                 subscriptionDetail = new SubscriptionDetail();
-                                                subscriptionDetail.Routes[element.InRouterName] = DateTime.UtcNow.AddMinutes(subscriptionExpirationIncrement);
+                                                subscriptionDetail.Routes[element.WspEvent.InRouterName] = DateTime.UtcNow.AddMinutes(subscriptionManagement.ExpirationIncrement);
 
                                                 subscriptions[subscriptionEvent.SubscriptionEventType] = subscriptionDetail;
 
@@ -234,7 +118,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                                             {
                                                 lock (subscriptionDetail.SubscriptionDetailLock)
                                                 {
-                                                    subscriptionDetail.Routes[element.InRouterName] = DateTime.UtcNow.AddMinutes(subscriptionExpirationIncrement);
+                                                    subscriptionDetail.Routes[element.WspEvent.InRouterName] = DateTime.UtcNow.AddMinutes(subscriptionManagement.ExpirationIncrement);
                                                 }
                                             }
                                         }
@@ -243,7 +127,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                                     {
                                         lock (subscriptionDetail.SubscriptionDetailLock)
                                         {
-                                            subscriptionDetail.Routes[element.InRouterName] = DateTime.UtcNow.AddMinutes(subscriptionExpirationIncrement);
+                                            subscriptionDetail.Routes[element.WspEvent.InRouterName] = DateTime.UtcNow.AddMinutes(subscriptionManagement.ExpirationIncrement);
                                         }
                                     }
 
@@ -259,7 +143,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                                 RemoveExpiredEntries();
                             }
 
-                            nextTimeout = DateTime.UtcNow.AddMinutes(subscriptionExpirationIncrement);
+                            nextTimeout = DateTime.UtcNow.AddMinutes(subscriptionManagement.ExpirationIncrement);
                         }
                     }
                 }
@@ -316,6 +200,8 @@ namespace Microsoft.WebSolutionsPlatform.Event
             /// </summary>
             internal static void ResendSubscriptions(string outRouterName)
             {
+                Dictionary<byte, string> extendedHeaders = new Dictionary<byte, string>();
+
                 lock (subscriptionsLock)
                 {
                     foreach (Guid subscriptionEventType in subscriptions.Keys)
@@ -326,24 +212,23 @@ namespace Microsoft.WebSolutionsPlatform.Event
                             {
                                 if (string.Compare(inRouterName, outRouterName, true) != 0)
                                 {
+                                    extendedHeaders[(byte)HeaderType.OriginatingRouter] = inRouterName;
+
                                     Subscription subscription = new Subscription();
 
-                                    subscription.InRouterName = inRouterName;
                                     subscription.LocalOnly = false;
-                                    subscription.OriginatingRouterName = inRouterName;
                                     subscription.Subscribe = true;
                                     subscription.SubscriptionEventType = subscriptionEventType;
-                                    subscription.SubscriptionId = Guid.NewGuid();
+
+                                    WspEvent wspEvent = new WspEvent(Subscription.SubscriptionEvent, extendedHeaders, subscription.Serialize());
 
                                     QueueElement element = new QueueElement();
 
-                                    element.InRouterName = inRouterName;
-                                    element.OriginatingRouterName = inRouterName;
-                                    element.EventType = subscription.EventType;
-                                    element.SerializedEvent = subscription.Serialize();
-                                    element.SerializedLength = element.SerializedEvent.Length;
+                                    element.WspEvent = wspEvent;
+                                    element.Source = EventSource.FromLocal;
+                                    element.BodyEvent = subscription;
 
-                                    forwarderQueue.Enqueue(element);
+                                    Communicator.socketQueues[outRouterName].Enqueue(element);
 
                                     break;
                                 }

@@ -8,9 +8,8 @@ using System.Net;
 using System.Resources;
 using System.Reflection;
 using Microsoft.WebSolutionsPlatform.Common;
-using Microsoft.WebSolutionsPlatform.Event;
 
-namespace Microsoft.WebSolutionsPlatform.Event.PubSubManager
+namespace Microsoft.WebSolutionsPlatform.PubSubManager
 {
     /// <summary>
     /// The ISubscriptionCallback interface is implemented by an event subscriber class. The
@@ -22,21 +21,236 @@ namespace Microsoft.WebSolutionsPlatform.Event.PubSubManager
         /// This method is passed to the SubscriptionManager as the callback for delivering events.
         /// </summary>
         /// <param name="eventType">Event type for the event being passed.</param>
-        /// <param name="serializedEvent">The serialized version of the event.</param>
-        void SubscriptionCallback(Guid eventType, byte[] serializedEvent);
+        /// <param name="wspEvent">The serialized version of the event.</param>
+        void SubscriptionCallback(Guid eventType, WspEvent wspEvent);
     }
 
     internal struct StateInfo
     {
         public object callBack;
         public Guid eventType;
-        public byte[] serializedEvent;
+        public WspEvent wspEvent;
+    }
+
+    /// <summary>
+    /// This class is used to subscribe to events using Rx
+    /// </summary>
+    public class WspEventObservable : IObservable<WspEvent>
+    {
+        private static Thread subscriptionThread = null;
+        private static bool subscriptionThreadReady = false;
+
+        private static SpinLock spinLock = new SpinLock();
+
+        private static Guid initialEventType;
+        private static bool initialLocalOnly;
+
+        /// <summary>
+        /// Subscription Manager
+        /// </summary>        
+        private static SubscriptionManager wspSubscriptionManager = null;
+
+        /// <summary>
+        /// The list of observers for wsp event object.
+        /// </summary>
+        private static Dictionary<Guid, List<IObserver<WspEvent>>> observersByEventType = new Dictionary<Guid, List<IObserver<WspEvent>>>();
+
+        private Guid eventType;
+        private bool localOnly;
+
+        /// <summary>
+        /// The ObservableSubscription constructor is used to create an observable subscription to then subscribe to via Rx
+        /// </summary>
+        /// <param name="eventType">The event type to subscribe to</param>
+        /// <param name="localOnly">True if only local events are to be subscribed to</param>
+        public WspEventObservable(Guid eventType, bool localOnly)
+        {
+            this.eventType = eventType;
+            this.localOnly = localOnly;
+        }
+
+        /// <summary>
+        /// Subscribe method to provide an observer
+        /// </summary>
+        /// <param name="observer">The observer to be called for each event</param>
+        /// <returns></returns>
+        public IDisposable Subscribe(IObserver<WspEvent> observer)
+        {
+            bool lockTaken = false;
+
+            try
+            {
+                spinLock.Enter(ref lockTaken);
+
+                if (observersByEventType.Count == 0)
+                {
+                    initialEventType = eventType;
+                    initialLocalOnly = localOnly;
+
+                    subscriptionThread = new Thread(Start);
+
+                    subscriptionThread.Start();
+
+                    while (subscriptionThreadReady == false)
+                    {
+                        Thread.Sleep(10);
+                    }
+                }
+                else
+                {
+                    if (observersByEventType.ContainsKey(eventType) == true)
+                    {
+                        wspSubscriptionManager.RemoveSubscription(eventType);
+                    }
+
+                    wspSubscriptionManager.AddSubscription(eventType, localOnly);
+                }
+
+                List<IObserver<WspEvent>> observers;
+
+                if (observersByEventType.TryGetValue(eventType, out observers) == true)
+                {
+                    observers.Add(observer);
+                }
+                else
+                {
+                    observers = new List<IObserver<WspEvent>>();
+                    observers.Add(observer);
+                    observersByEventType[eventType] = observers;
+                }
+            }
+            finally
+            {
+                if (lockTaken == true)
+                {
+                    spinLock.Exit();
+                }
+            }
+
+            return new WspSubscriptionDisposable(this, observer);
+        }
+
+        class WspSubscriptionDisposable : IDisposable
+        {
+            private readonly WspEventObservable parent;
+            private readonly IObserver<WspEvent> observer;
+
+            public WspSubscriptionDisposable(WspEventObservable parent, IObserver<WspEvent> observer)
+            {
+                this.parent = parent;
+                this.observer = observer;
+            }
+
+            public void Dispose()
+            {
+                parent.Dispose(observer);
+            }
+        }
+
+        /// <summary>
+        /// Starts this instance.
+        /// </summary>
+        private static void Start()
+        {
+            try
+            {
+                var wspSubscriptionCallback = new SubscriptionManager.Callback(SubscriptionCallback);
+                wspSubscriptionManager = new SubscriptionManager(wspSubscriptionCallback);
+                wspSubscriptionManager.AddSubscription(initialEventType, initialLocalOnly);
+
+                subscriptionThreadReady = true;
+
+                Thread.Sleep(Timeout.Infinite);
+            }
+            catch (ThreadAbortException)
+            {
+                subscriptionThreadReady = false;
+            }
+        }
+
+        /// <summary>
+        /// callback subscription
+        /// </summary>
+        /// <param name="eventType">Type of the event.</param>
+        /// <param name="wspEvent">The serialized event.</param>
+        public static void SubscriptionCallback(Guid eventType, WspEvent wspEvent)
+        {
+            bool lockTaken = false;
+            List<IObserver<WspEvent>> observers;
+
+            try
+            {
+                spinLock.Enter(ref lockTaken);
+
+                if (observersByEventType.TryGetValue(eventType, out observers) == true)
+                {
+                    foreach (IObserver<WspEvent> subscriptionObserver in observers)
+                    {
+                        subscriptionObserver.OnNext(wspEvent);
+                    }
+                }
+            }
+            finally
+            {
+                if (lockTaken == true)
+                {
+                    spinLock.Exit();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Dispose for the ObservableSubscription object
+        /// </summary>
+        /// <param name="observer">Observer to be disposed</param>
+        private void Dispose(IObserver<WspEvent> observer)
+        {
+            bool lockTaken = false;
+
+            try
+            {
+                spinLock.Enter(ref lockTaken);
+
+                List<IObserver<WspEvent>> observers;
+
+                if (observersByEventType.TryGetValue(eventType, out observers) == true)
+                {
+                    int last = observers.LastIndexOf(observer);
+                    if (last >= 0)
+                    {
+                        observers.RemoveAt(last);
+                    }
+
+                    if (observers.Count == 0)
+                    {
+                        observersByEventType.Remove(eventType);
+
+                        wspSubscriptionManager.RemoveSubscription(eventType);
+                    }
+                }
+
+                if (observersByEventType.Count == 0 && subscriptionThread != null)
+                {
+                    subscriptionThread.Abort();
+                    subscriptionThread = null;
+
+                    wspSubscriptionManager = null;
+                }
+            }
+            finally
+            {
+                if (lockTaken == true)
+                {
+                    spinLock.Exit();
+                }
+            }
+        }
     }
 
     /// <summary>
     /// This class is used to subscribe to events.
     /// </summary>
-    public class SubscriptionManager : IDisposable
+    public class SubscriptionManager
     {
         private bool disposed;
 
@@ -59,8 +273,8 @@ namespace Microsoft.WebSolutionsPlatform.Event.PubSubManager
         /// Defines the callback method for delivering events to an application.
         /// </summary>
         /// <param name="eventType">Event type for the event being passed.</param>
-        /// <param name="serializedEvent">The serialized version of the event.</param>
-        public delegate void Callback(Guid eventType, byte[] serializedEvent);
+        /// <param name="wspEvent">The WspEvent with Headers and Body.</param>
+        public delegate void Callback(Guid eventType, WspEvent wspEvent);
 
         private bool listenForEvents;
         /// <summary>
@@ -74,9 +288,9 @@ namespace Microsoft.WebSolutionsPlatform.Event.PubSubManager
             }
             set
             {
-                if(value == true)
+                if (value == true)
                 {
-                    if(listenForEvents == false)
+                    if (listenForEvents == false)
                     {
                         StartListening();
                     }
@@ -208,7 +422,7 @@ namespace Microsoft.WebSolutionsPlatform.Event.PubSubManager
         /// Dispose for SubscriptionManager
         /// </summary>
         /// <param name="disposing">True if disposing.</param>
-        protected virtual void Dispose(bool disposing) 
+        protected virtual void Dispose(bool disposing)
         {
             if (!disposed)
             {
@@ -273,11 +487,10 @@ namespace Microsoft.WebSolutionsPlatform.Event.PubSubManager
         {
             Subscription subscription = new Subscription();
             subscription.SubscriptionEventType = eventType;
-            subscription.SubscriptionId = Guid.NewGuid();
             subscription.Subscribe = true;
             subscription.LocalOnly = localOnly;
 
-            publishMgr.Publish(subscription.Serialize());
+            publishMgr.Publish(Subscription.SubscriptionEvent, subscription.Serialize());
 
             subscriptions[eventType] = subscription;
         }
@@ -294,7 +507,7 @@ namespace Microsoft.WebSolutionsPlatform.Event.PubSubManager
             if (subscriptions.TryGetValue(eventType, out subscription) == true)
             {
                 subscription.Subscribe = false;
-                publishMgr.Publish(subscription.Serialize());
+                publishMgr.Publish(Subscription.SubscriptionEvent, subscription.Serialize());
                 return subscriptions.Remove(eventType);
             }
             else
@@ -349,23 +562,22 @@ namespace Microsoft.WebSolutionsPlatform.Event.PubSubManager
         /// </summary>
         private void Listen()
         {
-            Guid eventType;
-            string originatingRouterName;
             string localRouterName;
-            string inRouterName;
             bool elementRetrieved;
             DateTime nextPushSubscriptions = DateTime.UtcNow.AddMinutes(subscriptionRefreshIncrement);
             Subscription subscription;
+            WspEvent wspEvent;
 
             try
             {
                 Thread.CurrentThread.Priority = ThreadPriority.Highest;
+                WaitCallback subscriptionCallback = new WaitCallback(CallSubscriptionCallback);
 
                 byte[] buffer = null;
 
                 localRouterName = Dns.GetHostName();
 
-                while(true)
+                while (true)
                 {
                     buffer = eventQueue.Dequeue(Timeout);
 
@@ -380,19 +592,28 @@ namespace Microsoft.WebSolutionsPlatform.Event.PubSubManager
 
                     if (elementRetrieved == true)
                     {
-                        Event.GetHeader(buffer, out originatingRouterName, out inRouterName, out eventType);
-
-                        if (subscriptions.TryGetValue(eventType, out subscription) == true)
+                        try
                         {
-                            if (subscription.LocalOnly == false || string.Compare(localRouterName, originatingRouterName,true) == 0)
+                            wspEvent = new WspEvent(buffer);
+                        }
+                        catch (Exception e)
+                        {
+                            EventLog.WriteEntry("WspEventRouter", "Event has invalid format:  " + e.ToString(), EventLogEntryType.Error);
+
+                            continue;
+                        }
+
+                        if (subscriptions.TryGetValue(wspEvent.EventType, out subscription) == true)
+                        {
+                            if (subscription.LocalOnly == false || string.Compare(localRouterName, wspEvent.OriginatingRouterName, true) == 0)
                             {
                                 StateInfo stateInfo = new StateInfo();
 
                                 stateInfo.callBack = callbackMethod;
-                                stateInfo.eventType = eventType;
-                                stateInfo.serializedEvent = buffer;
+                                stateInfo.eventType = wspEvent.EventType;
+                                stateInfo.wspEvent = wspEvent;
 
-                                ThreadPool.QueueUserWorkItem(new WaitCallback(CallSubscriptionCallback), stateInfo);
+                                ThreadPool.QueueUserWorkItem(subscriptionCallback, stateInfo);
                             }
                         }
                     }
@@ -403,7 +624,7 @@ namespace Microsoft.WebSolutionsPlatform.Event.PubSubManager
                         {
                             try
                             {
-                                publishMgr.Publish(subscriptions[subId].Serialize());
+                                publishMgr.Publish(Subscription.SubscriptionEvent, subscriptions[subId].Serialize());
                             }
                             catch
                             {
@@ -416,7 +637,7 @@ namespace Microsoft.WebSolutionsPlatform.Event.PubSubManager
                     }
                 }
             }
-            catch(ThreadAbortException)
+            catch (ThreadAbortException)
             {
                 // Another thread has signalled that this worker
                 // thread must terminate.  Typically, this occurs when
@@ -440,7 +661,7 @@ namespace Microsoft.WebSolutionsPlatform.Event.PubSubManager
         private static void CallSubscriptionCallback(object stateInfo)
         {
             ((Callback)((StateInfo)stateInfo).callBack)(
-                ((StateInfo)stateInfo).eventType, ((StateInfo)stateInfo).serializedEvent);
+                ((StateInfo)stateInfo).eventType, ((StateInfo)stateInfo).wspEvent);
         }
     }
 }
