@@ -1467,7 +1467,7 @@ namespace Microsoft.WebSolutionsPlatform.Router
                     {
                         byte[] serializedEvent = ConcatArrayList(state.buffers);
 
-                        WspEvent wspEvent = WspEvent.ChangeInRouterName(serializedEvent, state.socketInfo.routerNameEncoded, state.socketInfo.RouterName);
+                        Microsoft.WebSolutionsPlatform.PubSubManager.WspEvent wspEvent = Microsoft.WebSolutionsPlatform.PubSubManager.WspEvent.ChangeInRouterName(serializedEvent, state.socketInfo.routerNameEncoded, state.socketInfo.RouterName);
 
                         if (String.Compare(wspEvent.OriginatingRouterName, Router.localRouterName, true) != 0)
                         {
