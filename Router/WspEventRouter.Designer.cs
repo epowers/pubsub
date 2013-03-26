@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace Router {
+namespace Microsoft.WebSolutionsPlatform.Router {
     using System;
     
     
@@ -39,7 +39,7 @@ namespace Router {
         internal static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("Router.WspEventRouter", typeof(WspEventRouter).Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("Microsoft.WebSolutionsPlatform.Router.WspEventRouter", typeof(WspEventRouter).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;

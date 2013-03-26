@@ -344,6 +344,7 @@ namespace Microsoft.WebSolutionsPlatform.Router
             internal void ConnectToGroup(Dictionary<string, Hub> hubs, string groupName)
             {
                 SocketInfo socketInfo;
+                IPAddress[] ipLocal = Dns.GetHostAddresses(string.Empty);
 
                 foreach (Hub hub in hubs.Values)
                 {
@@ -352,7 +353,34 @@ namespace Microsoft.WebSolutionsPlatform.Router
                         continue;
                     }
 
-                    if(commSockets.TryGetValue(hub.Name, out socketInfo) == false)
+                    bool localAddress = false;
+
+                    IPAddress[] ipHub = Dns.GetHostAddresses(hub.Name);
+
+                    for (int i = 0; i < ipLocal.Length; i++)
+                    {
+                        for (int j = 0; j < ipHub.Length; j++)
+                        {
+                            if (IPAddress.Equals(ipLocal[i], ipHub[j]) == true)
+                            {
+                                localAddress = true;
+
+                                break;
+                            }
+                        }
+
+                        if (localAddress == true)
+                        {
+                            break;
+                        }
+                    }
+
+                    if (localAddress == true)
+                    {
+                        continue;
+                    }
+
+                    if (commSockets.TryGetValue(hub.Name, out socketInfo) == false)
                     {
                         socketInfo = new SocketInfo();
                         socketInfo.Group = groupName;
@@ -765,8 +793,8 @@ namespace Microsoft.WebSolutionsPlatform.Router
                 socketInfo.UseToSend = true;
                 socketInfo.Group = groupName;
 
-                return new Route(parentName, 
-                    configSettings.NodeRoleSettings.ParentRouter.NumConnections, 
+                return new Route(parentName,
+                    configSettings.NodeRoleSettings.ParentRouter.NumConnections,
                     configSettings.NodeRoleSettings.ParentRouter.Port,
                     configSettings.NodeRoleSettings.ParentRouter.BufferSize,
                     configSettings.NodeRoleSettings.ParentRouter.Timeout);
@@ -1467,7 +1495,7 @@ namespace Microsoft.WebSolutionsPlatform.Router
                     {
                         byte[] serializedEvent = ConcatArrayList(state.buffers);
 
-                        Microsoft.WebSolutionsPlatform.PubSubManager.WspEvent wspEvent = Microsoft.WebSolutionsPlatform.PubSubManager.WspEvent.ChangeInRouterName(serializedEvent, state.socketInfo.routerNameEncoded, state.socketInfo.RouterName);
+                        WspEvent wspEvent = WspEvent.ChangeInRouterName(serializedEvent, state.socketInfo.routerNameEncoded, state.socketInfo.RouterName);
 
                         if (String.Compare(wspEvent.OriginatingRouterName, Router.localRouterName, true) != 0)
                         {
@@ -1475,7 +1503,26 @@ namespace Microsoft.WebSolutionsPlatform.Router
 
                             element.WspEvent = wspEvent;
 
-                            rePublisherQueue.Enqueue(element);
+                            for(int tries = 0; tries < 10; tries++)
+                            {
+                                try
+                                {
+                                    rePublisherQueue.Enqueue(element);
+
+                                    break;
+                                }
+                                catch (Exception e)
+                                {
+                                    if (tries == 10)
+                                    {
+                                        EventLog.WriteEntry("WspEventRouter", "Event dropped: " + e.ToString(), EventLogEntryType.Error);
+                                    }
+                                    else
+                                    {
+                                        EventLog.WriteEntry("WspEventRouter", e.ToString(), EventLogEntryType.Warning);
+                                    }
+                                }
+                            }
                         }
 
                         state.Reset();

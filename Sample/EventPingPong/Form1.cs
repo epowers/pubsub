@@ -19,7 +19,7 @@ namespace Microsoft.Sample.EventPingPong
         private static TimeSpan totalTime;
         private static PublishEvent pubEvent;
         private static SubscribeEvent subEvent;
-        private static PublishManager pubMgr;
+        private static WspEventPublish eventPush;
         private static SubscriptionManager subMgr;
         private static SubscriptionManager.Callback subCallback;
         private static SubscriptionManager.Callback pubCallback;
@@ -35,7 +35,7 @@ namespace Microsoft.Sample.EventPingPong
 
             subEvent = new SubscribeEvent();
 
-            pubMgr = new PublishManager();
+            eventPush = new WspEventPublish();
 
             subCallback = new SubscriptionManager.Callback(SubscriptionCallback);
             pubCallback = new SubscriptionManager.Callback(PublishCallback);
@@ -78,7 +78,7 @@ namespace Microsoft.Sample.EventPingPong
             {
                 try
                 {
-                    pubMgr.Publish(pubEvent.EventType, pubEvent.Serialize());
+                    eventPush.OnNext(new WspEvent(pubEvent.EventType, null, pubEvent.Serialize()));
 
                     break;
                 }
@@ -191,7 +191,7 @@ namespace Microsoft.Sample.EventPingPong
 
 
 
-        public void SubscriptionCallback(Guid eventType, Microsoft.WebSolutionsPlatform.PubSubManager.WspEvent wspEvent)
+        public void SubscriptionCallback(Guid eventType, WspEvent wspEvent)
         {
             PublishEvent localEvent;
 
@@ -211,7 +211,7 @@ namespace Microsoft.Sample.EventPingPong
                 {
                     try
                     {
-                        pubMgr.Publish(subEvent.EventType, subEvent.Serialize());
+                        eventPush.OnNext(new WspEvent(subEvent.EventType, null, subEvent.Serialize()));
 
                         break;
                     }
@@ -225,7 +225,7 @@ namespace Microsoft.Sample.EventPingPong
             SetTextbox(eventNumberSent, counter.ToString());
         }
 
-        public void PublishCallback(Guid eventType, Microsoft.WebSolutionsPlatform.PubSubManager.WspEvent wspEvent)
+        public void PublishCallback(Guid eventType, WspEvent wspEvent)
         {
             SubscribeEvent subscribeEvent;
 
@@ -245,7 +245,7 @@ namespace Microsoft.Sample.EventPingPong
                     {
                         try
                         {
-                            pubMgr.Publish(pubEvent.EventType, pubEvent.Serialize());
+                            eventPush.OnNext(new WspEvent(pubEvent.EventType, null, pubEvent.Serialize()));
 
                             break;
                         }

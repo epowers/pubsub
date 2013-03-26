@@ -20,25 +20,25 @@ using Microsoft.WebSolutionsPlatform.PubSubManager;
 
 namespace Microsoft.WebSolutionsPlatform.Router
 {
-    public partial class Router : ServiceBase
-    {
-        internal class Listener : ServiceThread
-        {
-            public override void Start()
-            {
+	public partial class Router : ServiceBase
+	{
+		internal class Listener : ServiceThread
+		{
+			public override void Start()
+			{
                 if (eventQueue == null)
                 {
                     eventQueue = new SharedQueue(localPublish.EventQueueName, localPublish.EventQueueSize, (uint)localPublish.AverageEventSize);
                 }
 
                 ListenToEvents();
-            }
+			}
 
             public static void ListenToEvents()
-            {
+			{
                 EventSource eventSource;
                 SocketInfo socketInfo;
-                Microsoft.WebSolutionsPlatform.PubSubManager.WspEvent wspEvent;
+                WspEvent wspEvent;
 
                 try
                 {
@@ -74,7 +74,7 @@ namespace Microsoft.WebSolutionsPlatform.Router
 
                         try
                         {
-                            wspEvent = new Microsoft.WebSolutionsPlatform.PubSubManager.WspEvent(buffer);
+                            wspEvent = new WspEvent(buffer);
                         }
                         catch (Exception e)
                         {
@@ -236,13 +236,13 @@ namespace Microsoft.WebSolutionsPlatform.Router
                 }
 
                 catch (ThreadAbortException)
-                {
-                    // Another thread has signalled that this worker
-                    // thread must terminate.  Typically, this occurs when
-                    // the main service thread receives a service stop 
-                    // command.
-                }
-            }
-        }
-    }
+				{
+					// Another thread has signalled that this worker
+					// thread must terminate.  Typically, this occurs when
+					// the main service thread receives a service stop 
+					// command.
+				}
+			}
+		}
+	}
 }

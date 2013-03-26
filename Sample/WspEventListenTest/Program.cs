@@ -53,7 +53,7 @@ namespace WspEventListenTest
         }
     }
 
-    class WorkerClass : IObserver<Microsoft.WebSolutionsPlatform.PubSubManager.WspEvent>
+    class WorkerClass : IObserver<WspEvent>
     {
         WspEventObservable sub;
 
@@ -97,7 +97,7 @@ namespace WspEventListenTest
             }
         }
 
-        public void OnNext(Microsoft.WebSolutionsPlatform.PubSubManager.WspEvent wspEvent)
+        public void OnNext(WspEvent wspEvent)
         {
             WebpageEvent localEvent;
 

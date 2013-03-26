@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace WspEvent {
+namespace Microsoft.WebSolutionsPlatform.Event {
     using System;
     
     
@@ -39,7 +39,7 @@ namespace WspEvent {
         internal static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("WspEvent.WspEvent", typeof(WspEvent).Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("Microsoft.WebSolutionsPlatform.Event.WspEvent", typeof(WspEvent).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;

@@ -426,7 +426,7 @@ namespace Microsoft.WebSolutionsPlatform.Common
 
             rc = NativeMethods.GetBuffer(buffer, bufferLength, timeout, ref bytesRead, ref commBuffer);
 
-            if (rc == ReturnCode.Timeout)
+            if (rc == ReturnCode.Timeout || bytesRead == 0)
             {
                 return null;
             }

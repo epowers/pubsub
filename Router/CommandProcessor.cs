@@ -36,7 +36,7 @@ namespace Microsoft.WebSolutionsPlatform.Router
                 bool elementRetrieved;
                 string prevValue = string.Empty;
                 long nextSendTick = DateTime.Now.Ticks;
-                PublishManager pubMgr;
+                WspEventPublish eventPush = null;
                 Regex targetFilter;
                 bool processCommands = true;
 
@@ -57,11 +57,11 @@ namespace Microsoft.WebSolutionsPlatform.Router
                         {
                             if (hubRole == true)
                             {
-                                pubMgr = new PublishManager((uint)configSettings.HubRoleSettings.ThisRouter.Timeout);
+                                eventPush = new WspEventPublish((uint)configSettings.HubRoleSettings.ThisRouter.Timeout);
                             }
                             else
                             {
-                                pubMgr = new PublishManager((uint)configSettings.NodeRoleSettings.ParentRouter.Timeout);
+                                eventPush = new WspEventPublish((uint)configSettings.NodeRoleSettings.ParentRouter.Timeout);
                             }
 
                             break;
@@ -174,7 +174,23 @@ namespace Microsoft.WebSolutionsPlatform.Router
                                 case "wsp_getsysteminfo":
                                     try
                                     {
-                                        AddDictionaryElement(response.Results, "HostName", Dns.GetHostName());
+                                        string hostName = Dns.GetHostName().ToLower();
+
+                                        try
+                                        {
+                                            char[] splitChar = { '.' };
+
+                                            IPHostEntry hostEntry = Dns.GetHostEntry(hostName);
+
+                                            string[] temp = hostEntry.HostName.ToLower().Split(splitChar, 2);
+
+                                            hostName = temp[0];
+                                        }
+                                        catch
+                                        {
+                                        }
+
+                                        AddDictionaryElement(response.Results, "HostName", hostName);
 
                                         try
                                         {
@@ -1478,16 +1494,16 @@ namespace Microsoft.WebSolutionsPlatform.Router
 
                             if (response.ReturnCode == 0)
                             {
-                                EventLog.WriteEntry("WspEventRouter", FormatMessage(request, response), EventLogEntryType.Information);
+                                EventLog.WriteEntry("WspEventRouter", FormatMessage(element.WspEvent, request, response), EventLogEntryType.Information);
                             }
                             else
                             {
-                                EventLog.WriteEntry("WspEventRouter", FormatMessage(request, response), EventLogEntryType.Warning);
+                                EventLog.WriteEntry("WspEventRouter", FormatMessage(element.WspEvent, request, response), EventLogEntryType.Warning);
                             }
 
                             try
                             {
-                                pubMgr.Publish(response.EventType, response.Serialize());
+                                eventPush.OnNext(new WspEvent(response.EventType, null, response.Serialize()));
                             }
                             catch
                             {
@@ -1525,18 +1541,18 @@ namespace Microsoft.WebSolutionsPlatform.Router
                 }
             }
 
-            internal string FormatMessage(CommandRequest request, CommandResponse response)
+            internal string FormatMessage(WspEvent wspEvent, CommandRequest request, CommandResponse response)
             {
                 StringBuilder sb = new StringBuilder();
 
                 sb.Append("Originating Machine: ");
-                sb.Append(request.OriginatingRouterName);
+                sb.Append(wspEvent.OriginatingRouterName);
                 sb.Append('\n');
 
                 sb.Append("Command Time: ");
-                sb.Append(new DateTime(request.EventTime).ToShortDateString());
+                sb.Append(new DateTime(wspEvent.TimeStamp).ToShortDateString());
                 sb.Append(" ");
-                sb.Append(new DateTime(request.EventTime).ToLongTimeString());
+                sb.Append(new DateTime(wspEvent.TimeStamp).ToLongTimeString());
                 sb.Append('\n');
 
                 sb.Append("Command: ");

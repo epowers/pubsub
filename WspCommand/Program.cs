@@ -134,7 +134,7 @@ namespace WspCommand
 
             responseMgr.AddSubscription(commandRequest.EventIdForResponse, false);
 
-            PublishManager pubMgr = new PublishManager();
+            WspEventPublish eventPush = new WspEventPublish();
 
             switch (commandRequest.Command)
             {
@@ -146,7 +146,7 @@ namespace WspCommand
                     else
                     {
                         if (commandRequest.Arguments.Count > 1 ||
-                            (string.Compare((string)commandRequest.Arguments[0], "true", true) != 0 &&
+                            (string.Compare((string)commandRequest.Arguments[0], "true", true) != 0 && 
                             string.Compare((string)commandRequest.Arguments[0], "false", true) != 0))
                         {
                             ConsoleColor currColor = Console.ForegroundColor;
@@ -239,7 +239,7 @@ namespace WspCommand
                 return;
             }
 
-            pubMgr.Publish(commandRequest.EventType, commandRequest.Serialize());
+            eventPush.OnNext(new WspEvent(commandRequest.EventType, null, commandRequest.Serialize()));
 
             Console.WriteLine();
 
@@ -257,7 +257,7 @@ namespace WspCommand
             return;
         }
 
-        static public void ResponseCallback(Guid eventType, Microsoft.WebSolutionsPlatform.PubSubManager.WspEvent wspEvent)
+        static public void ResponseCallback(Guid eventType, WspEvent wspEvent)
         {
             CommandResponse response;
 
@@ -270,12 +270,12 @@ namespace WspCommand
 
                 Console.WriteLine();
 
-                Console.WriteLine("OriginatingRouterName: " + response.OriginatingRouterName);
+                Console.WriteLine("OriginatingRouterName: " + wspEvent.OriginatingRouterName);
                 Console.WriteLine("ReturnCode: " + response.ReturnCode.ToString());
                 Console.WriteLine("Message: " + response.Message);
                 Console.WriteLine("CorrelationID: " + response.CorrelationID.ToString());
 
-                if (response.ResponseException != null)
+                if(response.ResponseException != null)
                 {
                     Console.WriteLine("ResponseException: " + response.ResponseException.Message);
                 }
@@ -299,7 +299,7 @@ namespace WspCommand
 
         static public void WriteOutput(Dictionary<string, object> dictionary, string name, int level)
         {
-            for (int i = 0; i < level; i++)
+            for(int i = 0; i < level; i++)
             {
                 Console.Write('\t');
             }
@@ -328,7 +328,7 @@ namespace WspCommand
                         }
                         else
                         {
-                            WriteOutput((object)dictionary[key], key, level + 1);
+                            WriteOutput((object) dictionary[key], key, level + 1);
                         }
                     }
                 }
@@ -345,9 +345,9 @@ namespace WspCommand
 
             Console.Write(name + ": \n");
 
-            for (int i = 0; i < list.Count; i++)
+            for(int i = 0; i < list.Count; i++)
             {
-                WriteOutput((object)list[i], i.ToString(), level + 1);
+                WriteOutput((object) list[i], i.ToString(), level + 1);
             }
         }
 
@@ -360,7 +360,7 @@ namespace WspCommand
 
             Console.Write(name + ": \n");
 
-            for (int i = 0; i < list.Count; i++)
+            for(int i = 0; i < list.Count; i++)
             {
                 object obj = list[i];
 

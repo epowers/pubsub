@@ -24,7 +24,7 @@ namespace Microsoft.WebSolutionsPlatform.Router
 		{
 			public override void Start()
 			{
-                PublishManager pubMgr = null;
+                WspEventPublish eventPush = null;
 				QueueElement element;
                 QueueElement newElement = new QueueElement();
 				bool elementRetrieved;
@@ -46,11 +46,11 @@ namespace Microsoft.WebSolutionsPlatform.Router
                         {
                             if (hubRole == true)
                             {
-                                pubMgr = new PublishManager((uint)configSettings.HubRoleSettings.ThisRouter.Timeout);
+                                eventPush = new WspEventPublish((uint)configSettings.HubRoleSettings.ThisRouter.Timeout);
                             }
                             else
                             {
-                                pubMgr = new PublishManager((uint)configSettings.NodeRoleSettings.ParentRouter.Timeout);
+                                eventPush = new WspEventPublish((uint)configSettings.NodeRoleSettings.ParentRouter.Timeout);
                             }
 
 
@@ -88,7 +88,7 @@ namespace Microsoft.WebSolutionsPlatform.Router
                         {
                             try
                             {
-                                pubMgr.PublishNew(element.WspEvent.SerializedEvent);
+                                eventPush.OnNext(element.WspEvent);
                             }
                             catch
                             {

@@ -92,6 +92,7 @@
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="Common.cs" />
     <Compile Include="Exceptions.cs" />
+    <Compile Include="Interceptor.cs" />
     <Compile Include="PublishMgr.cs" />
     <Compile Include="PubSubMgr.Designer.cs">
       <AutoGen>True</AutoGen>

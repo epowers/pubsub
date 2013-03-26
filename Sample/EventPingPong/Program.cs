@@ -21,7 +21,7 @@ namespace Microsoft.Sample.EventPingPong
         }
     }
 
-    public class PublishEvent : Event
+    public class PublishEvent : WspBody
     {
         private UInt64 eventNum;
         [CLSCompliant(false)]
@@ -108,7 +108,7 @@ namespace Microsoft.Sample.EventPingPong
         }
     }
 
-    public class SubscribeEvent : Event
+    public class SubscribeEvent : WspBody
     {
         private UInt64 eventNum;
         [CLSCompliant(false)]
