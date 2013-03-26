@@ -14,7 +14,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
     /// The Command class defines the command request object to execute
     /// commands on remote systems
     /// </summary>
-    public class CommandRequest : Event
+    public class CommandRequest : WspBody
     {
         private Guid eventIdForResponse = Guid.Empty;
         /// <summary>
@@ -144,7 +144,6 @@ namespace Microsoft.WebSolutionsPlatform.Event
         public CommandRequest() :
             base()
         {
-            EventVersion = new Version(@"3.0");
             Arguments = new List<object>();
         }
 
@@ -232,7 +231,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
     /// The Command class defines the command response object to execute
     /// commands on remote systems
     /// </summary>
-    public class CommandResponse : Event
+    public class CommandResponse : WspBody
     {
         private Guid correlationID = Guid.Empty;
         /// <summary>
@@ -325,7 +324,6 @@ namespace Microsoft.WebSolutionsPlatform.Event
         public CommandResponse() :
             base()
         {
-            EventVersion = new Version(@"3.0");
             Results = new Dictionary<string, object>();
             ResponseException = null;
             ReturnCode = 0;
@@ -338,7 +336,6 @@ namespace Microsoft.WebSolutionsPlatform.Event
         public CommandResponse(CommandRequest commandRequest) :
             base()
         {
-            EventVersion = new Version(@"3.0");
             Results = new Dictionary<string, object>();
             ResponseException = null;
             ReturnCode = 0;

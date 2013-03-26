@@ -671,7 +671,7 @@ namespace Microsoft.WebSolutionsPlatform.Router
         }
     }
 
-    internal class ConfigEvent : Event.Event
+    internal class ConfigEvent : Event.WspBody
     {
         private string data;
         /// <summary>
@@ -724,7 +724,7 @@ namespace Microsoft.WebSolutionsPlatform.Router
                 bool elementRetrieved;
                 string prevValue = string.Empty;
                 long nextSendTick = DateTime.Now.Ticks;
-                PublishManager pubMgr;
+                WspEventPublish eventPush = null;
                 ConfigEvent mgmtEvent;
 
                 try
@@ -738,7 +738,7 @@ namespace Microsoft.WebSolutionsPlatform.Router
                         // If the thread is restarted, this could throw an exception but just ignore
                     }
 
-                    pubMgr = new PublishManager();
+                    eventPush = new WspEventPublish();
 
                     mgmtEvent = new ConfigEvent();
 
@@ -758,7 +758,7 @@ namespace Microsoft.WebSolutionsPlatform.Router
                                     mgmtEvent.Data = File.ReadAllText(configFile);
                                     mgmtEvent.EventType = configSettings.EventRouterSettings.MgmtGuid;
 
-                                    pubMgr.Publish(configSettings.EventRouterSettings.MgmtGuid, null, mgmtEvent.Serialize());
+                                    eventPush.OnNext(new WspEvent(configSettings.EventRouterSettings.MgmtGuid, null, mgmtEvent.Serialize()));
                                 }
 
                                 nextSendTick = DateTime.Now.Ticks + 600000000L;
@@ -873,6 +873,17 @@ namespace Microsoft.WebSolutionsPlatform.Router
 
                     if (string.Compare(newConfigSettings.EventRouterSettings.Role, "hub", true) == 0)
                     {
+                        Dictionary<string, Hub> hubs = GetHubList(newConfigSettings, newConfigSettings.EventRouterSettings.Group);
+
+                        if(hubs.ContainsKey(Router.LocalRouterName) == false)
+                        {
+                            newConfigSettings.EventRouterSettings.Role = "node";
+                            EventLog.WriteEntry("WspEventRouter", "Role has been changed to Node since name was not found in Hub list", EventLogEntryType.Error);
+                        }
+                    }
+
+                    if (string.Compare(newConfigSettings.EventRouterSettings.Role, "hub", true) == 0)
+                    {
                         hubRole = true;
                         subscriptionManagement = newConfigSettings.HubRoleSettings.SubscriptionManagement;
                         outputCommunicationQueues = newConfigSettings.HubRoleSettings.OutputCommunicationQueues;
@@ -891,6 +902,41 @@ namespace Microsoft.WebSolutionsPlatform.Router
                     LoadLogSettings();
                     LoadLocalLogSettings();
                 }
+            }
+
+            internal static Dictionary<string, Hub> GetHubList(ConfigSettings configSettings, string groupNameIn)
+            {
+                Group currGroup = null;
+                string groupName = groupNameIn;
+
+                while (currGroup == null)
+                {
+                    if (configSettings.GroupSettings.Groups.TryGetValue(groupName, out currGroup) == true)
+                    {
+                        if (string.IsNullOrEmpty(currGroup.UseGroup) == false)
+                        {
+                            groupName = currGroup.UseGroup;
+                            currGroup = null;
+                            continue;
+                        }
+                        else
+                        {
+                            continue;
+                        }
+                    }
+                    else
+                    {
+                        if (string.Compare(groupName, "default", true) != 0)
+                        {
+                            return new Dictionary<string, Hub>();
+                        }
+
+                        groupName = "default";
+                        currGroup = null;
+                    }
+                }
+
+                return currGroup.Hubs;
             }
 
             internal static bool LoadEventRouterSettings(XPathNavigator navigator, ConfigSettings newConfigSettings)
@@ -1200,8 +1246,29 @@ namespace Microsoft.WebSolutionsPlatform.Router
                             configValueIn = child.Current.GetAttribute(@"name", String.Empty);
                             if (configValueIn.Length != 0)
                             {
-                                hub.Name = configValueIn;
-                                group.Hubs.Add(hub.Name, hub);
+                                try
+                                {
+                                    IPHostEntry hostEntry = Dns.GetHostEntry(configValueIn);
+
+                                    if (string.IsNullOrEmpty(hostEntry.HostName) == true)
+                                    {
+                                        EventLog.WriteEntry("WspEventRouter", "Hub entry [" + configValueIn + "] cannot be resolved by DNS", EventLogEntryType.Error);
+                                    }
+                                    else
+                                    {
+                                        char[] splitChar = { '.' };
+
+                                        string[] temp = hostEntry.HostName.ToLower().Split(splitChar, 2);
+
+                                        hub.Name = temp[0];
+
+                                        group.Hubs.Add(hub.Name, hub);
+                                    }
+                                }
+                                catch (Exception e)
+                                {
+                                    EventLog.WriteEntry("WspEventRouter", "Hub entry [" + configValueIn + "] cannot be resolved by DNS.  Exception: " + e.Message, EventLogEntryType.Error);
+                                }
                             }
                         }
 

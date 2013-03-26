@@ -17,7 +17,25 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
     /// </summary>
     public class WspEventPublish : IObserver<WspEvent>
     {
-        private static PublishManager pubMgr = new PublishManager();
+        private static PublishManager pubMgr;
+
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        public WspEventPublish()
+        {
+            pubMgr = new PublishManager();
+        }
+
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="timeout">Timeout for publishing an event</param>
+        [CLSCompliant(false)]
+        public WspEventPublish(uint timeout)
+        {
+            pubMgr = new PublishManager(timeout);
+        }
 
         /// <summary>
         /// The OnCompleted is not used for publishing events
@@ -40,6 +58,41 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
         /// <param name="wspEvent">The WspEvent being published</param>
         public void OnNext(WspEvent wspEvent)
         {
+            WspEvent[] wspEvents = null;
+
+            if (Interceptor.publishInterceptor != null)
+            {
+                try
+                {
+                    if (Interceptor.publishInterceptor(wspEvent, out wspEvents) == false)
+                    {
+                        return;
+                    }
+                }
+                catch
+                {
+                }
+            }
+
+            if (wspEvents == null || wspEvents.Length == 0)
+            {
+                pubMgr.PublishNew(wspEvent.SerializedEvent);
+            }
+            else
+            {
+                for (int i = 0; i < wspEvents.Length; i++)
+                {
+                    pubMgr.PublishNew(wspEvents[i].SerializedEvent);
+                }
+            }
+        }
+
+        /// <summary>
+        /// The OnNextPrivate is used to publish events using Rx but bypassing the interceptor
+        /// </summary>
+        /// <param name="wspEvent">The WspEvent being published</param>
+        internal void OnNextPrivate(WspEvent wspEvent)
+        {
             pubMgr.PublishNew(wspEvent.SerializedEvent);
         }
     }
@@ -47,7 +100,7 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
     /// <summary>
     /// PublishManager is used by applcations to publish events.
     /// </summary>
-    public class PublishManager : IDisposable
+    internal class PublishManager : IDisposable
     {
         private static UInt32 defaultEventTimeout = 10000;
 
@@ -60,7 +113,7 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
         /// <summary>
         /// Number of times to retry a failed enqueue request before returning a fail to the application
         /// </summary>
-        public int RetryAttempts
+        internal int RetryAttempts
         {
             get
             {
@@ -76,7 +129,7 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
         /// <summary>
         /// Number of milliseconds to wait before retrying an enqueue request
         /// </summary>
-        public int RetryPause
+        internal int RetryPause
         {
             get
             {
@@ -92,8 +145,7 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
         /// <summary>
         /// Timeout for publishing events
         /// </summary>
-        [CLSCompliant(false)]
-        public UInt32 Timeout
+        internal UInt32 Timeout
         {
             get
             {
@@ -108,8 +160,7 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
         /// <summary>
         /// Size in bytes of the SharedQueue
         /// </summary>
-        [CLSCompliant(false)]
-        public UInt32 QueueSize
+        internal UInt32 QueueSize
         {
             get
             {
@@ -125,7 +176,7 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
         /// <summary>
         /// Constructor
         /// </summary>
-        public PublishManager()
+        internal PublishManager()
             : this(defaultEventTimeout)
         {
         }
@@ -134,8 +185,7 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
         /// Constructor
         /// </summary>
         /// <param name="timeout">Timeout for publishing an event</param>
-        [CLSCompliant(false)]
-        public PublishManager(UInt32 timeout)
+        internal PublishManager(UInt32 timeout)
         {
             this.timeout = timeout;
             this.retryAttempts = 3;
@@ -171,7 +221,7 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
         /// </summary>
         /// <param name="eventType">Guid for the event</param>
         /// <param name="serializedBody">Serialized version of the event</param>
-        public void Publish(Guid eventType, byte[] serializedBody)
+        internal void Publish(Guid eventType, byte[] serializedBody)
         {
             Publish(eventType, null, serializedBody);
         }
@@ -182,7 +232,7 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
         /// <param name="eventType">Guid for the event</param>
         /// <param name="extendedHeaders">Dictionary of user headers</param>
         /// <param name="serializedBody">Serialized version of the event</param>
-        public void Publish(Guid eventType, Dictionary<byte, string> extendedHeaders, byte[] serializedBody)
+        internal void Publish(Guid eventType, Dictionary<byte, string> extendedHeaders, byte[] serializedBody)
         {
             if (serializedBody == null || serializedBody.Length == 0)
             {
@@ -207,7 +257,7 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
         /// Publishes an event to the event service
         /// </summary>
         /// <param name="wspEvent">The WspEvent object to be published</param>
-        public void Publish(WspEvent wspEvent)
+        internal void Publish(WspEvent wspEvent)
         {
             PublishNew(wspEvent.SerializedEvent);
         }
@@ -216,7 +266,7 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
         /// Publishes an event to the event service
         /// </summary>
         /// <param name="serializedEvent">A serialized WspEvent object</param>
-        public void PublishNew(byte[] serializedEvent)
+        internal void PublishNew(byte[] serializedEvent)
         {
             int tries = 0;
 

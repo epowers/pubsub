@@ -115,7 +115,7 @@ namespace Microsoft.WebSolutionsPlatform.Router
 
 	internal class QueueElement
 	{
-        internal Microsoft.WebSolutionsPlatform.PubSubManager.WspEvent WspEvent { get; set; }
+        internal WspEvent WspEvent { get; set; }
         internal EventSource Source{get; set;}
         internal object BodyEvent { get; set; }
 
@@ -172,7 +172,21 @@ namespace Microsoft.WebSolutionsPlatform.Router
             {
                 if (localRouterName.Length == 0)
                 {
+                    char[] splitChar = { '.' };
+
                     localRouterName = Dns.GetHostName();
+
+                    try
+                    {
+                        IPHostEntry hostEntry = Dns.GetHostEntry(localRouterName);
+
+                        string[] temp = hostEntry.HostName.ToLower().Split(splitChar, 2);
+
+                        localRouterName = temp[0];
+                    }
+                    catch
+                    {
+                    }
                 }
 
                 return localRouterName;
@@ -187,7 +201,8 @@ namespace Microsoft.WebSolutionsPlatform.Router
                 if (routerNameEncodedPriv == null)
                 {
                     UTF8Encoding uniEncoding = new UTF8Encoding();
-                    routerNameEncodedPriv = uniEncoding.GetBytes(Dns.GetHostName());
+
+                    routerNameEncodedPriv = uniEncoding.GetBytes(LocalRouterName);
                 }
 
                 return routerNameEncodedPriv;

@@ -82,9 +82,9 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
                 while( newLength < (position + length) )
                 {
-                    if ((int.MaxValue / 2) > buffer.Length)
+                    if ((int.MaxValue / 2) > newLength)
                     {
-                        newLength = buffer.Length * 2;
+                        newLength = newLength * 2;
                     }
                     else
                     {
@@ -198,47 +198,6 @@ namespace Microsoft.WebSolutionsPlatform.Event
                 outArray = null;
                 return false;
             }
-        }
-
-        /// <summary>
-        /// Method returns the event's header properties.
-        /// </summary>
-        /// <param name="originatingRouterName">Machine were event originated from</param>
-        /// <param name="inRouterName">Machine which passed the event to this machine</param>
-        /// <param name="eventType">Event type</param>
-        /// <returns>Number of bytes of the buffer which was the header</returns>
-        public bool GetHeader(out string originatingRouterName, out string inRouterName, out Guid eventType)
-        {
-            bool rc;
-
-            Reset();
-
-            originatingRouterName = string.Empty;
-            inRouterName = string.Empty;
-            eventType = Guid.Empty;
-
-            rc = Read(out originatingRouterName);
-
-            if (rc == false)
-            {
-                return false;
-            }
-
-            rc = Read(out inRouterName);
-
-            if (rc == false)
-            {
-                return false;
-            }
-
-            rc = Read(out eventType);
-
-            if (rc == false)
-            {
-                return false;
-            }
-
-            return true;
         }
 
         /// <summary>

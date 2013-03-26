@@ -15,201 +15,45 @@ namespace Microsoft.WebSolutionsPlatform.Event
     /// <summary>
     /// Base class for events. All events must inherit from this class.
     /// </summary>
-    abstract public class Event
+    abstract public class WspBody
 	{
-        private static string baseVersion = @"3.0";
+		private WspBuffer serializedBody = null;
 
-        private string originatingRouterName = string.Empty;
         /// <summary>
-        /// Router that the event originated from
+        /// Type of the event
         /// </summary>
-        public string OriginatingRouterName
-        {
-            get
-            {
-                if (originatingRouterName.Length == 0)
-                {
-                    originatingRouterName = Dns.GetHostName();
-                }
+        public Guid EventType { get; set; }
 
-                return originatingRouterName;
-            }
-
-            set
-            {
-                originatingRouterName = value;
-            }
-        }
-
-        private string inRouterName = string.Empty;
         /// <summary>
-        /// Router the event was passed from
-        /// </summary>
-        public string InRouterName
-        {
-            get
-            {
-                if (inRouterName.Length == 0)
-                {
-                    inRouterName = Dns.GetHostName();
-                }
-
-                return inRouterName;
-            }
-
-            set
-            {
-                inRouterName = value;
-            }
-        }
-
-        private static Guid subscriptionEvent = new Guid(@"3D7B4317-C051-4e1a-8379-B6E2D6C107F9");
-        /// <summary>
-        /// Event type for a Subscription Event
-        /// </summary>
-        public static Guid SubscriptionEvent
-        {
-            get
-            {
-                return subscriptionEvent;
-            }
-
-            set
-            {
-                subscriptionEvent = value;
-            }
-        }
-
-        private Guid eventType;
-		/// <summary>
-		/// Type of the event
+		/// Serialized version of the WspBody
 		/// </summary>
-        public Guid EventType
+        public WspBuffer SerializedBody
 		{
 			get
 			{
-				return eventType;
-			}
-
-			set
-			{
-				eventType = value;
-			}
-		}
-
-		private Version eventVersion;
-		/// <summary>
-		/// Version of the event
-		/// </summary>
-		public Version EventVersion
-		{
-			get
-			{
-				return eventVersion;
-			}
-
-			set
-			{
-				eventVersion = value;
-			}
-		}
-
-		private string eventName;
-		/// <summary>
-		/// Friendly name of the event
-		/// </summary>
-		public string EventName
-		{
-			get
-			{
-				return eventName;
-			}
-
-			set
-			{
-				eventName = value;
-			}
-		}
-
-		private long eventTime;
-		/// <summary>
-		/// UTC time in ticks of when the event is published
-		/// </summary>
-		public long EventTime
-		{
-			get
-			{
-				return eventTime;
+				return serializedBody;
 			}
 
             set
             {
-                eventTime = value;
-            }
-        }
-
-		private string eventPublisher;
-		/// <summary>
-		/// Friendly name of the event
-		/// </summary>
-		public string EventPublisher
-		{
-			get
-			{
-				return eventPublisher;
-			}
-
-			set
-			{
-				eventPublisher = value;
-			}
-		}
-
-		private WspBuffer serializedEvent = null;
-		/// <summary>
-		/// Serialized version of the event
-		/// </summary>
-        public WspBuffer SerializedEvent
-		{
-			get
-			{
-				return serializedEvent;
-			}
-
-            set
-            {
-                serializedEvent = value;
+                serializedBody = value;
             }
         }
 
 		/// <summary>
 		/// Base constructor to create a new event
 		/// </summary>
-        public Event()
+        public WspBody()
 		{
-            InitializeEvent();
 		}
 
 		/// <summary>
 		/// Base contructor to re-instantiate an existing event
 		/// </summary>
         /// <param name="serializationData">Serialized event buffer</param>
-        public Event(byte[] serializationData)
+        public WspBody(byte[] serializationData)
 		{
-            InitializeEvent();
-
             Deserialize(serializationData);
-		}
-
-		/// <summary>
-		/// Initializes a new event object
-		/// </summary>
-        private void InitializeEvent()
-		{
-            eventType = Guid.Empty;
-			eventVersion = new Version(baseVersion);
-			eventName = string.Empty;
-			eventTime = 0;
 		}
 
         /// <summary>
@@ -250,28 +94,16 @@ namespace Microsoft.WebSolutionsPlatform.Event
         /// <returns>Serialized version of the event</returns>
 		public byte[] Serialize()
 		{
-            if (serializedEvent == null)
+            if (serializedBody == null)
             {
-                serializedEvent = new WspBuffer();
+                serializedBody = new WspBuffer();
             }
 
-            serializedEvent.Reset();
+            serializedBody.Reset();
 
-            this.eventTime = DateTime.UtcNow.Ticks;
+            GetObjectData(serializedBody);
 
-            serializedEvent.Write(OriginatingRouterName);
-            serializedEvent.Write(InRouterName);
-            serializedEvent.Write(EventType);
-            serializedEvent.AddElement(@"EventBaseVersion", baseVersion);
-            serializedEvent.AddElement(@"EventType", eventType);
-            serializedEvent.AddElement(@"EventVersion", eventVersion);
-            serializedEvent.AddElement(@"EventName", eventName);
-            serializedEvent.AddElement(@"EventTime", eventTime);
-            serializedEvent.AddElement(@"EventPublisher", System.AppDomain.CurrentDomain.FriendlyName);
-
-            GetObjectData(serializedEvent);
-
-            return serializedEvent.ToByteArray();
+            return serializedBody.ToByteArray();
 		}
 
         /// <summary>
@@ -314,21 +146,16 @@ namespace Microsoft.WebSolutionsPlatform.Event
             List<string> stringListValue = null;
             List<object> objectListValue = null;
 
-            serializedEvent = new WspBuffer(serializationData);
+            serializedBody = new WspBuffer(serializationData);
 
-            if (serializedEvent.GetHeader(out originatingRouterName, out inRouterName, out eventType) == false)
+            while (serializedBody.Position < serializedBody.Size)
             {
-                throw new EventDeserializationException("Error reading OriginatingRouterName from serializedEvent");
-            }
-
-            while (serializedEvent.Position < serializedEvent.Size)
-            {
-                if (serializedEvent.Read(out propName) == false)
+                if (serializedBody.Read(out propName) == false)
                 {
                     throw new EventDeserializationException("Error reading PropertyName from buffer");
                 }
 
-                if (serializedEvent.Read(out propType) == false)
+                if (serializedBody.Read(out propType) == false)
                 {
                     throw new EventDeserializationException("Error reading PropertyType from buffer");
                 }
@@ -336,30 +163,9 @@ namespace Microsoft.WebSolutionsPlatform.Event
                 switch (propType)
                 {
                     case (byte)PropertyType.String:
-                        if (serializedEvent.Read(out stringValue) == false)
+                        if (serializedBody.Read(out stringValue) == false)
                         {
                             throw new EventDeserializationException("Error reading PropertyType from buffer");
-                        }
-
-                        if (propName == @"EventBaseVersion")
-                        {
-                            baseVersion = stringValue;
-
-                            continue;
-                        }
-
-                        if (propName == @"EventName")
-                        {
-                            eventName = stringValue;
-
-                            continue;
-                        }
-
-                        if (propName == @"EventPublisher")
-                        {
-                            eventPublisher = stringValue;
-
-                            continue;
                         }
 
                         SetElement(propName, stringValue);
@@ -367,7 +173,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         continue;
 
                     case (byte)PropertyType.Boolean:
-                        if (serializedEvent.Read(out boolValue) == false)
+                        if (serializedBody.Read(out boolValue) == false)
                         {
                             throw new EventDeserializationException("Error reading PropertyType from buffer");
                         }
@@ -377,7 +183,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         continue;
 
                     case (byte)PropertyType.Int32:
-                        if (serializedEvent.Read(out int32Value) == false)
+                        if (serializedBody.Read(out int32Value) == false)
                         {
                             throw new EventDeserializationException("Error reading PropertyType from buffer");
                         }
@@ -387,16 +193,9 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         continue;
 
                     case (byte)PropertyType.Int64:
-                        if (serializedEvent.Read(out int64Value) == false)
+                        if (serializedBody.Read(out int64Value) == false)
                         {
                             throw new EventDeserializationException("Error reading PropertyType from buffer");
-                        }
-
-                        if (propName == @"EventTime")
-                        {
-                            eventTime = int64Value;
-
-                            continue;
                         }
 
                         SetElement(propName, int64Value);
@@ -404,7 +203,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         continue;
 
                     case (byte)PropertyType.SByte:
-                        if (serializedEvent.Read(out sbyteValue) == false)
+                        if (serializedBody.Read(out sbyteValue) == false)
                         {
                             throw new EventDeserializationException("Error reading PropertyType from buffer");
                         }
@@ -414,7 +213,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         continue;
 
                     case (byte)PropertyType.Double:
-                        if (serializedEvent.Read(out doubleValue) == false)
+                        if (serializedBody.Read(out doubleValue) == false)
                         {
                             throw new EventDeserializationException("Error reading PropertyType from buffer");
                         }
@@ -424,7 +223,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         continue;
 
                     case (byte)PropertyType.Decimal:
-                        if (serializedEvent.Read(out decimalValue) == false)
+                        if (serializedBody.Read(out decimalValue) == false)
                         {
                             throw new EventDeserializationException("Error reading PropertyType from buffer");
                         }
@@ -434,7 +233,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         continue;
 
                     case (byte)PropertyType.Byte:
-                        if (serializedEvent.Read(out byteValue) == false)
+                        if (serializedBody.Read(out byteValue) == false)
                         {
                             throw new EventDeserializationException("Error reading PropertyType from buffer");
                         }
@@ -444,7 +243,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         continue;
 
                     case (byte)PropertyType.Char:
-                        if (serializedEvent.Read(out charValue) == false)
+                        if (serializedBody.Read(out charValue) == false)
                         {
                             throw new EventDeserializationException("Error reading PropertyType from buffer");
                         }
@@ -454,16 +253,9 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         continue;
 
                     case (byte)PropertyType.Version:
-                        if (serializedEvent.Read(out versionValue) == false)
+                        if (serializedBody.Read(out versionValue) == false)
                         {
                             throw new EventDeserializationException("Error reading PropertyType from buffer");
-                        }
-
-                        if (propName == @"EventVersion")
-                        {
-                            eventVersion = versionValue;
-
-                            continue;
                         }
 
                         SetElement(propName, versionValue);
@@ -471,7 +263,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         continue;
 
                     case (byte)PropertyType.DateTime:
-                        if (serializedEvent.Read(out dateTimeValue) == false)
+                        if (serializedBody.Read(out dateTimeValue) == false)
                         {
                             throw new EventDeserializationException("Error reading PropertyType from buffer");
                         }
@@ -481,16 +273,9 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         continue;
 
                     case (byte)PropertyType.Guid:
-                        if (serializedEvent.Read(out guidValue) == false)
+                        if (serializedBody.Read(out guidValue) == false)
                         {
                             throw new EventDeserializationException("Error reading PropertyType from buffer");
-                        }
-
-                        if (propName == @"EventType")
-                        {
-                            eventType = guidValue;
-
-                            continue;
                         }
 
                         SetElement(propName, guidValue);
@@ -498,7 +283,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         continue;
 
                     case (byte)PropertyType.Uri:
-                        if (serializedEvent.Read(out uriValue) == false)
+                        if (serializedBody.Read(out uriValue) == false)
                         {
                             throw new EventDeserializationException("Error reading PropertyType from buffer");
                         }
@@ -508,7 +293,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         continue;
 
                     case (byte)PropertyType.Int16:
-                        if (serializedEvent.Read(out int16Value) == false)
+                        if (serializedBody.Read(out int16Value) == false)
                         {
                             throw new EventDeserializationException("Error reading PropertyType from buffer");
                         }
@@ -518,7 +303,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         continue;
 
                     case (byte)PropertyType.Single:
-                        if (serializedEvent.Read(out singleValue) == false)
+                        if (serializedBody.Read(out singleValue) == false)
                         {
                             throw new EventDeserializationException("Error reading PropertyType from buffer");
                         }
@@ -528,7 +313,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         continue;
 
                     case (byte)PropertyType.UInt16:
-                        if (serializedEvent.Read(out uint16Value) == false)
+                        if (serializedBody.Read(out uint16Value) == false)
                         {
                             throw new EventDeserializationException("Error reading PropertyType from buffer");
                         }
@@ -538,7 +323,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         continue;
 
                     case (byte)PropertyType.UInt32:
-                        if (serializedEvent.Read(out uint32Value) == false)
+                        if (serializedBody.Read(out uint32Value) == false)
                         {
                             throw new EventDeserializationException("Error reading PropertyType from buffer");
                         }
@@ -548,7 +333,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         continue;
 
                     case (byte)PropertyType.UInt64:
-                        if (serializedEvent.Read(out uint64Value) == false)
+                        if (serializedBody.Read(out uint64Value) == false)
                         {
                             throw new EventDeserializationException("Error reading PropertyType from buffer");
                         }
@@ -558,7 +343,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         continue;
 
                     case (byte)PropertyType.IPAddress:
-                        if (serializedEvent.Read(out ipAddressValue) == false)
+                        if (serializedBody.Read(out ipAddressValue) == false)
                         {
                             throw new EventDeserializationException("Error reading PropertyType from buffer");
                         }
@@ -568,7 +353,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         continue;
 
                     case (byte)PropertyType.ByteArray:
-                        if (serializedEvent.Read(out byteArrayValue) == false)
+                        if (serializedBody.Read(out byteArrayValue) == false)
                         {
                             throw new EventDeserializationException("Error reading PropertyType from buffer");
                         }
@@ -578,7 +363,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         continue;
 
                     case (byte)PropertyType.CharArray:
-                        if (serializedEvent.Read(out charArrayValue) == false)
+                        if (serializedBody.Read(out charArrayValue) == false)
                         {
                             throw new EventDeserializationException("Error reading PropertyType from buffer");
                         }
@@ -588,7 +373,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         continue;
 
                     case (byte)PropertyType.StringDictionary:
-                        if (serializedEvent.Read(out stringDictionaryValue) == false)
+                        if (serializedBody.Read(out stringDictionaryValue) == false)
                         {
                             throw new EventDeserializationException("Error reading PropertyType from buffer");
                         }
@@ -598,7 +383,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         continue;
 
                     case (byte)PropertyType.ObjectDictionary:
-                        if (serializedEvent.Read(out objectDictionaryValue) == false)
+                        if (serializedBody.Read(out objectDictionaryValue) == false)
                         {
                             throw new EventDeserializationException("Error reading PropertyType from buffer");
                         }
@@ -608,7 +393,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         continue;
 
                     case (byte)PropertyType.StringList:
-                        if (serializedEvent.Read(out stringListValue) == false)
+                        if (serializedBody.Read(out stringListValue) == false)
                         {
                             throw new EventDeserializationException("Error reading PropertyType from buffer");
                         }
@@ -618,7 +403,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         continue;
 
                     case (byte)PropertyType.ObjectList:
-                        if (serializedEvent.Read(out objectListValue) == false)
+                        if (serializedBody.Read(out objectListValue) == false)
                         {
                             throw new EventDeserializationException("Error reading PropertyType from buffer");
                         }

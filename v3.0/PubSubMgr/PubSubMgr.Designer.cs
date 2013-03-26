@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace PubSubMgr {
+namespace Microsoft.WebSolutionsPlatform.PubSubManager {
     using System;
     
     
@@ -39,7 +39,7 @@ namespace PubSubMgr {
         internal static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("PubSubMgr.PubSubMgr", typeof(PubSubMgr).Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("Microsoft.WebSolutionsPlatform.PubSubManager.PubSubMgr", typeof(PubSubMgr).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;

@@ -94,7 +94,7 @@ namespace Microsoft.WebSolutionsPlatform.Router
 
             internal static long lastLocalConfigFileTick;
 
-            internal static PublishManager pubMgr = null;
+            internal static WspEventPublish eventPush = null;
 
             internal static Dictionary<Guid, PersistEventInfo> persistEvents = new Dictionary<Guid, PersistEventInfo>();
 
@@ -109,7 +109,23 @@ namespace Microsoft.WebSolutionsPlatform.Router
 
             public Persister()
             {
-                fileNameBase = Dns.GetHostName() + @".Events.";
+                string hostName = Dns.GetHostName().ToLower();
+
+                try
+                {
+                    char[] splitChar = { '.' };
+
+                    IPHostEntry hostEntry = Dns.GetHostEntry(hostName);
+
+                    string[] temp = hostEntry.HostName.ToLower().Split(splitChar, 2);
+
+                    hostName = temp[0];
+                }
+                catch
+                {
+                }
+
+                fileNameBase = hostName + @".Events.";
                 fileNameSuffix = @".txt";
 
                 persistFileEvents = new Stack<PersistFileEvent>();
@@ -141,7 +157,7 @@ namespace Microsoft.WebSolutionsPlatform.Router
 
                 try
                 {
-                    pubMgr = new PublishManager();
+                    eventPush = new WspEventPublish();
 
                     while (true)
                     {
@@ -177,7 +193,7 @@ namespace Microsoft.WebSolutionsPlatform.Router
                                         eInfo.NextCopyTick = currentTick - 1;
 
                                         eInfo.subscription.Subscribe = false;
-                                        pubMgr.Publish(Subscription.SubscriptionEvent, eInfo.subscription.Serialize());
+                                        eventPush.OnNext(new WspEvent(Subscription.SubscriptionEvent, null, eInfo.subscription.Serialize()));
                                     }
                                 }
 
@@ -190,7 +206,7 @@ namespace Microsoft.WebSolutionsPlatform.Router
                                 if (eInfo.InUse == true)
                                 {
                                     eInfo.subscription.Subscribe = true;
-                                    pubMgr.Publish(Subscription.SubscriptionEvent, eInfo.subscription.Serialize());
+                                    eventPush.OnNext(new WspEvent(Subscription.SubscriptionEvent, null, eInfo.subscription.Serialize()));
                                 }
                             }
                         }
@@ -1064,7 +1080,7 @@ namespace Microsoft.WebSolutionsPlatform.Router
                 {
                     try
                     {
-                        pubMgr.Publish(persistFileEvent.EventType, persistFileEvent.Serialize());
+                        eventPush.OnNext(new WspEvent(PersistFileEvent.EventType, null, persistFileEvent.Serialize()));
                         break;
                     }
                     catch

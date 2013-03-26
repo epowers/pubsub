@@ -44,45 +44,150 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
     /// </summary>
     public class WspEvent
     {
+        private Guid eventType;
         /// <summary>
         /// Type of the event
         /// </summary>
-        public Guid EventType { get; set; }
+        public Guid EventType
+        {
+            get
+            {
+                return eventType;
+            }
 
+            set
+            {
+                eventType = value;
+                Headers[(byte)HeaderType.EventType] = eventType.ToString();
+                serializedEvent = null;
+            }
+        }
+
+        private byte[] serializedEvent = null;
         /// <summary>
         /// A serialized form of the event
         /// </summary>
-        public byte[] SerializedEvent { get; internal set; }
+        public byte[] SerializedEvent
+        {
+            get
+            {
+                if (serializedEvent == null)
+                {
+                    return this.Serialize();
+                }
+                else
+                {
+                    return serializedEvent;
+                }
+            }
 
+            internal set
+            {
+                serializedEvent = value;
+            }
+        }
+
+        private string originatingRouterName;
         /// <summary>
         /// Router that the event originated from
         /// </summary>
-        public string OriginatingRouterName { get; set; }
+        public string OriginatingRouterName
+        {
+            get
+            {
+                return originatingRouterName;
+            }
 
+            set
+            {
+                originatingRouterName = value;
+                Headers[(byte)HeaderType.OriginatingRouter] = originatingRouterName;
+                serializedEvent = null;
+            }
+        }
+
+        private string inRouterName;
         /// <summary>
         /// Router that the event was passed from
         /// </summary>
-        public string InRouterName { get; set; }
+        public string InRouterName
+        {
+            get
+            {
+                return inRouterName;
+            }
+
+            set
+            {
+                inRouterName = value;
+                Headers[(byte)HeaderType.InRouterName] = InRouterName;
+                serializedEvent = null;
+            }
+        }
 
         /// <summary>
         /// Version of the event
         /// </summary>
-        public Version Version { get; set; }
+        public Version Version { get; internal set; }
 
+        private long timeStamp;
         /// <summary>
         /// UTC time in ticks of when the event is published
         /// </summary>
-        public long TimeStamp { get; set; }
+        public long TimeStamp
+        {
+            get
+            {
+                return timeStamp;
+            }
+
+            set
+            {
+                timeStamp = value;
+                Headers[(byte)HeaderType.UtcTimestamp] = timeStamp.ToString();
+                serializedEvent = null;
+            }
+        }
 
         /// <summary>
         /// Headers for the event
         /// </summary>
-        public Dictionary<byte, string> Headers { get; set; }
+        public Dictionary<byte, string> Headers { get; internal set; }
 
+        private byte[] body;
         /// <summary>
         /// Serialized body of the event
         /// </summary>
-        public byte[] Body { get; set; }
+        public byte[] Body
+        {
+            get
+            {
+                return body;
+            }
+
+            set
+            {
+                body = value;
+                serializedEvent = null;
+            }
+        }
+
+        private static Guid subscriptionEvent = new Guid(@"3D7B4317-C051-4e1a-8379-B6E2D6C107F9");
+        /// <summary>
+        /// Event type for a Subscription Event
+        /// </summary>
+        public static Guid SubscriptionEvent
+        {
+            get
+            {
+                return subscriptionEvent;
+            }
+
+            set
+            {
+                subscriptionEvent = value;
+            }
+        }
 
         /// <summary>
         /// Base contructor to deserialize a byte array into a WspEvent object
@@ -90,6 +195,16 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
         internal WspEvent()
         {
             Headers = new Dictionary<byte, string>();
+
+            EventType = Guid.Empty;
+            OriginatingRouterName = RouterName;
+            InRouterName = RouterName;
+            TimeStamp = DateTime.UtcNow.Ticks;
+
+            Version = new Version(version);
+            Headers[(byte)HeaderType.Version] = version;
+
+            Body = new byte[0];
         }
 
         /// <summary>
@@ -131,11 +246,11 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
 
             Buffer.BlockCopy(serializationData, position, Body, 0, bodyLength);
 
-            EventType = new Guid(Headers[(byte) HeaderType.EventType]);
-            OriginatingRouterName = Headers[(byte)HeaderType.OriginatingRouter];
-            InRouterName = Headers[(byte)HeaderType.InRouterName];
+            eventType = new Guid(Headers[(byte) HeaderType.EventType]);
+            originatingRouterName = Headers[(byte)HeaderType.OriginatingRouter];
+            inRouterName = Headers[(byte)HeaderType.InRouterName];
             Version = new Version(Headers[(byte)HeaderType.Version]);
-            TimeStamp = long.Parse(Headers[(byte)HeaderType.UtcTimestamp]);
+            timeStamp = long.Parse(Headers[(byte)HeaderType.UtcTimestamp]);
         }
 
         /// <summary>
@@ -146,11 +261,6 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
         /// <param name="body">The Body of the event which is normally a serialized object</param>
         public WspEvent(Guid eventType, Dictionary<byte, string> extendedHeaders, byte[] body)
         {
-            Int32 headerLength = 0;
-            Int32 totalLength;
-            byte[] eventTypeSerialized;
-            Dictionary<byte, byte[]> extendedHeadersPriv = null;
-
             Headers = new Dictionary<byte, string>();
 
             EventType = eventType;
@@ -171,19 +281,8 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
 
             Body = body;
 
-            UTF8Encoding uniEncoding = new UTF8Encoding();
-            eventTypeSerialized = uniEncoding.GetBytes(eventType.ToString());
-
-            headerLength += 1 + sizeof(Int32) + eventTypeSerialized.Length;
-            headerLength += 1 + sizeof(Int32) + routerNameEncoded.Length;
-            headerLength += 1 + sizeof(Int32) + routerNameEncoded.Length;
-            headerLength += 1 + sizeof(Int32) + timestampEncoded.Length;
-            headerLength += 1 + sizeof(Int32) + versionEncoded.Length;
-
             if (extendedHeaders != null && extendedHeaders.Count > 0)
             {
-                extendedHeadersPriv = new Dictionary<byte, byte[]>();
-
                 foreach (byte headerId in extendedHeaders.Keys)
                 {
                     if (headerId <= (byte)HeaderType.InRouterName)
@@ -192,95 +291,8 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
                     }
 
                     Headers[headerId] = extendedHeaders[headerId];
-
-                    extendedHeadersPriv[headerId] = uniEncoding.GetBytes(extendedHeaders[headerId]);
-
-                    headerLength += 1 + sizeof(Int32) + extendedHeadersPriv[headerId].Length;
                 }
             }
-
-            totalLength = headerLength + sizeof(Int32) + body.Length + sizeof(Int32) + sizeof(Int32);
-
-            SerializedEvent = new byte[totalLength];
-
-            int location = 0;
-
-            Buffer.BlockCopy(BitConverter.GetBytes((Int32)totalLength), 0, SerializedEvent, location, sizeof(Int32));
-            location += sizeof(Int32);
-
-            Buffer.BlockCopy(BitConverter.GetBytes((Int32)headerLength), 0, SerializedEvent, location, sizeof(Int32));
-            location += sizeof(Int32);
-
-            SerializedEvent[location] = (byte)HeaderType.EventType;
-            location += sizeof(byte);
-
-            Buffer.BlockCopy(BitConverter.GetBytes((Int32)eventTypeSerialized.Length), 0, SerializedEvent, location, sizeof(Int32));
-            location += sizeof(Int32);
-
-            Buffer.BlockCopy(eventTypeSerialized, 0, SerializedEvent, location, eventTypeSerialized.Length);
-            location += eventTypeSerialized.Length;
-
-            SerializedEvent[location] = (byte)HeaderType.OriginatingRouter;
-            location += sizeof(byte);
-
-            Buffer.BlockCopy(BitConverter.GetBytes((Int32)routerNameEncoded.Length), 0, SerializedEvent, location, sizeof(Int32));
-            location += sizeof(Int32);
-
-            Buffer.BlockCopy(routerNameEncoded, 0, SerializedEvent, location, routerNameEncoded.Length);
-            location += routerNameEncoded.Length;
-
-            SerializedEvent[location] = (byte)HeaderType.InRouterName;
-            location += sizeof(byte);
-
-            Buffer.BlockCopy(BitConverter.GetBytes((Int32)routerNameEncoded.Length), 0, SerializedEvent, location, sizeof(Int32));
-            location += sizeof(Int32);
-
-            Buffer.BlockCopy(routerNameEncoded, 0, SerializedEvent, location, routerNameEncoded.Length);
-            location += routerNameEncoded.Length;
-
-            SerializedEvent[location] = (byte)HeaderType.UtcTimestamp;
-            location += sizeof(byte);
-
-            Buffer.BlockCopy(BitConverter.GetBytes((Int32)timestampEncoded.Length), 0, SerializedEvent, location, sizeof(Int32));
-            location += sizeof(Int32);
-
-            Buffer.BlockCopy(timestampEncoded, 0, SerializedEvent, location, timestampEncoded.Length);
-            location += timestampEncoded.Length;
-
-            SerializedEvent[location] = (byte)HeaderType.Version;
-            location += sizeof(byte);
-
-            Buffer.BlockCopy(BitConverter.GetBytes((Int32)versionEncoded.Length), 0, SerializedEvent, location, sizeof(Int32));
-            location += sizeof(Int32);
-
-            Buffer.BlockCopy(versionEncoded, 0, SerializedEvent, location, versionEncoded.Length);
-            location += versionEncoded.Length;
-
-            if (extendedHeadersPriv != null)
-            {
-                foreach (byte headerId in extendedHeadersPriv.Keys)
-                {
-                    if (headerId <= (byte)HeaderType.InRouterName)
-                    {
-                        continue;
-                    }
-
-                    SerializedEvent[location] = headerId;
-                    location += sizeof(byte);
-
-                    Buffer.BlockCopy(BitConverter.GetBytes((Int32)extendedHeadersPriv[headerId].Length), 0, SerializedEvent, location, sizeof(Int32));
-                    location += sizeof(Int32);
-
-                    Buffer.BlockCopy(extendedHeadersPriv[headerId], 0, SerializedEvent, location, extendedHeadersPriv[headerId].Length);
-                    location += extendedHeadersPriv[headerId].Length;
-                }
-            }
-
-            Buffer.BlockCopy(BitConverter.GetBytes((Int32)body.Length), 0, SerializedEvent, location, sizeof(Int32));
-            location += sizeof(Int32);
-
-            Buffer.BlockCopy(body, 0, SerializedEvent, location, body.Length);
-            location += body.Length;
         }
 
         private static long timestamp;
@@ -322,7 +334,21 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
             {
                 if (string.IsNullOrEmpty(routerName) == true)
                 {
-                    routerName = Dns.GetHostName();
+                    routerName = Dns.GetHostName().ToLower();
+
+                    try
+                    {
+                        char[] splitChar = { '.' };
+
+                        IPHostEntry hostEntry = Dns.GetHostEntry(routerName);
+
+                        string[] temp = hostEntry.HostName.ToLower().Split(splitChar, 2);
+
+                        routerName = temp[0];
+                    }
+                    catch
+                    {
+                    }
                 }
 
                 return routerName;
@@ -487,6 +513,142 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
             utcTimeStamp = long.Parse(Read(serializationData, ref position, valueLength));
 
             return;
+        }
+
+        /// <summary>
+        /// Serializes the event
+        /// </summary>
+        /// <returns>Byte array of event</returns>
+        public byte[] Serialize()
+        {
+            Int32 headerLength = 0;
+            Int32 totalLength;
+            byte[] eventTypeSerialized;
+            Dictionary<byte, byte[]> extendedHeadersPriv = null;
+
+            Headers = new Dictionary<byte, string>();
+
+            Headers[(byte)HeaderType.EventType] = EventType.ToString();
+
+            OriginatingRouterName = RouterName;
+            Headers[(byte)HeaderType.OriginatingRouter] = OriginatingRouterName;
+
+            Headers[(byte)HeaderType.InRouterName] = InRouterName;
+
+            Version = new Version(version);
+            Headers[(byte)HeaderType.Version] = version;
+
+            TimeStamp = DateTime.UtcNow.Ticks;
+            timestamp = TimeStamp;
+            Headers[(byte)HeaderType.UtcTimestamp] = TimeStamp.ToString();
+
+            UTF8Encoding uniEncoding = new UTF8Encoding();
+            eventTypeSerialized = uniEncoding.GetBytes(EventType.ToString());
+
+            headerLength += 1 + sizeof(Int32) + eventTypeSerialized.Length;
+            headerLength += 1 + sizeof(Int32) + routerNameEncoded.Length;
+            headerLength += 1 + sizeof(Int32) + routerNameEncoded.Length;
+            headerLength += 1 + sizeof(Int32) + timestampEncoded.Length;
+            headerLength += 1 + sizeof(Int32) + versionEncoded.Length;
+
+            extendedHeadersPriv = new Dictionary<byte, byte[]>();
+
+            foreach (byte headerId in Headers.Keys)
+            {
+                if (headerId <= (byte)HeaderType.InRouterName)
+                {
+                    continue;
+                }
+
+                extendedHeadersPriv[headerId] = uniEncoding.GetBytes(Headers[headerId]);
+
+                headerLength += 1 + sizeof(Int32) + extendedHeadersPriv[headerId].Length;
+            }
+
+            totalLength = headerLength + sizeof(Int32) + Body.Length + sizeof(Int32) + sizeof(Int32);
+
+            SerializedEvent = new byte[totalLength];
+
+            int location = 0;
+
+            Buffer.BlockCopy(BitConverter.GetBytes((Int32)totalLength), 0, SerializedEvent, location, sizeof(Int32));
+            location += sizeof(Int32);
+
+            Buffer.BlockCopy(BitConverter.GetBytes((Int32)headerLength), 0, SerializedEvent, location, sizeof(Int32));
+            location += sizeof(Int32);
+
+            SerializedEvent[location] = (byte)HeaderType.EventType;
+            location += sizeof(byte);
+
+            Buffer.BlockCopy(BitConverter.GetBytes((Int32)eventTypeSerialized.Length), 0, SerializedEvent, location, sizeof(Int32));
+            location += sizeof(Int32);
+
+            Buffer.BlockCopy(eventTypeSerialized, 0, SerializedEvent, location, eventTypeSerialized.Length);
+            location += eventTypeSerialized.Length;
+
+            SerializedEvent[location] = (byte)HeaderType.OriginatingRouter;
+            location += sizeof(byte);
+
+            Buffer.BlockCopy(BitConverter.GetBytes((Int32)routerNameEncoded.Length), 0, SerializedEvent, location, sizeof(Int32));
+            location += sizeof(Int32);
+
+            Buffer.BlockCopy(routerNameEncoded, 0, SerializedEvent, location, routerNameEncoded.Length);
+            location += routerNameEncoded.Length;
+
+            SerializedEvent[location] = (byte)HeaderType.InRouterName;
+            location += sizeof(byte);
+
+            Buffer.BlockCopy(BitConverter.GetBytes((Int32)routerNameEncoded.Length), 0, SerializedEvent, location, sizeof(Int32));
+            location += sizeof(Int32);
+
+            Buffer.BlockCopy(routerNameEncoded, 0, SerializedEvent, location, routerNameEncoded.Length);
+            location += routerNameEncoded.Length;
+
+            SerializedEvent[location] = (byte)HeaderType.UtcTimestamp;
+            location += sizeof(byte);
+
+            Buffer.BlockCopy(BitConverter.GetBytes((Int32)timestampEncoded.Length), 0, SerializedEvent, location, sizeof(Int32));
+            location += sizeof(Int32);
+
+            Buffer.BlockCopy(timestampEncoded, 0, SerializedEvent, location, timestampEncoded.Length);
+            location += timestampEncoded.Length;
+
+            SerializedEvent[location] = (byte)HeaderType.Version;
+            location += sizeof(byte);
+
+            Buffer.BlockCopy(BitConverter.GetBytes((Int32)versionEncoded.Length), 0, SerializedEvent, location, sizeof(Int32));
+            location += sizeof(Int32);
+
+            Buffer.BlockCopy(versionEncoded, 0, SerializedEvent, location, versionEncoded.Length);
+            location += versionEncoded.Length;
+
+            if (extendedHeadersPriv != null)
+            {
+                foreach (byte headerId in extendedHeadersPriv.Keys)
+                {
+                    if (headerId <= (byte)HeaderType.InRouterName)
+                    {
+                        continue;
+                    }
+
+                    SerializedEvent[location] = headerId;
+                    location += sizeof(byte);
+
+                    Buffer.BlockCopy(BitConverter.GetBytes((Int32)extendedHeadersPriv[headerId].Length), 0, SerializedEvent, location, sizeof(Int32));
+                    location += sizeof(Int32);
+
+                    Buffer.BlockCopy(extendedHeadersPriv[headerId], 0, SerializedEvent, location, extendedHeadersPriv[headerId].Length);
+                    location += extendedHeadersPriv[headerId].Length;
+                }
+            }
+
+            Buffer.BlockCopy(BitConverter.GetBytes((Int32)Body.Length), 0, SerializedEvent, location, sizeof(Int32));
+            location += sizeof(Int32);
+
+            Buffer.BlockCopy(Body, 0, SerializedEvent, location, Body.Length);
+            location += Body.Length;
+
+            return SerializedEvent;
         }
 
         /// <summary>

@@ -40,7 +40,7 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
         private static Thread subscriptionThread = null;
         private static bool subscriptionThreadReady = false;
 
-        private static SpinLock spinLock = new SpinLock();
+        private static object lockObj = new object();
 
         private static Guid initialEventType;
         private static bool initialLocalOnly;
@@ -76,12 +76,8 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
         /// <returns></returns>
         public IDisposable Subscribe(IObserver<WspEvent> observer)
         {
-            bool lockTaken = false;
-
-            try
+            lock (lockObj)
             {
-                spinLock.Enter(ref lockTaken);
-
                 if (observersByEventType.Count == 0)
                 {
                     initialEventType = eventType;
@@ -117,13 +113,6 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
                     observers = new List<IObserver<WspEvent>>();
                     observers.Add(observer);
                     observersByEventType[eventType] = observers;
-                }
-            }
-            finally
-            {
-                if (lockTaken == true)
-                {
-                    spinLock.Exit();
                 }
             }
 
@@ -173,28 +162,44 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
         /// </summary>
         /// <param name="eventType">Type of the event.</param>
         /// <param name="wspEvent">The serialized event.</param>
-        public static void SubscriptionCallback(Guid eventType, WspEvent wspEvent)
+        internal static void SubscriptionCallback(Guid eventType, WspEvent wspEvent)
         {
-            bool lockTaken = false;
+            WspEvent[] wspEvents = null;
+
             List<IObserver<WspEvent>> observers;
 
-            try
+            lock(lockObj)
             {
-                spinLock.Enter(ref lockTaken);
-
                 if (observersByEventType.TryGetValue(eventType, out observers) == true)
                 {
-                    foreach (IObserver<WspEvent> subscriptionObserver in observers)
+                    for (int i = 0; i < observers.Count; i++)
                     {
-                        subscriptionObserver.OnNext(wspEvent);
+                        if (Interceptor.subscribeInterceptor != null)
+                        {
+                            try
+                            {
+                                if (Interceptor.subscribeInterceptor(wspEvent, out wspEvents) == false)
+                                {
+                                    return;
+                                }
+                            }
+                            catch
+                            {
+                            }
+                        }
+
+                        if (wspEvents == null || wspEvents.Length == 0)
+                        {
+                            observers[i].OnNext(wspEvent);
+                        }
+                        else
+                        {
+                            for (int j = 0; j < wspEvents.Length; j++)
+                            {
+                                observers[i].OnNext(wspEvents[j]);
+                            }
+                        }
                     }
-                }
-            }
-            finally
-            {
-                if (lockTaken == true)
-                {
-                    spinLock.Exit();
                 }
             }
         }
@@ -205,12 +210,8 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
         /// <param name="observer">Observer to be disposed</param>
         private void Dispose(IObserver<WspEvent> observer)
         {
-            bool lockTaken = false;
-
-            try
+            lock(lockObj)
             {
-                spinLock.Enter(ref lockTaken);
-
                 List<IObserver<WspEvent>> observers;
 
                 if (observersByEventType.TryGetValue(eventType, out observers) == true)
@@ -236,13 +237,7 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
 
                     wspSubscriptionManager = null;
                 }
-            }
-            finally
-            {
-                if (lockTaken == true)
-                {
-                    spinLock.Exit();
-                }
+
             }
         }
     }
@@ -531,7 +526,7 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
         /// <summary>
         /// Starts a thread to listen to events
         /// </summary>
-        private void StartListening()
+        public void StartListening()
         {
             listenThread = new Thread(new ThreadStart(Listen));
 
@@ -541,7 +536,7 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
         /// <summary>
         /// Stops the thread listening to events
         /// </summary>
-        private void StopListening()
+        public void StopListening()
         {
             if (listenThread != null)
             {
@@ -568,6 +563,8 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
             Subscription subscription;
             WspEvent wspEvent;
 
+            WspEvent[] wspEvents = null;
+
             try
             {
                 Thread.CurrentThread.Priority = ThreadPriority.Highest;
@@ -575,7 +572,21 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
 
                 byte[] buffer = null;
 
-                localRouterName = Dns.GetHostName();
+                localRouterName = Dns.GetHostName().ToLower();
+
+                try
+                {
+                    char[] splitChar = { '.' };
+
+                    IPHostEntry hostEntry = Dns.GetHostEntry(localRouterName);
+
+                    string[] temp = hostEntry.HostName.ToLower().Split(splitChar, 2);
+
+                    localRouterName = temp[0];
+                }
+                catch
+                {
+                }
 
                 while (true)
                 {
@@ -613,7 +624,41 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
                                 stateInfo.eventType = wspEvent.EventType;
                                 stateInfo.wspEvent = wspEvent;
 
-                                ThreadPool.QueueUserWorkItem(subscriptionCallback, stateInfo);
+                                if (Interceptor.subscribeInterceptor != null)
+                                {
+                                    try
+                                    {
+                                        wspEvents = null;
+
+                                        if (Interceptor.subscribeInterceptor(wspEvent, out wspEvents) == true)
+                                        {
+                                            if (wspEvents == null || wspEvents.Length == 0)
+                                            {
+                                                ThreadPool.QueueUserWorkItem(subscriptionCallback, stateInfo);
+                                            }
+                                            else
+                                            {
+                                                for (int i = 0; i < wspEvents.Length; i++)
+                                                {
+                                                    stateInfo = new StateInfo();
+
+                                                    stateInfo.callBack = callbackMethod;
+                                                    stateInfo.eventType = wspEvents[i].EventType;
+                                                    stateInfo.wspEvent = wspEvents[i];
+
+                                                    ThreadPool.QueueUserWorkItem(subscriptionCallback, stateInfo);
+                                                }
+                                            }
+                                        }
+                                    }
+                                    catch
+                                    {
+                                    }
+                                }
+                                else
+                                {
+                                    ThreadPool.QueueUserWorkItem(subscriptionCallback, stateInfo);
+                                }
                             }
                         }
                     }

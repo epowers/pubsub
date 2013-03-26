@@ -10,7 +10,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
     /// <summary>
     /// This class is meant to correspond to the UserAgent property for HTTP classes.
     /// </summary>
-	public class WebpageEvent : Event
+	public class WebpageEvent : WspBody
 	{
 		private IPAddress userHostAddress;
 		/// <summary>

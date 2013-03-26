@@ -9,7 +9,7 @@ using Microsoft.WebSolutionsPlatform.PubSubManager;
 
 namespace WspEventLogTest
 {
-    public class LogEntry : Event
+    public class LogEntry : WspBody
     {
         public bool BooleanProp { get; set; }
         public byte ByteProp { get; set; }
@@ -130,7 +130,7 @@ namespace WspEventLogTest
     {
         static void Main(string[] args)
         {
-            PublishManager pubMgr = new PublishManager();
+            WspEventPublish eventPush = new WspEventPublish();
 
             LogEntry e1 = new LogEntry();
             LogEntry e2;
@@ -139,7 +139,7 @@ namespace WspEventLogTest
 
             e2 = new LogEntry(eSerialized);
 
-            pubMgr.Publish(e1.EventType, eSerialized);
+            eventPush.OnNext(new WspEvent(e1.EventType, null, eSerialized));
         }
     }
 }

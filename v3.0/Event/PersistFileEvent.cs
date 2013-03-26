@@ -41,8 +41,13 @@ namespace Microsoft.WebSolutionsPlatform.Event
     /// <summary>
     /// This class is used to tract the state of the files for persisted events.
     /// </summary>
-    public class PersistFileEvent : Event
+    public class PersistFileEvent : WspBody
     {
+        /// <summary>
+        /// This is the EventType one would subscribe to for listening to files being created by Wsp when it's persisting events.
+        /// </summary>
+        new public static Guid EventType = new Guid(@"62D531DE-5F76-43a4-B0B8-1DF325B6787E");
+
         private PersistFileState fileState;
         /// <summary>
         /// File's state
@@ -322,7 +327,6 @@ namespace Microsoft.WebSolutionsPlatform.Event
             :
             base()
         {
-            EventType = new Guid(@"62D531DE-5F76-43a4-B0B8-1DF325B6787E");
         }
 
         /// <summary>
@@ -330,10 +334,8 @@ namespace Microsoft.WebSolutionsPlatform.Event
         /// </summary>
         /// <param name="serializationData">Serialized event buffer</param>
         public PersistFileEvent(byte[] serializationData)
-            :
-            base(serializationData)
+            : base(serializationData)
         {
-            EventType = new Guid(@"62D531DE-5F76-43a4-B0B8-1DF325B6787E");
         }
 
         /// <summary>

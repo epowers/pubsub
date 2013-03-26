@@ -94,7 +94,6 @@ namespace WspEventServiceTest
                 }
 
                 WebpageEvent localEvent = new WebpageEvent();
-				localEvent.EventName = @"Test Event";
 
 				localEvent.ActiveXControls = true;
 				localEvent.AnonymousId = Guid.NewGuid();
@@ -144,7 +143,7 @@ namespace WspEventServiceTest
                     {
                         try
                         {
-                            eventPush.OnNext(new Microsoft.WebSolutionsPlatform.PubSubManager.WspEvent(localEvent.EventType, null, localEvent.Serialize()));
+                            eventPush.OnNext(new WspEvent(localEvent.EventType, null, localEvent.Serialize()));
                         }
                         catch // (Exception e)
                         {
