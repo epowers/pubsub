@@ -263,22 +263,20 @@ namespace Microsoft.WebSolutionsPlatform.Router
         {
             CounterCreationDataCollection CCDC;
 
-            ResourceManager rm = new ResourceManager("Microsoft.WebSolutionsPlatform.Router.WspEventRouter", Assembly.GetExecutingAssembly());
-
-            categoryName = rm.GetString("CategoryName");
-            communicationCategoryName = rm.GetString("CommunicationCategoryName");
-            categoryHelp = rm.GetString("CategoryHelp");
-            communicationCategoryHelp = rm.GetString("CommunicationCategoryHelp");
-            subscriptionQueueSizeName = rm.GetString("SubscriptionQueueSizeName");
-            rePublisherQueueSizeName = rm.GetString("RePublisherQueueSizeName");
-            persisterQueueSizeName = rm.GetString("PersisterQueueSizeName");
-            forwarderQueueSizeName = rm.GetString("ForwarderQueueSizeName");
-            mgmtQueueSizeName = rm.GetString("MgmtQueueSizeName");
-            cmdQueueSizeName = rm.GetString("CmdQueueSizeName");
-            subscriptionEntriesName = rm.GetString("SubscriptionEntriesName");
-            eventsProcessedName = rm.GetString("EventsProcessedName");
-            eventsProcessedBytesName = rm.GetString("EventsProcessedBytesName");
-            baseInstance = rm.GetString("BaseInstance");
+            categoryName = "WspEventRouter";
+            communicationCategoryName = "CommunicationCategory";
+            categoryHelp = "WspEventRouter counters showing internal performance of the router.";
+            communicationCategoryHelp = "WspEventRouter counters showing communication queues to other machines";
+            subscriptionQueueSizeName = "SubscriptionQueueSize";
+            rePublisherQueueSizeName = "RePublisherQueueSize";
+            persisterQueueSizeName = "PersisterQueueSize";
+            forwarderQueueSizeName = "ForwarderQueueSize";
+            mgmtQueueSizeName = "MgmtQueueSize";
+            cmdQueueSizeName = "CmdQueueSize";
+            subscriptionEntriesName = "SubscriptionEntries";
+            eventsProcessedName = "EventsProcessed";
+            eventsProcessedBytesName = "EventsProcessedBytes";
+            baseInstance = "BaseInstance";
 
             subscriptionQueueSize = new PerformanceCounter(categoryName, subscriptionQueueSizeName, string.Empty, false);
             rePublisherQueueSize = new PerformanceCounter(categoryName, rePublisherQueueSizeName, string.Empty, false);
