@@ -40,7 +40,7 @@ namespace Microsoft.WebSolutionsPlatform.Common
                 String sharedMemoryName,
                 ref IntPtr commBuffer);
 
-            [DllImport(SharedMemoryMgr, ExactSpelling = true)]
+            [DllImport(SharedMemoryMgr, ExactSpelling = true, CallingConvention = CallingConvention.Cdecl)]
             internal static extern UInt32 GetQueueSize(ref IntPtr commBuffer);
 
             [DllImport(SharedMemoryMgr, ExactSpelling = true, CallingConvention = CallingConvention.Cdecl)]
@@ -77,7 +77,7 @@ namespace Microsoft.WebSolutionsPlatform.Common
                 String sharedMemoryName,
                 ref IntPtr commBuffer);
 
-            [DllImport(SharedMemoryMgr, ExactSpelling = true)]
+            [DllImport(SharedMemoryMgr, ExactSpelling = true, CallingConvention = CallingConvention.Cdecl)]
             internal static extern UInt32 GetQueueSize(ref IntPtr commBuffer);
 
             [DllImport(SharedMemoryMgr, ExactSpelling = true, CallingConvention = CallingConvention.Cdecl)]

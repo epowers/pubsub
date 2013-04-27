@@ -16,6 +16,7 @@ extern INT32 __cdecl JoinMemoryMgr(LPCTSTR SharedMemoryName, PCOMMBUFFER *CommBu
 extern INT32 __cdecl ReleaseMemoryMgr(PCOMMBUFFER *CommBufferIn);
 extern INT32 __cdecl PutBuffer(LPCSTR pEventBuffer, DWORD dwEventLength, DWORD dwTimeOut, PCOMMBUFFER *CommBufferIn);
 extern INT32 __cdecl GetBuffer(LPCSTR pEventBuffer, DWORD dwEventBufferLength, DWORD dwTimeOut, DWORD *pBytesRead, PCOMMBUFFER *CommBufferIn);
+extern DWORD __cdecl GetQueueSize(PCOMMBUFFER *CommBufferIn);
 
 void InitEvent(PCOMMBUFFER CommBuffer);
 void InitNewEvent(PCOMMBUFFER CommBuffer);
@@ -382,7 +383,7 @@ extern INT32 __cdecl ReleaseMemoryMgr(PCOMMBUFFER *CommBufferIn)
 	return SUCCESS;
 }
 
-extern DWORD GetQueueSize(PCOMMBUFFER *CommBufferIn)
+extern DWORD __cdecl GetQueueSize(PCOMMBUFFER *CommBufferIn)
 {
 	PCOMMBUFFER CommBuffer = *CommBufferIn;
 
