@@ -85,7 +85,6 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Data" />
-    <Reference Include="System.Reactive, Version=1.1.11111.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
@@ -94,26 +93,18 @@
     <Compile Include="Exceptions.cs" />
     <Compile Include="Interceptor.cs" />
     <Compile Include="PublishMgr.cs" />
-    <Compile Include="PubSubMgr.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>PubSubMgr.resx</DependentUpon>
-    </Compile>
     <Compile Include="Subscription.cs" />
     <Compile Include="SubscriptionMgr.cs" />
     <Compile Include="WspEvent.cs" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="PubSubMgr.resx">
-      <SubType>Designer</SubType>
-      <Generator>ResXFileCodeGenerator</Generator>
-      <LastGenOutput>PubSubMgr.Designer.cs</LastGenOutput>
-    </EmbeddedResource>
-  </ItemGroup>
-  <ItemGroup>
     <None Include="key.snk" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Event\Base.csproj">
+      <Project>{6A02FD1F-7F2B-434B-97E4-86411277CE29}</Project>
+      <Name>Base</Name>
+    </ProjectReference>
     <ProjectReference Include="..\SharedQueue\SharedQueue.csproj">
       <Project>{61FEA7C2-ED9D-4C66-B9CF-94E1A7692263}</Project>
       <Name>SharedQueue</Name>

@@ -4,6 +4,8 @@ using System.Text;
 using System.Web;
 using System.Net;
 using System.Security.Cryptography;
+using Microsoft.WebSolutionsPlatform.Common;
+using Microsoft.WebSolutionsPlatform.Event;
 
 namespace Microsoft.WebSolutionsPlatform.PubSubManager
 {
@@ -11,9 +13,21 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
     /// The Subscription class defines the subscription objects which are published 
     /// when an application subscribes to event types.
     /// </summary>
-	public class Subscription
+	public class Subscription : WspBody
 	{
-		private Guid subscriptionEventType;
+        private static Guid subscriptionEvent = new Guid(@"3D7B4317-C051-4e1a-8379-B6E2D6C107F9");
+        /// <summary>
+        /// Event type for a Subscription Event
+        /// </summary>
+        public static Guid SubscriptionEvent
+        {
+            get
+            {
+                return subscriptionEvent;
+            }
+        }
+
+        private Guid subscriptionEventType;
 		/// <summary>
 		/// Event registering/unregistering for
 		/// </summary>
@@ -29,18 +43,51 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
 			}
 		}
 
-        internal byte[] subscriptionEventTypeEncodedPriv = null;
-        internal byte[] subscriptionEventTypeEncoded
+        private string methodBody;
+        /// <summary>
+        /// Method body for filtered subscription
+        /// </summary>
+        public string MethodBody
         {
             get
             {
-                if (subscriptionEventTypeEncodedPriv == null)
-                {
-                    UTF8Encoding uniEncoding = new UTF8Encoding();
-                    subscriptionEventTypeEncodedPriv = uniEncoding.GetBytes(SubscriptionEventType.ToString());
-                }
+                return methodBody;
+            }
+            set
+            {
+                methodBody = value;
+            }
+        }
 
-                return subscriptionEventTypeEncodedPriv;
+        private List<string> usingLibraries;
+        /// <summary>
+        /// Array of using libraries, if any, for filtered subscription
+        /// </summary>
+        public List<string> UsingLibraries
+        {
+            get
+            {
+                return usingLibraries;
+            }
+            set
+            {
+                usingLibraries = value;
+            }
+        }
+
+        private List<string> referencedAssemblies;
+        /// <summary>
+        /// Array of referenced assemblies, if any, for filtered subscription
+        /// </summary>
+        public List<string> ReferencedAssemblies
+        {
+            get
+            {
+                return referencedAssemblies;
+            }
+            set
+            {
+                referencedAssemblies = value;
             }
         }
 
@@ -79,95 +126,89 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
 		/// <summary>
 		/// Base constructor to create a new subscription event
 		/// </summary>
-        public Subscription()
-		{
-            subscribe = true;
+        public Subscription() :
+            base()
+        {
 		}
 
         /// <summary>
         /// Base constructor to create a new subscription event
         /// </summary>
-        /// <param name="serializedEvent">Serialized Subscription event</param>
-        public Subscription(byte[] serializedEvent)
+        /// <param name="serializationData">Serialized Subscription event</param>
+        public Subscription(byte[] serializationData) :
+            base(serializationData)
         {
-            int position = 0;
-
-            int valueLength = 0;
-
-            valueLength = WspEvent.Read(serializedEvent, ref position);
-            SubscriptionEventType = new Guid(WspEvent.Read(serializedEvent, ref position, valueLength));
-
-            if (serializedEvent[position] == (byte)1)
-            {
-                Subscribe = true;
-            }
-            else
-            {
-                Subscribe = false;
-            }
-
-            position++;
-
-            if (serializedEvent[position] == (byte)1)
-            {
-                LocalOnly = true;
-            }
-            else
-            {
-                LocalOnly = false;
-            }
         }
 
         /// <summary>
-        /// Serializes the event
+        /// Method called when serializing the object
         /// </summary>
-        /// <returns>Serialized version of the event</returns>
-        public byte[] Serialize()
+        /// <param name="buffer"></param>
+        public override void GetObjectData(WspBuffer buffer)
         {
-            int position = 0;
-
-            byte[] buffer = new byte[subscriptionEventTypeEncoded.Length + sizeof(Int32) + 2];
-
-            Buffer.BlockCopy(BitConverter.GetBytes((Int32)subscriptionEventTypeEncoded.Length), 0, buffer, position, sizeof(Int32));
-            position += sizeof(Int32);
-
-            Buffer.BlockCopy(subscriptionEventTypeEncoded, 0, buffer, position, subscriptionEventTypeEncoded.Length);
-
-            position += subscriptionEventTypeEncoded.Length;
-
-            if (Subscribe == true)
+            if (MethodBody == null)
             {
-                buffer[position] = (byte)1;
-            }
-            else
-            {
-                buffer[position] = (byte)0;
+                MethodBody = string.Empty;
             }
 
-            position++;
-
-            if (LocalOnly == true)
+            if (UsingLibraries == null)
             {
-                buffer[position] = (byte)1;
-            }
-            else
-            {
-                buffer[position] = (byte)0;
+                UsingLibraries = new List<string>();
             }
 
-            return buffer;
+            if (ReferencedAssemblies == null)
+            {
+                ReferencedAssemblies = new List<string>();
+            }
+
+            buffer.AddElement(@"1", SubscriptionEventType);
+            buffer.AddElement(@"2", MethodBody);
+            buffer.AddElement(@"3", UsingLibraries);
+            buffer.AddElement(@"4", ReferencedAssemblies);
+            buffer.AddElement(@"5", Subscribe);
+            buffer.AddElement(@"6", LocalOnly);
         }
 
-        private static Guid subscriptionEvent = new Guid(@"3D7B4317-C051-4e1a-8379-B6E2D6C107F9");
         /// <summary>
-        /// Event type for a Subscription Event
+        /// Set values on object during deserialization
         /// </summary>
-        public static Guid SubscriptionEvent
+        /// <param name="elementName">Name of property</param>
+        /// <param name="elementValue">Value of property</param>
+        /// <returns></returns>
+        public override bool SetElement(string elementName, object elementValue)
         {
-            get
+            switch (elementName)
             {
-                return subscriptionEvent;
+                case "1":
+                    SubscriptionEventType = (Guid)elementValue;
+                    break;
+
+                case "2":
+                    MethodBody = (string)elementValue;
+                    break;
+
+                case "3":
+                    UsingLibraries = (List<string>)elementValue;
+                    break;
+
+                case "4":
+                    ReferencedAssemblies = (List<string>)elementValue;
+                    break;
+
+                case "5":
+                    Subscribe = (bool)elementValue;
+                    break;
+
+                case "6":
+                    LocalOnly = (bool)elementValue;
+                    break;
+
+                default:
+                    base.SetElement(elementName, elementValue);
+                    break;
             }
+
+            return true;
         }
     }
 }

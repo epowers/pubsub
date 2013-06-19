@@ -14,7 +14,8 @@ namespace WspEventServiceTest
 		static int numIterations;
 		static DateTime startTime;
 		static List<Thread> workerThreads = new List<Thread>();
-
+        static string filterString = string.Empty;
+        
 		static void Main( string[] args )
 		{
 			int numThreads;
@@ -83,6 +84,8 @@ namespace WspEventServiceTest
 
 			public void SendEvents()
 			{
+                ReturnCode rc;
+
                 try
                 {
                     eventPush = new WspEventPublish();
@@ -137,16 +140,22 @@ namespace WspEventServiceTest
 				localEvent.Win16 = false;
 				localEvent.Win32 = true;
 
+                Dictionary<byte, string> pb = new Dictionary<byte, string>();
+
+                Random rdm = new Random(10000);
+
                 try
                 {
                     for (int i = 0; i < numIterations; i++)
                     {
-                        try
+                        pb[100] = "test" + rdm.Next(10000).ToString();
+
+                        WspEvent wspEvent = new WspEvent(localEvent.EventType, pb, localEvent.Serialize());
+                        eventPush.OnNext(wspEvent, out rc);
+
+                        if (rc != ReturnCode.Success)
                         {
-                            eventPush.OnNext(new WspEvent(localEvent.EventType, null, localEvent.Serialize()));
-                        }
-                        catch // (Exception e)
-                        {
+
                             Thread.Sleep(0);
                             //Console.WriteLine("Item: " + i.ToString() + @"    Exception: " + e.Message);
                             i--;

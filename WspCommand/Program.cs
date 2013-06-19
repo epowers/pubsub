@@ -14,8 +14,12 @@ namespace WspCommand
     {
         static object lockObj = new object();
 
+        static WspEventObservable responseObservable;
+
         static void Main(string[] args)
         {
+            IDisposable responseDispose = null;
+
             bool showHelp = false;
             char[] splitChar = { '=' };
 
@@ -111,14 +115,10 @@ namespace WspCommand
                 }
             }
 
-            SubscriptionManager responseMgr;
-            SubscriptionManager.Callback responseCallback;
-
-            responseCallback = new SubscriptionManager.Callback(ResponseCallback);
 
             try
             {
-                responseMgr = new SubscriptionManager(responseCallback);
+                responseObservable = new WspEventObservable(commandRequest.EventIdForResponse, false);
             }
             catch (PubSubQueueDoesNotExistException)
             {
@@ -132,7 +132,7 @@ namespace WspCommand
                 return;
             }
 
-            responseMgr.AddSubscription(commandRequest.EventIdForResponse, false);
+            responseDispose = responseObservable.Subscribe(new ResponseObservable());
 
             WspEventPublish eventPush = new WspEventPublish();
 
@@ -156,7 +156,7 @@ namespace WspCommand
 
                             Console.ForegroundColor = currColor;
 
-                            responseMgr.ListenForEvents = false;
+                            responseDispose.Dispose();
 
                             return;
                         }
@@ -181,7 +181,7 @@ namespace WspCommand
 
                         Console.ForegroundColor = currColor;
 
-                        responseMgr.ListenForEvents = false;
+                        responseDispose.Dispose();
 
                         return;
                     }
@@ -200,7 +200,7 @@ namespace WspCommand
 
                         Console.ForegroundColor = currColor;
 
-                        responseMgr.ListenForEvents = false;
+                        responseDispose.Dispose();
 
                         return;
                     }
@@ -234,7 +234,7 @@ namespace WspCommand
 
                 Console.ForegroundColor = currColor;
 
-                responseMgr.ListenForEvents = false;
+                responseDispose.Dispose();
 
                 return;
             }
@@ -252,167 +252,180 @@ namespace WspCommand
 
             Console.ReadKey();
 
-            responseMgr.ListenForEvents = false;
+            responseDispose.Dispose();
 
             return;
         }
 
-        static public void ResponseCallback(Guid eventType, WspEvent wspEvent)
+        public class ResponseObservable : IObserver<WspEvent>
         {
-            CommandResponse response;
-
-            response = new CommandResponse(wspEvent.Body);
-
-            lock (lockObj)
+            public void OnNext(WspEvent wspEvent)
             {
-                ConsoleColor c = Console.ForegroundColor;
-                Console.ForegroundColor = ConsoleColor.Green;
+                CommandResponse response;
 
-                Console.WriteLine();
+                response = new CommandResponse(wspEvent.Body);
 
-                Console.WriteLine("OriginatingRouterName: " + wspEvent.OriginatingRouterName);
-                Console.WriteLine("ReturnCode: " + response.ReturnCode.ToString());
-                Console.WriteLine("Message: " + response.Message);
-                Console.WriteLine("CorrelationID: " + response.CorrelationID.ToString());
-
-                if(response.ResponseException != null)
+                lock (lockObj)
                 {
-                    Console.WriteLine("ResponseException: " + response.ResponseException.Message);
-                }
+                    ConsoleColor c = Console.ForegroundColor;
+                    Console.ForegroundColor = ConsoleColor.Green;
 
-                WriteOutput(response.Results, "Results", 0);
+                    Console.WriteLine();
 
-                Console.WriteLine();
-                Console.WriteLine();
+                    Console.WriteLine("OriginatingRouterName: " + wspEvent.OriginatingRouterName);
+                    Console.WriteLine("ReturnCode: " + response.ReturnCode.ToString());
+                    Console.WriteLine("Message: " + response.Message);
+                    Console.WriteLine("CorrelationID: " + response.CorrelationID.ToString());
 
-                Console.ForegroundColor = ConsoleColor.Red;
-
-                Console.WriteLine("---- Press any key to end ----");
-
-                Console.ForegroundColor = c;
-
-                Console.WriteLine();
-            }
-
-            return;
-        }
-
-        static public void WriteOutput(Dictionary<string, object> dictionary, string name, int level)
-        {
-            for(int i = 0; i < level; i++)
-            {
-                Console.Write('\t');
-            }
-
-            Console.Write(name + ": \n");
-
-            foreach (string key in dictionary.Keys)
-            {
-                Type type = dictionary[key].GetType();
-
-                if (type == typeof(Dictionary<string, object>))
-                {
-                    WriteOutput((Dictionary<string, object>)dictionary[key], key, level + 1);
-                }
-                else
-                {
-                    if (type == typeof(List<string>))
+                    if (response.ResponseException != null)
                     {
-                        WriteOutput((List<string>)dictionary[key], key, level + 1);
+                        Console.WriteLine("ResponseException: " + response.ResponseException.Message);
+                    }
+
+                    WriteOutput(response.Results, "Results", 0);
+
+                    Console.WriteLine();
+                    Console.WriteLine();
+
+                    Console.ForegroundColor = ConsoleColor.Red;
+
+                    Console.WriteLine("---- Press any key to end ----");
+
+                    Console.ForegroundColor = c;
+
+                    Console.WriteLine();
+                }
+
+                return;
+            }
+
+            static public void WriteOutput(Dictionary<string, object> dictionary, string name, int level)
+            {
+                for (int i = 0; i < level; i++)
+                {
+                    Console.Write('\t');
+                }
+
+                Console.Write(name + ": \n");
+
+                foreach (string key in dictionary.Keys)
+                {
+                    Type type = dictionary[key].GetType();
+
+                    if (type == typeof(Dictionary<string, object>))
+                    {
+                        WriteOutput((Dictionary<string, object>)dictionary[key], key, level + 1);
                     }
                     else
                     {
-                        if (type == typeof(List<object>))
+                        if (type == typeof(List<string>))
                         {
-                            WriteOutput((List<object>)dictionary[key], key, level + 1);
+                            WriteOutput((List<string>)dictionary[key], key, level + 1);
                         }
                         else
                         {
-                            WriteOutput((object) dictionary[key], key, level + 1);
+                            if (type == typeof(List<object>))
+                            {
+                                WriteOutput((List<object>)dictionary[key], key, level + 1);
+                            }
+                            else
+                            {
+                                WriteOutput((object)dictionary[key], key, level + 1);
+                            }
                         }
                     }
+
+                }
+            }
+
+            static public void WriteOutput(List<string> list, string name, int level)
+            {
+                for (int i = 0; i < level; i++)
+                {
+                    Console.Write('\t');
                 }
 
-            }
-        }
+                Console.Write(name + ": \n");
 
-        static public void WriteOutput(List<string> list, string name, int level)
-        {
-            for (int i = 0; i < level; i++)
-            {
-                Console.Write('\t');
-            }
-
-            Console.Write(name + ": \n");
-
-            for(int i = 0; i < list.Count; i++)
-            {
-                WriteOutput((object) list[i], i.ToString(), level + 1);
-            }
-        }
-
-        static public void WriteOutput(List<object> list, string name, int level)
-        {
-            for (int i = 0; i < level; i++)
-            {
-                Console.Write('\t');
-            }
-
-            Console.Write(name + ": \n");
-
-            for(int i = 0; i < list.Count; i++)
-            {
-                object obj = list[i];
-
-                Type type = obj.GetType();
-
-                if (type == typeof(Dictionary<string, object>))
+                for (int i = 0; i < list.Count; i++)
                 {
-                    WriteOutput((Dictionary<string, object>)obj, i.ToString(), level + 1);
+                    WriteOutput((object)list[i], i.ToString(), level + 1);
                 }
-                else
+            }
+
+            static public void WriteOutput(List<object> list, string name, int level)
+            {
+                for (int i = 0; i < level; i++)
                 {
-                    if (type == typeof(List<string>))
+                    Console.Write('\t');
+                }
+
+                Console.Write(name + ": \n");
+
+                for (int i = 0; i < list.Count; i++)
+                {
+                    object obj = list[i];
+
+                    Type type = obj.GetType();
+
+                    if (type == typeof(Dictionary<string, object>))
                     {
-                        WriteOutput((List<string>)obj, i.ToString(), level + 1);
+                        WriteOutput((Dictionary<string, object>)obj, i.ToString(), level + 1);
                     }
                     else
                     {
-                        if (type == typeof(List<object>))
+                        if (type == typeof(List<string>))
                         {
-                            WriteOutput((List<object>)obj, i.ToString(), level + 1);
+                            WriteOutput((List<string>)obj, i.ToString(), level + 1);
                         }
                         else
                         {
-                            WriteOutput((object)obj, string.Empty, level + 1);
+                            if (type == typeof(List<object>))
+                            {
+                                WriteOutput((List<object>)obj, i.ToString(), level + 1);
+                            }
+                            else
+                            {
+                                WriteOutput((object)obj, string.Empty, level + 1);
+                            }
                         }
                     }
                 }
             }
-        }
 
-        static public void WriteOutput(object obj, string name, int level)
-        {
-            Type t = obj.GetType();
-
-            for (int i = 0; i < level; i++)
+            static public void WriteOutput(object obj, string name, int level)
             {
-                Console.Write('\t');
+                Type t = obj.GetType();
+
+                for (int i = 0; i < level; i++)
+                {
+                    Console.Write('\t');
+                }
+
+                if (name != string.Empty)
+                {
+                    Console.Write(name + ": ");
+                }
+
+                if (t == typeof(byte[]))
+                {
+                    Console.Write(BitConverter.ToString((byte[])obj));
+                    Console.Write("\n");
+                }
+                else
+                {
+                    Console.Write(obj.ToString() + "\n");
+                }
             }
 
-            if (name != string.Empty)
+            public void OnCompleted()
             {
-                Console.Write(name + ": ");
+                throw new NotImplementedException();
             }
 
-            if (t == typeof(byte[]))
+            public void OnError(Exception error)
             {
-                Console.Write(BitConverter.ToString((byte[])obj));
-                Console.Write("\n");
-            }
-            else
-            {
-                Console.Write(obj.ToString() + "\n");
+                throw new NotImplementedException();
             }
         }
     }

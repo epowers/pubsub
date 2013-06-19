@@ -39,6 +39,7 @@ namespace Microsoft.WebSolutionsPlatform.Router
                 WspEventPublish eventPush = null;
                 Regex targetFilter;
                 bool processCommands = true;
+                PubSubManager.ReturnCode rc;
 
                 try
                 {
@@ -336,14 +337,130 @@ namespace Microsoft.WebSolutionsPlatform.Router
                                 case "wsp_getwspassemblyinfo":
                                     try
                                     {
+                                        Dictionary<string, object> routerInfo = new Dictionary<string, object>();
+                                        AddDictionaryElement(response.Results, "RouterInfo", routerInfo);
+
+                                        if (Router.hubRole == true)
+                                        {
+                                            AddDictionaryElement(routerInfo, "Role", "Hub");
+
+                                            Dictionary<string, object> hubRoleSettings = new Dictionary<string, object>();
+                                            AddDictionaryElement(response.Results, "HubRoleSettings", hubRoleSettings);
+
+                                            Dictionary<string, object> subscriptionInfo = new Dictionary<string, object>();
+                                            AddDictionaryElement(hubRoleSettings, "SubscriptionInfo", subscriptionInfo);
+
+                                            AddDictionaryElement(subscriptionInfo, "ExpirationIncrement", configSettings.HubRoleSettings.SubscriptionManagement.ExpirationIncrement);
+                                            AddDictionaryElement(subscriptionInfo, "RefreshIncrement", configSettings.HubRoleSettings.SubscriptionManagement.RefreshIncrement);
+
+                                            Dictionary<string, object> localPublishInfo = new Dictionary<string, object>();
+                                            AddDictionaryElement(hubRoleSettings, "LocalPublishInfo", localPublishInfo);
+
+                                            AddDictionaryElement(localPublishInfo, "EventQueueName", configSettings.HubRoleSettings.LocalPublish.EventQueueName);
+                                            AddDictionaryElement(localPublishInfo, "EventQueueSize", configSettings.HubRoleSettings.LocalPublish.EventQueueSize);
+
+                                            Dictionary<string, object> outputCommunicationQueueInfo = new Dictionary<string, object>();
+                                            AddDictionaryElement(hubRoleSettings, "OutputCommunicationQueues", outputCommunicationQueueInfo);
+
+                                            AddDictionaryElement(outputCommunicationQueueInfo, "MaxQueueSize", configSettings.HubRoleSettings.OutputCommunicationQueues.MaxQueueSize);
+                                            AddDictionaryElement(outputCommunicationQueueInfo, "MaxTimeout", configSettings.HubRoleSettings.OutputCommunicationQueues.MaxTimeout);
+
+                                            Dictionary<string, object> thisRouterInfo = new Dictionary<string, object>();
+                                            AddDictionaryElement(hubRoleSettings, "ThisRouterInfo", thisRouterInfo);
+
+                                            AddDictionaryElement(thisRouterInfo, "Nic", configSettings.HubRoleSettings.ThisRouter.Nic);
+                                            AddDictionaryElement(thisRouterInfo, "Port", configSettings.HubRoleSettings.ThisRouter.Port);
+                                            AddDictionaryElement(thisRouterInfo, "Timeout", configSettings.HubRoleSettings.ThisRouter.Timeout);
+                                            AddDictionaryElement(thisRouterInfo, "BufferSize", configSettings.HubRoleSettings.ThisRouter.BufferSize);
+
+                                            Dictionary<string, object> peerInfo = new Dictionary<string, object>();
+                                            AddDictionaryElement(hubRoleSettings, "PeerInfo", peerInfo);
+
+                                            AddDictionaryElement(peerInfo, "NumConnections", configSettings.HubRoleSettings.PeerRouter.NumConnections);
+                                            AddDictionaryElement(peerInfo, "Port", configSettings.HubRoleSettings.PeerRouter.Port);
+                                            AddDictionaryElement(peerInfo, "Timeout", configSettings.HubRoleSettings.PeerRouter.Timeout);
+                                            AddDictionaryElement(peerInfo, "BufferSize", configSettings.HubRoleSettings.PeerRouter.BufferSize);
+                                        }
+                                        else
+                                        {
+                                            AddDictionaryElement(routerInfo, "Role", "Node");
+
+                                            Dictionary<string, object> nodeRoleSettings = new Dictionary<string, object>();
+                                            AddDictionaryElement(response.Results, "NodeRoleSettings", nodeRoleSettings);
+
+                                            Dictionary<string, object> subscriptionInfo = new Dictionary<string, object>();
+                                            AddDictionaryElement(nodeRoleSettings, "SubscriptionInfo", subscriptionInfo);
+
+                                            AddDictionaryElement(subscriptionInfo, "ExpirationIncrement", configSettings.NodeRoleSettings.SubscriptionManagement.ExpirationIncrement);
+                                            AddDictionaryElement(subscriptionInfo, "RefreshIncrement", configSettings.NodeRoleSettings.SubscriptionManagement.RefreshIncrement);
+
+                                            Dictionary<string, object> localPublishInfo = new Dictionary<string, object>();
+                                            AddDictionaryElement(nodeRoleSettings, "LocalPublishInfo", localPublishInfo);
+
+                                            AddDictionaryElement(localPublishInfo, "EventQueueName", configSettings.NodeRoleSettings.LocalPublish.EventQueueName);
+                                            AddDictionaryElement(localPublishInfo, "EventQueueSize", configSettings.NodeRoleSettings.LocalPublish.EventQueueSize);
+
+                                            Dictionary<string, object> outputCommunicationQueueInfo = new Dictionary<string, object>();
+                                            AddDictionaryElement(nodeRoleSettings, "OutputCommunicationQueues", outputCommunicationQueueInfo);
+
+                                            AddDictionaryElement(outputCommunicationQueueInfo, "MaxQueueSize", configSettings.NodeRoleSettings.OutputCommunicationQueues.MaxQueueSize);
+                                            AddDictionaryElement(outputCommunicationQueueInfo, "MaxTimeout", configSettings.NodeRoleSettings.OutputCommunicationQueues.MaxTimeout);
+
+                                            Dictionary<string, object> parentInfo = new Dictionary<string, object>(2);
+                                            AddDictionaryElement(nodeRoleSettings, "ParentInfo", parentInfo);
+
+                                            AddDictionaryElement(parentInfo, "NumConnections", configSettings.NodeRoleSettings.ParentRouter.NumConnections);
+                                            AddDictionaryElement(parentInfo, "Port", configSettings.NodeRoleSettings.ParentRouter.Port);
+                                            AddDictionaryElement(parentInfo, "Timeout", configSettings.NodeRoleSettings.ParentRouter.Timeout);
+                                            AddDictionaryElement(parentInfo, "BufferSize", configSettings.NodeRoleSettings.ParentRouter.BufferSize);
+                                        }
+
+                                        AddDictionaryElement(routerInfo, "Group", configSettings.EventRouterSettings.Group);
+                                        AddDictionaryElement(routerInfo, "AutoConfig", configSettings.EventRouterSettings.AutoConfig);
+                                        AddDictionaryElement(routerInfo, "CmdGuid", configSettings.EventRouterSettings.CmdGuid);
+                                        AddDictionaryElement(routerInfo, "MgmtGuid", configSettings.EventRouterSettings.MgmtGuid);
+                                        AddDictionaryElement(routerInfo, "Publish", configSettings.EventRouterSettings.Publish);
+
+                                        if (string.Compare(configSettings.EventRouterSettings.BootstrapUrl, "GetConfig", true) == 0)
+                                        {
+                                            AddDictionaryElement(routerInfo, "BootstrapUrl", string.Empty);
+                                        }
+                                        else
+                                        {
+                                            AddDictionaryElement(routerInfo, "BootstrapUrl", configSettings.EventRouterSettings.BootstrapUrl);
+                                        }
+
+                                        Dictionary<string, object> groupInfo = new Dictionary<string, object>();
+                                        AddDictionaryElement(response.Results, "GroupInfo", groupInfo);
+
+                                        foreach (string name in configSettings.GroupSettings.Groups.Keys)
+                                        {
+                                            Dictionary<string, object> groupDetailInfo = new Dictionary<string, object>();
+                                            AddDictionaryElement(groupInfo, name, groupDetailInfo);
+
+                                            AddDictionaryElement(groupDetailInfo, "UseGroup", configSettings.GroupSettings.Groups[name].UseGroup);
+
+                                            List<string> groupDetailList = new List<string>();
+                                            AddDictionaryElement(groupDetailInfo, "Hubs", groupDetailList);
+
+                                            foreach (string groupName in configSettings.GroupSettings.Groups[name].Hubs.Keys)
+                                            {
+                                                groupDetailList.Add(groupName);
+                                            }
+                                        }
+
+                                        Dictionary<string, object> moduleInfo = new Dictionary<string, object>();
+                                        AddDictionaryElement(response.Results, "ModuleInfo", moduleInfo);
+
                                         Assembly assembly = Assembly.GetExecutingAssembly();
-                                        AddDictionaryElement(response.Results, "CodeBase", assembly.CodeBase);
-                                        AddDictionaryElement(response.Results, "EscapedCodeBase", assembly.EscapedCodeBase);
-                                        AddDictionaryElement(response.Results, "FullName", assembly.FullName);
-                                        AddDictionaryElement(response.Results, "GlobalAssemblyCache", assembly.GlobalAssemblyCache);
-                                        AddDictionaryElement(response.Results, "Location", assembly.Location);
-                                        AddDictionaryElement(response.Results, "ReflectionOnly", assembly.ReflectionOnly);
-                                        AddDictionaryElement(response.Results, "ImageRuntimeVersion", assembly.ImageRuntimeVersion);
+                                        AddDictionaryElement(moduleInfo, "CodeBase", assembly.CodeBase);
+                                        AddDictionaryElement(moduleInfo, "EscapedCodeBase", assembly.EscapedCodeBase);
+                                        AddDictionaryElement(moduleInfo, "FullName", assembly.FullName);
+                                        AddDictionaryElement(moduleInfo, "GlobalAssemblyCache", assembly.GlobalAssemblyCache);
+                                        AddDictionaryElement(moduleInfo, "Location", assembly.Location);
+                                        AddDictionaryElement(moduleInfo, "ReflectionOnly", assembly.ReflectionOnly);
+                                        AddDictionaryElement(moduleInfo, "ImageRuntimeVersion", assembly.ImageRuntimeVersion);
+                                        AddDictionaryElement(moduleInfo, "Version", FileVersionInfo.GetVersionInfo(assembly.Location).ProductVersion);
 
                                         response.ReturnCode = 0;
                                     }
@@ -1503,7 +1620,15 @@ namespace Microsoft.WebSolutionsPlatform.Router
 
                             try
                             {
-                                eventPush.OnNext(new WspEvent(response.EventType, null, response.Serialize()));
+                                WspEvent wspEvent = new WspEvent(response.EventType, null, response.Serialize());
+                                eventPush.OnNext(wspEvent, out rc);
+
+                                if (rc != PubSubManager.ReturnCode.Success)
+                                {
+                                    EventLog.WriteEntry("WspEventRouter",
+                                        "Error trying to publish command response event: Command = " + request.Command + ", Correlation ID = " + response.CorrelationID.ToString(),
+                                        EventLogEntryType.Warning);
+                                }
                             }
                             catch
                             {

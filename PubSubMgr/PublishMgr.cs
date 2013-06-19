@@ -13,18 +13,63 @@ using Microsoft.WebSolutionsPlatform.Common;
 namespace Microsoft.WebSolutionsPlatform.PubSubManager
 {
     /// <summary>
+    /// The ReturnCode enum defines the return codes when publishing events
+    /// </summary>
+    public enum ReturnCode : int
+    {
+        /// <summary>
+        /// Action was successful
+        /// </summary>
+        Success = 0,
+        /// <summary>
+        /// Action timed out
+        /// </summary>
+        Timeout = -1,
+        /// <summary>
+        /// Queue does not exist. Check to see if WspEventRouter is running.
+        /// </summary>
+        QueueNameDoesNotExist = 2,
+        /// <summary>
+        /// Invalid argument was passed
+        /// </summary>
+        InvalidArgument = 3,
+        /// <summary>
+        /// There was not sufficient space to publish the event. This indicates the queue is full.
+        /// </summary>
+        InsufficientSpace = 5,
+        /// <summary>
+        /// There is not sufficient memory to processing the event
+        /// </summary>
+        InsufficientMemory = 1455,
+        /// <summary>
+        /// The event overflowed the buffer
+        /// </summary>
+        Overflow = 9999
+    }
+
+    /// <summary>
     /// This class is used to publish Wsp events using Rx
     /// </summary>
     public class WspEventPublish : IObserver<WspEvent>
     {
-        private static PublishManager pubMgr;
+        private static object lockObj = new object();
+        private static PublishManager pubMgr = null;
 
         /// <summary>
         /// Constructor
         /// </summary>
         public WspEventPublish()
         {
-            pubMgr = new PublishManager();
+            if (pubMgr == null)
+            {
+                lock (lockObj)
+                {
+                    if (pubMgr == null)
+                    {
+                        pubMgr = new PublishManager();
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -34,7 +79,16 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
         [CLSCompliant(false)]
         public WspEventPublish(uint timeout)
         {
-            pubMgr = new PublishManager(timeout);
+            if (pubMgr == null)
+            {
+                lock (lockObj)
+                {
+                    if (pubMgr == null)
+                    {
+                        pubMgr = new PublishManager(timeout);
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -56,15 +110,18 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
         /// The OnNext is used to publish events using Rx
         /// </summary>
         /// <param name="wspEvent">The WspEvent being published</param>
-        public void OnNext(WspEvent wspEvent)
+        /// <param name="rc">Return code</param>
+        public void OnNext(WspEvent wspEvent, out ReturnCode rc)
         {
             WspEvent[] wspEvents = null;
+
+            rc = ReturnCode.Success;
 
             if (Interceptor.publishInterceptor != null)
             {
                 try
                 {
-                    if (Interceptor.publishInterceptor(wspEvent, out wspEvents) == false)
+                    if (Interceptor.publishInterceptor(wspEvent, null, out wspEvents) == false)
                     {
                         return;
                     }
@@ -76,13 +133,48 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
 
             if (wspEvents == null || wspEvents.Length == 0)
             {
-                pubMgr.PublishNew(wspEvent.SerializedEvent);
+                pubMgr.Publish(wspEvent.SerializedEvent, out rc);
             }
             else
             {
                 for (int i = 0; i < wspEvents.Length; i++)
                 {
-                    pubMgr.PublishNew(wspEvents[i].SerializedEvent);
+                    pubMgr.Publish(wspEvents[i].SerializedEvent, out rc);
+                }
+            }
+        }
+
+        /// <summary>
+        /// The OnNext is used to publish events using Rx
+        /// </summary>
+        /// <param name="wspEvent">The WspEvent being published</param>
+        public void OnNext(WspEvent wspEvent)
+        {
+            WspEvent[] wspEvents = null;
+
+            if (Interceptor.publishInterceptor != null)
+            {
+                try
+                {
+                    if (Interceptor.publishInterceptor(wspEvent, null, out wspEvents) == false)
+                    {
+                        return;
+                    }
+                }
+                catch
+                {
+                }
+            }
+
+            if (wspEvents == null || wspEvents.Length == 0)
+            {
+                pubMgr.Publish(wspEvent.SerializedEvent);
+            }
+            else
+            {
+                for (int i = 0; i < wspEvents.Length; i++)
+                {
+                    pubMgr.Publish(wspEvents[i].SerializedEvent);
                 }
             }
         }
@@ -93,7 +185,7 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
         /// <param name="wspEvent">The WspEvent being published</param>
         internal void OnNextPrivate(WspEvent wspEvent)
         {
-            pubMgr.PublishNew(wspEvent.SerializedEvent);
+            pubMgr.Publish(wspEvent.SerializedEvent);
         }
     }
 
@@ -107,7 +199,7 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
         private string eventQueueName = @"WspEventQueue";
         private SharedQueue eventQueue;
 
-        private bool disposed;
+        private bool disposed = false;
 
         private int retryAttempts;
         /// <summary>
@@ -197,9 +289,7 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
 
                 if (eventQueue == null)
                 {
-                    ResourceManager rm = new ResourceManager("PubSubMgr.PubSubMgr", Assembly.GetExecutingAssembly());
-
-                    throw new PubSubConnectionFailedException(rm.GetString("ConnectionFailed"));
+                    throw new PubSubConnectionFailedException("Connection to the Event System failed");
                 }
             }
             catch (SharedQueueDoesNotExistException e)
@@ -219,86 +309,61 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
         /// <summary>
         /// Publishes an event to the event service
         /// </summary>
-        /// <param name="eventType">Guid for the event</param>
-        /// <param name="serializedBody">Serialized version of the event</param>
-        internal void Publish(Guid eventType, byte[] serializedBody)
+        /// <param name="serializedEvent">A serialized WspEvent object</param>
+        internal void Publish(byte[] serializedEvent)
         {
-            Publish(eventType, null, serializedBody);
-        }
+            ReturnCode rc;
 
-        /// <summary>
-        /// Publishes an event to the event service
-        /// </summary>
-        /// <param name="eventType">Guid for the event</param>
-        /// <param name="extendedHeaders">Dictionary of user headers</param>
-        /// <param name="serializedBody">Serialized version of the event</param>
-        internal void Publish(Guid eventType, Dictionary<byte, string> extendedHeaders, byte[] serializedBody)
-        {
-            if (serializedBody == null || serializedBody.Length == 0)
+            Publish(serializedEvent, out rc);
+
+            if (rc == ReturnCode.Success)
             {
-                ResourceManager rm = new ResourceManager("PubSubMgr.PubSubMgr", Assembly.GetExecutingAssembly());
-
-                throw new ArgumentException(rm.GetString("InvalidArgumentValue"), "serializedEvent");
+                return;
             }
 
-            if (eventType == Guid.Empty)
+            if (rc == ReturnCode.Timeout)
             {
-                ResourceManager rm = new ResourceManager("PubSubMgr.PubSubMgr", Assembly.GetExecutingAssembly());
-
-                throw new ArgumentException(rm.GetString("InvalidArgumentValue"), "eventType");
+                throw new TimeoutException("Enqueue timed out");
             }
 
-            WspEvent wspEvent = new WspEvent(eventType, extendedHeaders, serializedBody);
+            if (rc == ReturnCode.InsufficientSpace)
+            {
+                SharedQueueFullException e = new SharedQueueFullException("Queue is full");
 
-            PublishNew(wspEvent.SerializedEvent);
-        }
+                throw new PubSubQueueFullException(e.Message, e.InnerException);
+            }
 
-        /// <summary>
-        /// Publishes an event to the event service
-        /// </summary>
-        /// <param name="wspEvent">The WspEvent object to be published</param>
-        internal void Publish(WspEvent wspEvent)
-        {
-            PublishNew(wspEvent.SerializedEvent);
+            if (rc != ReturnCode.Success)
+            {
+                SharedQueueException e = new SharedQueueException("(HRESULT:" + rc.ToString() + ") Enqueue failed");
+
+                throw new PubSubException(e.Message, e.InnerException);
+            }
         }
 
         /// <summary>
         /// Publishes an event to the event service
         /// </summary>
         /// <param name="serializedEvent">A serialized WspEvent object</param>
-        internal void PublishNew(byte[] serializedEvent)
+        /// <param name="rc">Return code</param>
+        internal void Publish(byte[] serializedEvent, out ReturnCode rc)
         {
-            int tries = 0;
+            Common.ReturnCode rcCommon;
 
-            while (true)
+            rc = ReturnCode.InvalidArgument;
+
+            for(int tries = 0; tries <= retryAttempts; tries++)
             {
-                try
-                {
-                    eventQueue.Enqueue(serializedEvent, timeout);
+                eventQueue.Enqueue(serializedEvent, out rcCommon, timeout);
 
-                    tries = 0;
+                rc = (ReturnCode)rcCommon;
 
-                    break;
-                }
-                catch (TimeoutException)
+                if (rc != ReturnCode.Timeout)
                 {
-                    tries++;
+                    return;
+                }
 
-                    if (tries > retryAttempts)
-                    {
-                        throw;
-                    }
-
-                    Thread.Sleep(retryPause);
-                }
-                catch (SharedQueueFullException e)
-                {
-                    throw new PubSubQueueFullException(e.Message, e.InnerException);
-                }
-                catch (SharedQueueException e)
-                {
-                    throw new PubSubException(e.Message, e.InnerException);
-                }
+                Thread.Sleep(retryPause);
             }
         }
 

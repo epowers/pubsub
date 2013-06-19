@@ -4,13 +4,14 @@ using System.ComponentModel;
 using System.Data;
 using System.Drawing;
 using System.Text;
+using System.Diagnostics;
 using System.Threading;
 using System.Windows.Forms;
 using Microsoft.WebSolutionsPlatform.PubSubManager;
 
 namespace Microsoft.Sample.EventPingPong
 {
-    public partial class Form1 : Form
+    public partial class Form1 : Form, IObserver<WspEvent>
     {
         private static object obj = new object();
         private static Guid instanceId = Guid.NewGuid();
@@ -20,9 +21,14 @@ namespace Microsoft.Sample.EventPingPong
         private static PublishEvent pubEvent;
         private static SubscribeEvent subEvent;
         private static WspEventPublish eventPush;
-        private static SubscriptionManager subMgr;
-        private static SubscriptionManager.Callback subCallback;
-        private static SubscriptionManager.Callback pubCallback;
+
+        WspEventObservable subObservable;
+        IDisposable subObservableDispose = null;
+        Guid subEventType;
+
+        WspEventObservable pubObservable;
+        IDisposable pubObservableDispose = null;
+        Guid pubEventType;
 
         delegate void SetTextCallback(TextBox tb, string text);
 
@@ -36,9 +42,6 @@ namespace Microsoft.Sample.EventPingPong
             subEvent = new SubscribeEvent();
 
             eventPush = new WspEventPublish();
-
-            subCallback = new SubscriptionManager.Callback(SubscriptionCallback);
-            pubCallback = new SubscriptionManager.Callback(PublishCallback);
 
             stopPubSubButton.Checked = true;
             stopPubSubButton.Select();
@@ -70,9 +73,9 @@ namespace Microsoft.Sample.EventPingPong
 
             pubEvent.EventNum = 0;
 
-            subMgr = new SubscriptionManager(1, pubCallback);
-            subMgr.ListenForEvents = true;
-            subMgr.AddSubscription(pubEvent.InstanceId, false);
+            pubEventType = pubEvent.InstanceId;
+            pubObservable = new WspEventObservable(pubEventType, false);
+            pubObservableDispose = pubObservable.Subscribe(this);
 
             while (true)
             {
@@ -95,11 +98,10 @@ namespace Microsoft.Sample.EventPingPong
             {
                 timer1.Stop();
 
-                if (subMgr != null)
+                if (pubObservableDispose != null)
                 {
-                    subMgr.RemoveSubscription(pubEvent.InstanceId);
-                    subMgr.ListenForEvents = false;
-                    subMgr = null;
+                    pubObservableDispose.Dispose();
+                    pubObservableDispose = null;
                 }
             }
             catch
@@ -114,9 +116,9 @@ namespace Microsoft.Sample.EventPingPong
 
             timer1.Start();
 
-            subMgr = new SubscriptionManager(1, subCallback);
-            subMgr.ListenForEvents = true;
-            subMgr.AddSubscription(pubEvent.EventType, false);
+            subEventType = pubEvent.EventType;
+            subObservable = new WspEventObservable(subEventType, false);
+            subObservableDispose = subObservable.Subscribe(this);
         }
 
         public void StopSubscribe()
@@ -125,11 +127,10 @@ namespace Microsoft.Sample.EventPingPong
             {
                 timer1.Stop();
 
-                if (subMgr != null)
+                if (subObservableDispose != null)
                 {
-                    subMgr.RemoveSubscription(pubEvent.EventType);
-                    subMgr.ListenForEvents = false;
-                    subMgr = null;
+                    subObservableDispose.Dispose();
+                    subObservableDispose = null;
                 }
             }
             catch
@@ -165,7 +166,7 @@ namespace Microsoft.Sample.EventPingPong
         {
             StopPubSub();
 
-            Application.Exit();
+            Process.GetCurrentProcess().Kill();
         }
 
         private void SetTextbox(TextBox tb, string text)
@@ -189,9 +190,30 @@ namespace Microsoft.Sample.EventPingPong
             }
         }
 
+        public void OnNext(WspEvent wspEvent)
+        {
+            if (wspEvent.EventType == pubEventType)
+            {
+                PublishCallback(wspEvent.EventType, wspEvent);
+            }
+            else
+            {
+                SubscriptionCallback(wspEvent.EventType, wspEvent);
+            }
+
+            return;
+        }
+
+        public void OnCompleted()
+        {
+        }
+
+        public void OnError(Exception e)
+        {
+        }
 
 
-        public void SubscriptionCallback(Guid eventType, WspEvent wspEvent)
+        private void SubscriptionCallback(Guid eventType, WspEvent wspEvent)
         {
             PublishEvent localEvent;
 
@@ -225,7 +247,7 @@ namespace Microsoft.Sample.EventPingPong
             SetTextbox(eventNumberSent, counter.ToString());
         }
 
-        public void PublishCallback(Guid eventType, WspEvent wspEvent)
+        private void PublishCallback(Guid eventType, WspEvent wspEvent)
         {
             SubscribeEvent subscribeEvent;
 

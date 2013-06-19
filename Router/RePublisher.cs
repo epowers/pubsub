@@ -28,6 +28,7 @@ namespace Microsoft.WebSolutionsPlatform.Router
 				QueueElement element;
                 QueueElement newElement = new QueueElement();
 				bool elementRetrieved;
+                PubSubManager.ReturnCode rc;
 
                 try
                 {
@@ -84,11 +85,20 @@ namespace Microsoft.WebSolutionsPlatform.Router
                             elementRetrieved = false;
                         }
 
-                        if (elementRetrieved == true)
+                        while(elementRetrieved == true)
                         {
                             try
                             {
-                                eventPush.OnNext(element.WspEvent);
+                                eventPush.OnNext(element.WspEvent, out rc);
+
+                                if (rc == PubSubManager.ReturnCode.Success)
+                                {
+                                    break;
+                                }
+                                else
+                                {
+                                    Thread.Sleep(1);
+                                }
                             }
                             catch
                             {

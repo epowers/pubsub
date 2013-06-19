@@ -122,7 +122,17 @@ namespace Microsoft.WebSolutionsPlatform.Router
 
                             element.WspEvent = wspEvent;
                             element.Source = eventSource;
-                            element.BodyEvent = new Subscription(wspEvent.Body);
+
+                            try
+                            {
+                                element.BodyEvent = new Subscription(wspEvent.Body);
+                            }
+                            catch (EventTypeNotSupportedException)
+                            {
+                                EventLog.WriteEntry("WspEventRouter", "Invalid subscription event is being published on server: " + wspEvent.OriginatingRouterName, EventLogEntryType.Warning);
+
+                                continue;
+                            }
 
                             for (i = 0; i < 10; i++)
                             {
@@ -142,7 +152,8 @@ namespace Microsoft.WebSolutionsPlatform.Router
 
                         try
                         {
-                            if (SubscriptionMgr.subscriptions.ContainsKey(wspEvent.EventType) == true)
+                            if (SubscriptionMgr.generalSubscriptions.ContainsKey(wspEvent.EventType) == true ||
+                                SubscriptionMgr.filteredSubscriptions.ContainsKey(wspEvent.EventType) == true)
                             {
                                 QueueElement element = new QueueElement();
 

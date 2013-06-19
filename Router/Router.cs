@@ -264,9 +264,9 @@ namespace Microsoft.WebSolutionsPlatform.Router
             CounterCreationDataCollection CCDC;
 
             categoryName = "WspEventRouter";
-            communicationCategoryName = "CommunicationCategory";
+            communicationCategoryName = "WspEventRouterCommunication";
             categoryHelp = "WspEventRouter counters showing internal performance of the router.";
-            communicationCategoryHelp = "WspEventRouter counters showing communication queues to other machines";
+            communicationCategoryHelp = "WspEventRouter counters showing communication queues to other servers";
             subscriptionQueueSizeName = "SubscriptionQueueSize";
             rePublisherQueueSizeName = "RePublisherQueueSize";
             persisterQueueSizeName = "PersisterQueueSize";

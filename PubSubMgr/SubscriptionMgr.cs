@@ -1,5 +1,8 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
+using System.Linq.Expressions;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -7,29 +10,79 @@ using System.Threading;
 using System.Net;
 using System.Resources;
 using System.Reflection;
+using Microsoft.CSharp;
+using System.CodeDom.Compiler;
 using Microsoft.WebSolutionsPlatform.Common;
 
 namespace Microsoft.WebSolutionsPlatform.PubSubManager
 {
     /// <summary>
-    /// The ISubscriptionCallback interface is implemented by an event subscriber class. The
-    /// SubscriptionCallback method is then called to deliver events to the application.
+    /// Delegate for the method used for filtered subscriptions
     /// </summary>
-    public interface ISubscriptionCallback
-    {
-        /// <summary>
-        /// This method is passed to the SubscriptionManager as the callback for delivering events.
-        /// </summary>
-        /// <param name="eventType">Event type for the event being passed.</param>
-        /// <param name="wspEvent">The serialized version of the event.</param>
-        void SubscriptionCallback(Guid eventType, WspEvent wspEvent);
-    }
+    /// <param name="wspEvent"></param>
+    /// <returns></returns>
+    public delegate bool WspFilterMethod(WspEvent wspEvent);
 
-    internal struct StateInfo
+    internal class SubscriptionObserver
     {
-        public object callBack;
-        public Guid eventType;
-        public WspEvent wspEvent;
+        internal Guid id;
+        internal IObserver<WspEvent> observer;
+        internal SynchronizationQueueGeneric<WspEvent> queue;
+        internal Thread observerThread;
+
+        internal SubscriptionObserver(IObserver<WspEvent> observer)
+        {
+            this.id = Guid.NewGuid();
+            this.observer = observer;
+            this.queue = new SynchronizationQueueGeneric<WspEvent>();
+
+            this.observerThread = new Thread(Start);
+            observerThread.Start();
+        }
+
+        internal void Start()
+        {
+            WspEvent wspEvent;
+
+            try
+            {
+                while (true)
+                {
+                    try
+                    {
+                        wspEvent = this.queue.Dequeue();
+
+                        if (wspEvent == null)
+                        {
+                            continue;
+                        }
+
+                        try
+                        {
+                            this.observer.OnNext(wspEvent);
+                        }
+                        catch (Exception e)
+                        {
+                            EventLog.WriteEntry("WspEventRouter", "Application threw unhandled exception:  " + e.ToString(), EventLogEntryType.Warning);
+                        }
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        wspEvent = null;
+                    }
+                    catch (Exception e)
+                    {
+                        EventLog.WriteEntry("WspEventRouter", "Exception processing event:  " + e.ToString(), EventLogEntryType.Warning);
+
+                        continue;
+                    }
+                }
+            }
+            catch
+            {
+                // intentionally left blank
+            }
+        }
     }
 
     /// <summary>
@@ -37,26 +90,32 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
     /// </summary>
     public class WspEventObservable : IObservable<WspEvent>
     {
-        private static Thread subscriptionThread = null;
-        private static bool subscriptionThreadReady = false;
+        private static Thread wspSubscriptionThread = null;
 
         private static object lockObj = new object();
 
         private static Guid initialEventType;
         private static bool initialLocalOnly;
+        private static string initialMethodBody;
+        private static List<string> initialUsingLibraries;
+        private static List<string> initialReferencedAssemblies;
 
-        /// <summary>
-        /// Subscription Manager
-        /// </summary>        
         private static SubscriptionManager wspSubscriptionManager = null;
 
-        /// <summary>
-        /// The list of observers for wsp event object.
-        /// </summary>
-        private static Dictionary<Guid, List<IObserver<WspEvent>>> observersByEventType = new Dictionary<Guid, List<IObserver<WspEvent>>>();
+        private static Dictionary<Guid, List<SubscriptionObserver>> observables = new Dictionary<Guid,List<SubscriptionObserver>>();
 
+        internal static Dictionary<Guid, List<WspEventObservable>> eventObservables = new Dictionary<Guid,List<WspEventObservable>>();
+
+        private Guid id;
         private Guid eventType;
         private bool localOnly;
+        private string methodBody;
+        private List<string> usingLibraries;
+        private List<string> referencedAssemblies;
+        private WspFilterMethod filterMethod;
+        internal SynchronizationQueueGeneric<WspEvent> queue;
+        internal PerformanceCounter eventQueueCounter;
+        internal Thread observableThread = null;
 
         /// <summary>
         /// The ObservableSubscription constructor is used to create an observable subscription to then subscribe to via Rx
@@ -64,9 +123,181 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
         /// <param name="eventType">The event type to subscribe to</param>
         /// <param name="localOnly">True if only local events are to be subscribed to</param>
         public WspEventObservable(Guid eventType, bool localOnly)
+            : this(eventType, localOnly, null, null, null)
         {
+        }
+
+        /// <summary>
+        /// The ObservableSubscription constructor is used to create an observable filtered subscription to then subscribe to via Rx
+        /// </summary>
+        /// <remarks>
+        /// The method will obviously consume more overhead, so only use when necessary. If referenced assemblies, they must be
+        /// deployed and accessible by the WspEventRouter on ALL computers running Wsp.
+        /// </remarks>
+        /// <param name="eventType">The event type to subscribe to</param>
+        /// <param name="localOnly">True if only local events are to be subscribed to</param>
+        /// <param name="methodBody">Method body defining the filter</param>
+        /// <param name="usingLibraries">List of using libraries which the method requires, null if none required</param>
+        /// <param name="referencedAssemblies">List of referenced assemblies which the method requires, null if none required</param>
+        public WspEventObservable(Guid eventType, bool localOnly, string methodBody, List<string> usingLibraries, List<string> referencedAssemblies)
+        {
+            this.id = Guid.NewGuid();
             this.eventType = eventType;
             this.localOnly = localOnly;
+            this.usingLibraries = null;
+            this.referencedAssemblies = null;
+            this.filterMethod = null;
+
+            if (string.IsNullOrEmpty(methodBody) == true)
+            {
+                this.methodBody = string.Empty;
+            }
+            else
+            {
+                this.methodBody = methodBody;
+
+                if (usingLibraries != null)
+                {
+                    this.usingLibraries = new List<string>(usingLibraries.Count);
+                    for (int i = 0; i < usingLibraries.Count; i++)
+                    {
+                        this.usingLibraries[i] = usingLibraries[i];
+                    }
+                }
+
+                if (referencedAssemblies != null)
+                {
+                    this.referencedAssemblies = new List<string>(referencedAssemblies.Count);
+                    for (int i = 0; i < referencedAssemblies.Count; i++)
+                    {
+                        this.referencedAssemblies[i] = referencedAssemblies[i];
+                    }
+                }
+
+                CompilerResults results;
+
+                bool rc = CompileFilterMethod(this.methodBody, this.usingLibraries, this.referencedAssemblies, out this.filterMethod, out results);
+
+                if (rc == false)
+                {
+                    throw new PubSubCompileException(results.Errors.ToString());
+                }
+            }
+
+            eventQueueCounter = new PerformanceCounter();
+            eventQueueCounter.InstanceLifetime = PerformanceCounterInstanceLifetime.Process;
+            eventQueueCounter.CategoryName = "WspEventRouterApplication";
+            eventQueueCounter.CounterName = "SubscriptionQueueSize";
+            eventQueueCounter.InstanceName = "PID" + Process.GetCurrentProcess().Id.ToString() + ":" + eventType.ToString() + ":" + Guid.NewGuid().ToString().GetHashCode().ToString();
+            eventQueueCounter.ReadOnly = false;
+
+            this.queue = new SynchronizationQueueGeneric<WspEvent>(eventQueueCounter);
+
+            observableThread = new Thread(ObservableThread);
+            observableThread.Start();
+
+            lock (lockObj)
+            {
+                if (wspSubscriptionThread == null)
+                {
+                    wspSubscriptionManager = new SubscriptionManager();
+                    wspSubscriptionThread = new Thread(wspSubscriptionManager.Listener);
+                    wspSubscriptionThread.Start();
+                }
+            }
+        }
+
+        private void ObservableThread()
+        {
+            WspEvent wspEvent;
+            WspEvent[] wspEvents = null;
+
+            try
+            {
+                while (true)
+                {
+                    try
+                    {
+                        wspEvent = this.queue.Dequeue();
+
+                        if (wspEvent == null)
+                        {
+                            continue;
+                        }
+
+                        if (this.filterMethod != null)
+                        {
+                            if (this.filterMethod(wspEvent) == false)
+                            {
+                                continue;
+                            }
+                        }
+
+                        if (Interceptor.subscribeInterceptor != null)
+                        {
+                            wspEvents = null;
+
+                            try
+                            {
+                                if (Interceptor.subscribeInterceptor(wspEvent, this, out wspEvents) == false)
+                                {
+                                    continue;
+                                }
+                            }
+                            catch (Exception e)
+                            {
+                                EventLog.WriteEntry("WspEventRouter", "Interceptor threw unhandled exception:  " + e.ToString(), EventLogEntryType.Warning);
+                            }
+                        }
+
+                        List<SubscriptionObserver> observers;
+
+                        if (wspEvents == null)
+                        {
+                            lock (lockObj)
+                            {
+                                if (observables.TryGetValue(this.id, out observers) == true)
+                                {
+                                    for (int i = 0; i < observers.Count; i++)
+                                    {
+                                        observers[i].queue.Enqueue(wspEvent);
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            lock (lockObj)
+                            {
+                                for (int x = 0; x < wspEvents.Length; x++)
+                                {
+                                    if (observables.TryGetValue(this.id, out observers) == true)
+                                    {
+                                        for (int i = 0; i < observers.Count; i++)
+                                        {
+                                            observers[i].queue.Enqueue(wspEvents[x]);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        wspEvent = null;
+                    }
+                    catch (Exception e)
+                    {
+                        EventLog.WriteEntry("WspEventRouter", "Exception processing event:  " + e.ToString(), EventLogEntryType.Warning);
+
+                        continue;
+                    }
+                }
+            }
+            catch
+            {
+                // intentionally left blank
+            }
         }
 
         /// <summary>
@@ -76,168 +307,257 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
         /// <returns></returns>
         public IDisposable Subscribe(IObserver<WspEvent> observer)
         {
+            SubscriptionObserver subscriptionObserver;
+
             lock (lockObj)
             {
-                if (observersByEventType.Count == 0)
+                if (eventObservables.Count == 0)
                 {
                     initialEventType = eventType;
                     initialLocalOnly = localOnly;
+                    initialMethodBody = methodBody;
+                    initialUsingLibraries = usingLibraries;
+                    initialReferencedAssemblies = referencedAssemblies;
+                }
 
-                    subscriptionThread = new Thread(Start);
+                wspSubscriptionManager.AddSubscription(eventType, localOnly, methodBody, usingLibraries, referencedAssemblies);
 
-                    subscriptionThread.Start();
+                subscriptionObserver = new SubscriptionObserver(observer);
 
-                    while (subscriptionThreadReady == false)
+                List<SubscriptionObserver> observers;
+
+                if (observables.TryGetValue(this.id, out observers) == false)
+                {
+                    observers = new List<SubscriptionObserver>();
+                    observables[this.id] = observers;
+                }
+
+                observers.Add(subscriptionObserver);
+
+                List<WspEventObservable> observableList;
+
+                if (eventObservables.TryGetValue(this.eventType, out observableList) == false)
+                {
+                    observableList = new List<WspEventObservable>();
+                    eventObservables[this.eventType] = observableList;
+                }
+
+                bool observableExists = false;
+
+                for (int i = 0; i < observableList.Count; i++)
+                {
+                    if (observableList[i].id == this.id)
                     {
-                        Thread.Sleep(10);
+                        observableExists = true;
+                        break;
                     }
                 }
-                else
-                {
-                    if (observersByEventType.ContainsKey(eventType) == true)
-                    {
-                        wspSubscriptionManager.RemoveSubscription(eventType);
-                    }
 
-                    wspSubscriptionManager.AddSubscription(eventType, localOnly);
-                }
-
-                List<IObserver<WspEvent>> observers;
-
-                if (observersByEventType.TryGetValue(eventType, out observers) == true)
+                if (observableExists == false)
                 {
-                    observers.Add(observer);
-                }
-                else
-                {
-                    observers = new List<IObserver<WspEvent>>();
-                    observers.Add(observer);
-                    observersByEventType[eventType] = observers;
+                    observableList.Add(this);
                 }
             }
 
-            return new WspSubscriptionDisposable(this, observer);
+            return new WspSubscriptionDisposable(this, subscriptionObserver);
+        }
+
+        /// <summary>
+        /// Compiles the method for the subscription and returns the function.
+        /// </summary>
+        /// <param name="methodBodyString">String containing the method body to compile</param>
+        /// <param name="usingLibraries">List of the using libraries by the expression</param>
+        /// <param name="referencedAssemblies">List of the reference assemblies used by the expression</param>
+        /// <param name="filterMethod">The compiled function</param>
+        /// <param name="results">Compiler results</param>
+        /// <returns>true if successful, false if failed</returns>
+        public static bool CompileFilterMethod(string methodBodyString, List<string> usingLibraries, List<string> referencedAssemblies,
+            out WspFilterMethod filterMethod, out CompilerResults results)
+        {
+            Dictionary<string, string> usingDictionary = new Dictionary<string, string>(StringComparer.CurrentCultureIgnoreCase);
+            Dictionary<string, string> referencedDictionary = new Dictionary<string, string>(StringComparer.CurrentCultureIgnoreCase);
+
+            filterMethod = null;
+            results = null;
+
+            string className = "a" + Guid.NewGuid().ToString().Replace('-', 'a');
+
+            try
+            {
+                usingDictionary[@"using System;"] = null;
+                usingDictionary[@"using System.Linq;"] = null;
+                usingDictionary[@"using System.Linq.Expressions;"] = null;
+                usingDictionary[@"using Microsoft.WebSolutionsPlatform.Event;"] = null;
+                usingDictionary[@"using Microsoft.WebSolutionsPlatform.PubSubManager;"] = null;
+
+                if (usingLibraries != null)
+                {
+                    for (int i = 0; i < usingLibraries.Count; i++)
+                    {
+                        if (usingLibraries[i].EndsWith(";") == true)
+                        {
+                            usingDictionary[usingLibraries[i]] = null;
+                        }
+                        else
+                        {
+                            usingDictionary[usingLibraries[i] + ";"] = null;
+                        }
+                    }
+                }
+
+                referencedDictionary[@"System.dll"] = null;
+                referencedDictionary[@"System.Core.dll"] = null;
+                referencedDictionary[AppDomain.CurrentDomain.SetupInformation.ApplicationBase + @"WspEvent.dll"] = null;
+                referencedDictionary[AppDomain.CurrentDomain.SetupInformation.ApplicationBase + @"WspPubSubMgr.dll"] = null;
+
+                if (referencedAssemblies != null)
+                {
+                    for (int i = 0; i < referencedAssemblies.Count; i++)
+                    {
+                        referencedDictionary[referencedAssemblies[i]] = null;
+                    }
+                }
+
+                string[] code = new string[1];
+
+                StringBuilder sb = new StringBuilder();
+
+                foreach (string s in usingDictionary.Keys)
+                {
+                    sb.Append(s + "\n");
+                }
+
+                sb.Append("public class " + className + "\n");
+                sb.Append("{\n");
+                sb.Append("    public WspFilterMethod GetFilterFunction()\n");
+                sb.Append("    {\n");
+                sb.Append("        return FilterMethod;\n");
+                sb.Append("    }\n");
+                sb.Append("\n");
+                sb.Append("    public bool FilterMethod(WspEvent wspEvent)\n");
+                sb.Append("    {\n");
+                sb.Append(methodBodyString);
+                sb.Append("    }\n");
+                sb.Append("}\n");
+
+                code[0] = sb.ToString();
+
+                CSharpCodeProvider compiler = new CSharpCodeProvider();
+
+                CompilerParameters parms = new System.CodeDom.Compiler.CompilerParameters
+                {
+                    GenerateExecutable = false,
+                    GenerateInMemory = true
+                };
+
+                foreach (string asm in referencedDictionary.Keys)
+                {
+                    parms.ReferencedAssemblies.Add(asm);
+                }
+
+                results = compiler.CompileAssemblyFromSource(parms, code);
+
+                if (results.Errors.HasErrors == true)
+                {
+                    return false;
+                }
+                else
+                {
+                    var wspFilterClass = results.CompiledAssembly.CreateInstance(className);
+                    Type filterType = wspFilterClass.GetType();
+                    MethodInfo tempMethod = filterType.GetMethod("GetFilterFunction");
+                    ConstructorInfo filterConstructor = filterType.GetConstructor(Type.EmptyTypes);
+                    object filterObject = filterConstructor.Invoke(new object[] { });
+
+                    filterMethod = (WspFilterMethod)tempMethod.Invoke(filterObject, new object[] { });
+
+                    WspEvent wspEvent = new WspEvent(Guid.Empty, null, null);
+
+                    filterMethod(wspEvent);
+
+                    return true;
+                }
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         class WspSubscriptionDisposable : IDisposable
         {
             private readonly WspEventObservable parent;
-            private readonly IObserver<WspEvent> observer;
+            private readonly SubscriptionObserver subscriptionObserver;
 
-            public WspSubscriptionDisposable(WspEventObservable parent, IObserver<WspEvent> observer)
+            public WspSubscriptionDisposable(WspEventObservable parent, SubscriptionObserver subscriptionObserver)
             {
                 this.parent = parent;
-                this.observer = observer;
+                this.subscriptionObserver = subscriptionObserver;
             }
 
             public void Dispose()
             {
-                parent.Dispose(observer);
-            }
-        }
-
-        /// <summary>
-        /// Starts this instance.
-        /// </summary>
-        private static void Start()
-        {
-            try
-            {
-                var wspSubscriptionCallback = new SubscriptionManager.Callback(SubscriptionCallback);
-                wspSubscriptionManager = new SubscriptionManager(wspSubscriptionCallback);
-                wspSubscriptionManager.AddSubscription(initialEventType, initialLocalOnly);
-
-                subscriptionThreadReady = true;
-
-                Thread.Sleep(Timeout.Infinite);
-            }
-            catch (ThreadAbortException)
-            {
-                subscriptionThreadReady = false;
-            }
-        }
-
-        /// <summary>
-        /// callback subscription
-        /// </summary>
-        /// <param name="eventType">Type of the event.</param>
-        /// <param name="wspEvent">The serialized event.</param>
-        internal static void SubscriptionCallback(Guid eventType, WspEvent wspEvent)
-        {
-            WspEvent[] wspEvents = null;
-
-            List<IObserver<WspEvent>> observers;
-
-            lock(lockObj)
-            {
-                if (observersByEventType.TryGetValue(eventType, out observers) == true)
-                {
-                    for (int i = 0; i < observers.Count; i++)
-                    {
-                        if (Interceptor.subscribeInterceptor != null)
-                        {
-                            try
-                            {
-                                if (Interceptor.subscribeInterceptor(wspEvent, out wspEvents) == false)
-                                {
-                                    return;
-                                }
-                            }
-                            catch
-                            {
-                            }
-                        }
-
-                        if (wspEvents == null || wspEvents.Length == 0)
-                        {
-                            observers[i].OnNext(wspEvent);
-                        }
-                        else
-                        {
-                            for (int j = 0; j < wspEvents.Length; j++)
-                            {
-                                observers[i].OnNext(wspEvents[j]);
-                            }
-                        }
-                    }
-                }
+                parent.Dispose(subscriptionObserver);
             }
         }
 
         /// <summary>
         /// Dispose for the ObservableSubscription object
         /// </summary>
-        /// <param name="observer">Observer to be disposed</param>
-        private void Dispose(IObserver<WspEvent> observer)
+        /// <param name="subscriptionObserver">Observer to be disposed</param>
+        private void Dispose(SubscriptionObserver subscriptionObserver)
         {
             lock(lockObj)
             {
-                List<IObserver<WspEvent>> observers;
+                List<SubscriptionObserver> observers;
 
-                if (observersByEventType.TryGetValue(eventType, out observers) == true)
+                if (observables.TryGetValue(this.id, out observers) == true)
                 {
-                    int last = observers.LastIndexOf(observer);
-                    if (last >= 0)
-                    {
-                        observers.RemoveAt(last);
-                    }
-
                     if (observers.Count == 0)
                     {
-                        observersByEventType.Remove(eventType);
+                        observables.Remove(this.id);
 
-                        wspSubscriptionManager.RemoveSubscription(eventType);
+                        List<WspEventObservable> observableList;
+
+                        if (eventObservables.TryGetValue(this.eventType, out observableList) == true)
+                        {
+                            for (int i = 0; i < observableList.Count; i++)
+                            {
+                                if (observableList[i].id == this.id)
+                                {
+                                    observableList.RemoveAt(i);
+
+                                    break;
+                                }
+                            }
+
+                            if (observableList.Count == 0)
+                            {
+                                eventObservables.Remove(this.eventType);
+                            }
+                        }
                     }
+
+                    wspSubscriptionManager.RemoveSubscription(eventType, localOnly, methodBody, usingLibraries, referencedAssemblies);
+
+                    this.observableThread.Abort();
                 }
 
-                if (observersByEventType.Count == 0 && subscriptionThread != null)
+                try
                 {
-                    subscriptionThread.Abort();
-                    subscriptionThread = null;
+                    subscriptionObserver.observerThread.Abort();
+                }
+                catch
+                {
+                }
+
+                if (observables.Count == 0 && wspSubscriptionThread != null)
+                {
+                    wspSubscriptionThread.Abort();
+                    wspSubscriptionThread = null;
 
                     wspSubscriptionManager = null;
                 }
-
             }
         }
     }
@@ -245,7 +565,7 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
     /// <summary>
     /// This class is used to subscribe to events.
     /// </summary>
-    public class SubscriptionManager
+    internal class SubscriptionManager
     {
         private bool disposed;
 
@@ -260,50 +580,15 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
         private string eventQueueName = @"WspEventQueue";
         private SharedQueue eventQueue;
 
-        private Dictionary<Guid, Subscription> subscriptions;
+        private Dictionary<Guid, Dictionary<string, Subscription>> subscriptions;
 
         private Thread listenThread;
-
-        /// <summary>
-        /// Defines the callback method for delivering events to an application.
-        /// </summary>
-        /// <param name="eventType">Event type for the event being passed.</param>
-        /// <param name="wspEvent">The WspEvent with Headers and Body.</param>
-        public delegate void Callback(Guid eventType, WspEvent wspEvent);
-
-        private bool listenForEvents;
-        /// <summary>
-        /// Starts and stops listening for events
-        /// </summary>
-        public bool ListenForEvents
-        {
-            get
-            {
-                return listenForEvents;
-            }
-            set
-            {
-                if (value == true)
-                {
-                    if (listenForEvents == false)
-                    {
-                        StartListening();
-                    }
-                }
-                else
-                {
-                    StopListening();
-                }
-
-                listenForEvents = value;
-            }
-        }
 
         private UInt32 timeout;
         /// <summary>
         /// Timeout for publishing events
         /// </summary>
-        [CLSCompliant(false)]
+        //[CLSCompliant(false)]
         public UInt32 Timeout
         {
             get
@@ -316,22 +601,10 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
             }
         }
 
-        private Callback callbackMethod;
-        /// <summary>
-        /// Callback delegate
-        /// </summary>
-        public Callback CallbackMethod
-        {
-            get
-            {
-                return callbackMethod;
-            }
-        }
-
         /// <summary>
         /// Size in bytes of the SharedQueue
         /// </summary>
-        [CLSCompliant(false)]
+        //[CLSCompliant(false)]
         public UInt32 QueueSize
         {
             get
@@ -348,9 +621,8 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
         /// <summary>
         /// Constructor
         /// </summary>
-        /// <param name="subscriptionCallback">Handle to the SubscriptionCallback method</param>
-        public SubscriptionManager(object subscriptionCallback)
-            : this(defaultEventTimeout, subscriptionCallback)
+        internal SubscriptionManager()
+            : this(defaultEventTimeout)
         {
         }
 
@@ -358,12 +630,10 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
         /// Constructor
         /// </summary>
         /// <param name="timeout">Timeout for publishing an event</param>
-        /// <param name="subscriptionCallback">Handle to the SubscriptionCallback method</param>
-        [CLSCompliant(false)]
-        public SubscriptionManager(UInt32 timeout, object subscriptionCallback)
+        //[CLSCompliant(false)]
+        internal SubscriptionManager(UInt32 timeout)
         {
             this.timeout = timeout;
-            this.callbackMethod = new Callback((Callback)subscriptionCallback);
 
             try
             {
@@ -377,19 +647,14 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
                     }
                 }
 
-                subscriptions = new Dictionary<Guid, Subscription>();
+                subscriptions = new Dictionary<Guid, Dictionary<string, Subscription>>();
 
                 eventQueue = new SharedQueue(eventQueueName, 100);
 
                 if (eventQueue == null)
                 {
-                    ResourceManager rm = new ResourceManager("PubSubMgr.PubSubMgr", Assembly.GetExecutingAssembly());
-
-                    throw new PubSubConnectionFailedException(rm.GetString("ConnectionFailed"));
+                    throw new PubSubConnectionFailedException("Connection to the Event System failed");
                 }
-
-                listenForEvents = true;
-                StartListening();
             }
             catch (SharedQueueDoesNotExistException e)
             {
@@ -423,21 +688,21 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
             {
                 try
                 {
-                    this.StopListening();
-
-                    Guid[] keys = GetSubscriptions();
-
-                    foreach (Guid subId in keys)
-                    {
-                        RemoveSubscription(subId);
-                    }
-
-                    eventQueue.Dispose();
-                    eventQueue = null;
-
-
                     lock (lockObject)
                     {
+                        this.StopListening();
+
+                        foreach (Dictionary<string, Subscription> subs in subscriptions.Values)
+                        {
+                            foreach (Subscription sub in subs.Values)
+                            {
+                                RemoveSubscription(sub.SubscriptionEventType, sub.LocalOnly, sub.MethodBody, sub.UsingLibraries, sub.ReferencedAssemblies);
+                            }
+                        }
+
+                        eventQueue.Dispose();
+                        eventQueue = null;
+
                         publishMgrRefCount--;
 
                         if (publishMgrRefCount == 0)
@@ -447,7 +712,6 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
                         }
                     }
                 }
-
                 catch
                 {
                     // intentionally left empty
@@ -478,37 +742,72 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
         /// </summary>
         /// <param name="eventType">EventType being subscribed to</param>
         /// <param name="localOnly">Specifies if subscription is only for local machine or global</param>
-        public void AddSubscription(Guid eventType, bool localOnly)
+        /// <param name="methodBody">String containing the method body defining the filter</param>
+        /// <param name="usingLibraries">List of using libraries which the method requires, null if none required</param>
+        /// <param name="referencedAssemblies">List of referenced assemblies which the method requires, null if none required</param>
+        public void AddSubscription(Guid eventType, bool localOnly, string methodBody, List<string> usingLibraries, List<string> referencedAssemblies)
         {
+            ReturnCode rc;
+
             Subscription subscription = new Subscription();
             subscription.SubscriptionEventType = eventType;
             subscription.Subscribe = true;
             subscription.LocalOnly = localOnly;
+            subscription.MethodBody = methodBody;
+            subscription.UsingLibraries = usingLibraries;
+            subscription.ReferencedAssemblies = referencedAssemblies;
 
-            publishMgr.Publish(Subscription.SubscriptionEvent, subscription.Serialize());
+            WspEvent wspEvent = new WspEvent(Subscription.SubscriptionEvent, null, subscription.Serialize());
 
-            subscriptions[eventType] = subscription;
+            publishMgr.Publish(wspEvent.SerializedEvent, out rc);
+
+            Dictionary<string, Subscription> subscriptionFilter;
+
+            if (subscriptions.TryGetValue(eventType, out subscriptionFilter) == false)
+            {
+                subscriptions[eventType] = new Dictionary<string, Subscription>();
+            }
+
+            subscriptions[eventType][methodBody] = subscription;
         }
 
         /// <summary>
         /// Remove a subscription for a specific event
         /// </summary>
         /// <param name="eventType">EventType being unsubscribed to</param>
+        /// <param name="localOnly">Specifies if subscription is only for local machine or global</param>
+        /// <param name="methodBody">String containing the method body defining the filter</param>
+        /// <param name="usingLibraries">List of using libraries which the method requires, null if none required</param>
+        /// <param name="referencedAssemblies">List of referenced assemblies which the method requires, null if none required</param>
         /// <returns>True if successful</returns>
-        public bool RemoveSubscription(Guid eventType)
+        public bool RemoveSubscription(Guid eventType, bool localOnly, string methodBody, List<string> usingLibraries, List<string> referencedAssemblies)
         {
+            ReturnCode rc;
+
             Subscription subscription = null;
 
-            if (subscriptions.TryGetValue(eventType, out subscription) == true)
+            Dictionary<string, Subscription> subscriptionFilter;
+
+            if (subscriptions.TryGetValue(eventType, out subscriptionFilter) == true)
             {
-                subscription.Subscribe = false;
-                publishMgr.Publish(Subscription.SubscriptionEvent, subscription.Serialize());
-                return subscriptions.Remove(eventType);
+                if (subscriptionFilter.TryGetValue(methodBody, out subscription) == true)
+                {
+                    subscription.Subscribe = false;
+
+                    WspEvent wspEvent = new WspEvent(Subscription.SubscriptionEvent, null, subscription.Serialize());
+
+                    publishMgr.Publish(wspEvent.SerializedEvent, out rc);
+
+                    subscriptionFilter.Remove(methodBody);
+
+                    if (subscriptionFilter.Count == 0)
+                    {
+                        subscriptions.Remove(eventType);
+                    }
+                }
             }
-            else
-            {
-                return true;
-            }
+
+            return true;
         }
 
         /// <summary>
@@ -521,16 +820,6 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
             subscriptions.Keys.CopyTo(keys, 0);
 
             return keys;
-        }
-
-        /// <summary>
-        /// Starts a thread to listen to events
-        /// </summary>
-        public void StartListening()
-        {
-            listenThread = new Thread(new ThreadStart(Listen));
-
-            listenThread.Start();
         }
 
         /// <summary>
@@ -553,123 +842,66 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
         }
 
         /// <summary>
-        /// Listening thread
+        /// Dequeues events from shared memory
         /// </summary>
-        private void Listen()
+        internal void Listener()
         {
-            string localRouterName;
-            bool elementRetrieved;
-            DateTime nextPushSubscriptions = DateTime.UtcNow.AddMinutes(subscriptionRefreshIncrement);
-            Subscription subscription;
             WspEvent wspEvent;
-
-            WspEvent[] wspEvents = null;
+            DateTime nextPushSubscriptions = DateTime.UtcNow.AddMinutes(subscriptionRefreshIncrement);
+            ReturnCode rc;
 
             try
             {
                 Thread.CurrentThread.Priority = ThreadPriority.Highest;
-                WaitCallback subscriptionCallback = new WaitCallback(CallSubscriptionCallback);
 
                 byte[] buffer = null;
 
-                localRouterName = Dns.GetHostName().ToLower();
-
-                try
-                {
-                    char[] splitChar = { '.' };
-
-                    IPHostEntry hostEntry = Dns.GetHostEntry(localRouterName);
-
-                    string[] temp = hostEntry.HostName.ToLower().Split(splitChar, 2);
-
-                    localRouterName = temp[0];
-                }
-                catch
-                {
-                }
-
                 while (true)
                 {
-                    buffer = eventQueue.Dequeue(Timeout);
-
-                    if (buffer == null)
+                    try
                     {
-                        elementRetrieved = false;
-                    }
-                    else
-                    {
-                        elementRetrieved = true;
-                    }
+                        buffer = eventQueue.Dequeue(Timeout);
 
-                    if (elementRetrieved == true)
-                    {
-                        try
-                        {
-                            wspEvent = new WspEvent(buffer);
-                        }
-                        catch (Exception e)
-                        {
-                            EventLog.WriteEntry("WspEventRouter", "Event has invalid format:  " + e.ToString(), EventLogEntryType.Error);
-
-                            continue;
-                        }
-
-                        if (subscriptions.TryGetValue(wspEvent.EventType, out subscription) == true)
-                        {
-                            if (subscription.LocalOnly == false || string.Compare(localRouterName, wspEvent.OriginatingRouterName, true) == 0)
-                            {
-                                StateInfo stateInfo = new StateInfo();
-
-                                stateInfo.callBack = callbackMethod;
-                                stateInfo.eventType = wspEvent.EventType;
-                                stateInfo.wspEvent = wspEvent;
-
-                                if (Interceptor.subscribeInterceptor != null)
-                                {
-                                    try
-                                    {
-                                        wspEvents = null;
-
-                                        if (Interceptor.subscribeInterceptor(wspEvent, out wspEvents) == true)
-                                        {
-                                            if (wspEvents == null || wspEvents.Length == 0)
-                                            {
-                                                ThreadPool.QueueUserWorkItem(subscriptionCallback, stateInfo);
-                                            }
-                                            else
-                                            {
-                                                for (int i = 0; i < wspEvents.Length; i++)
-                                                {
-                                                    stateInfo = new StateInfo();
-
-                                                    stateInfo.callBack = callbackMethod;
-                                                    stateInfo.eventType = wspEvents[i].EventType;
-                                                    stateInfo.wspEvent = wspEvents[i];
-
-                                                    ThreadPool.QueueUserWorkItem(subscriptionCallback, stateInfo);
-                                                }
-                                            }
-                                        }
-                                    }
-                                    catch
-                                    {
-                                    }
-                                }
-                                else
-                                {
-                                    ThreadPool.QueueUserWorkItem(subscriptionCallback, stateInfo);
-                                }
-                            }
-                        }
-                    }
-
-                    if (DateTime.UtcNow > nextPushSubscriptions)
-                    {
-                        foreach (Guid subId in subscriptions.Keys)
+                        if (buffer != null)
                         {
                             try
                             {
-                                publishMgr.Publish(Subscription.SubscriptionEvent, subscriptions[subId].Serialize());
+                                wspEvent = new WspEvent(buffer);
+                            }
+                            catch (Exception e)
+                            {
+                                EventLog.WriteEntry("WspEventRouter", "Event has invalid format:  " + e.ToString(), EventLogEntryType.Error);
+
+                                continue;
+                            }
+
+                            List<WspEventObservable> observables;
+
+                            if (WspEventObservable.eventObservables.TryGetValue(wspEvent.EventType, out observables) == true)
+                            {
+                                for (int i = 0; i < observables.Count; i++)
+                                {
+                                    observables[i].queue.Enqueue(wspEvent);
+                                }
+                            }
+                        }
+
+                        if (DateTime.UtcNow > nextPushSubscriptions)
+                        {
+                            try
+                            {
+                                foreach (Guid subId in subscriptions.Keys)
+                                {
+                                    foreach (string expression in subscriptions[subId].Keys)
+                                    {
+
+                                        WspEvent subEvent = new WspEvent(Subscription.SubscriptionEvent, null, subscriptions[subId][expression].Serialize());
+
+                                        publishMgr.Publish(subEvent.SerializedEvent, out rc);
+                                    }
+                                }
+
+                                nextPushSubscriptions = DateTime.UtcNow.AddMinutes(subscriptionRefreshIncrement);
                             }
                             catch
                             {
@@ -677,8 +909,18 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
                                 // it will retry next time
                             }
                         }
+                    }
+                    catch (PubSubException e)
+                    {
+                        EventLog.WriteEntry("WspEventRouter", "Exception occurred processing event from shared queue: " + e.ToString(), EventLogEntryType.Error);
 
-                        nextPushSubscriptions = DateTime.UtcNow.AddMinutes(subscriptionRefreshIncrement);
+                        continue;
+                    }
+                    catch (Exception e)
+                    {
+                        EventLog.WriteEntry("WspEventRouter", "Exception occurred processing event from shared queue: " + e.ToString(), EventLogEntryType.Error);
+
+                        continue;
                     }
                 }
             }
@@ -698,15 +940,6 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
             {
                 throw new PubSubException(e.Message, e.InnerException);
             }
-        }
-
-        /// <summary>
-        /// Call the SubscriptionCallback with event
-        /// </summary>
-        private static void CallSubscriptionCallback(object stateInfo)
-        {
-            ((Callback)((StateInfo)stateInfo).callBack)(
-                ((StateInfo)stateInfo).eventType, ((StateInfo)stateInfo).wspEvent);
         }
     }
 }

@@ -24,9 +24,10 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
     /// Interceptor delegate used for intercepting events
     /// </summary>
     /// <param name="wspEvent">This is the Wsp event being intercepted</param>
+    /// <param name="wspEventObservable">The observable associated with the event</param>
     /// <param name="wspEventsOut">If this array has one or more events then they will be returned to the application instead of the original wspEvent</param>
     /// <returns>False to have Wsp stop all processing of the event; True to hand the event(s) to the application</returns>
-    public delegate bool InterceptorDelegate(WspEvent wspEvent, out WspEvent[] wspEventsOut);
+    public delegate bool InterceptorDelegate(WspEvent wspEvent, WspEventObservable wspEventObservable, out WspEvent[] wspEventsOut);
     
     /// <summary>
     /// This is a delegate which is returned during registration of an interceptor to allow events to be published by the
