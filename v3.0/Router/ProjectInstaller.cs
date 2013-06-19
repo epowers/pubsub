@@ -258,8 +258,10 @@ namespace Microsoft.WebSolutionsPlatform.Router
     {
         internal static string categoryName;
         internal static string communicationCategoryName;
+        internal static string applicationCategoryName;
         internal static string categoryHelp;
         internal static string communicationCategoryHelp;
+        internal static string applicationCategoryHelp;
         internal static string subscriptionQueueSizeName;
         internal static string rePublisherQueueSizeName;
         internal static string persisterQueueSizeName;
@@ -291,8 +293,10 @@ namespace Microsoft.WebSolutionsPlatform.Router
 
             categoryName = "WspEventRouter";
             communicationCategoryName = "WspEventRouterCommunication";
+            applicationCategoryName = "WspEventRouterApplication";
             categoryHelp = "WspEventRouter counters showing internal performance of the router.";
-            communicationCategoryHelp = "WspEventRouter counters showing communication queues to other machines";
+            communicationCategoryHelp = "WspEventRouter counters showing communication queues to other servers";
+            applicationCategoryHelp = "WspEventRouter counters showing application internal queues";
             subscriptionQueueSizeName = "SubscriptionQueueSize";
             rePublisherQueueSizeName = "RePublisherQueueSize";
             persisterQueueSizeName = "PersisterQueueSize";
@@ -302,11 +306,21 @@ namespace Microsoft.WebSolutionsPlatform.Router
             subscriptionEntriesName = "SubscriptionEntries";
             eventsProcessedName = "EventsProcessed";
             eventsProcessedBytesName = "EventsProcessedBytes";
-            baseInstance = "WspEventRouter";
+            baseInstance = "BaseInstance";
 
             if (PerformanceCounterCategory.Exists(categoryName) == true)
             {
                 PerformanceCounterCategory.Delete(categoryName);
+            }
+
+            if (PerformanceCounterCategory.Exists(communicationCategoryName) == true)
+            {
+                PerformanceCounterCategory.Delete(communicationCategoryName);
+            }
+
+            if (PerformanceCounterCategory.Exists(applicationCategoryName) == true)
+            {
+                PerformanceCounterCategory.Delete(applicationCategoryName);
             }
 
             if (EventLog.SourceExists("WspEventRouter") == true)
@@ -389,6 +403,19 @@ namespace Microsoft.WebSolutionsPlatform.Router
             }
 
             forwarderQueueSize = new PerformanceCounter(communicationCategoryName, forwarderQueueSizeName, baseInstance, false);
+
+            if (PerformanceCounterCategory.Exists(applicationCategoryName) == false)
+            {
+                CCDC = new CounterCreationDataCollection();
+
+                CounterCreationData appSubscriptionQueueCounter = new CounterCreationData();
+                appSubscriptionQueueCounter.CounterType = PerformanceCounterType.NumberOfItems32;
+                appSubscriptionQueueCounter.CounterName = subscriptionQueueSizeName;
+                CCDC.Add(appSubscriptionQueueCounter);
+
+                PerformanceCounterCategory.Create(applicationCategoryName, applicationCategoryHelp,
+                    PerformanceCounterCategoryType.MultiInstance, CCDC);
+            }
 
             subscriptionQueueSize.RawValue = 0;
             rePublisherQueueSize.RawValue = 0;

@@ -13,28 +13,52 @@ using System.Text;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Xml.XPath;
+using System.CodeDom.Compiler;
 using Microsoft.WebSolutionsPlatform.PubSubManager;
 
 namespace Microsoft.WebSolutionsPlatform.Router
 {
     public partial class Router : ServiceBase
     {
-        internal class SubscriptionDetail
+        internal class RouteDetail
         {
-            internal object SubscriptionDetailLock;
             internal Dictionary<string, DateTime> Routes;
 
-            internal SubscriptionDetail()
+            internal RouteDetail()
             {
-                SubscriptionDetailLock = new object();
                 Routes = new Dictionary<string, DateTime>(StringComparer.CurrentCultureIgnoreCase);
+            }
+        }
+
+        internal class FilterSummary
+        {
+            internal Dictionary<string, FilterDetail> Filters;
+
+            internal FilterSummary()
+            {
+                Filters = new Dictionary<string, FilterDetail>(StringComparer.Ordinal);
+            }
+        }
+
+        internal class FilterDetail
+        {
+            internal Subscription subscription;
+            internal WspFilterMethod filterMethod;
+            internal RouteDetail UniqueRoutes;
+            internal RouteDetail GlobalRoutes;
+
+            internal FilterDetail()
+            {
+                UniqueRoutes = new RouteDetail();
+                GlobalRoutes = new RouteDetail();
             }
         }
 
         internal class SubscriptionMgr : ServiceThread
         {
             internal static object subscriptionsLock = new object();
-            internal static Dictionary<Guid, SubscriptionDetail> subscriptions = new Dictionary<Guid, SubscriptionDetail>();
+            internal static Dictionary<Guid, RouteDetail> generalSubscriptions = new Dictionary<Guid, RouteDetail>();
+            internal static Dictionary<Guid, FilterSummary> filteredSubscriptions = new Dictionary<Guid, FilterSummary>();
 
             private DateTime nextTimeout = DateTime.UtcNow.AddMinutes(subscriptionManagement.ExpirationIncrement);
             private DateTime nextPushSubscriptions = DateTime.UtcNow.AddMinutes(subscriptionManagement.RefreshIncrement);
@@ -98,36 +122,99 @@ namespace Microsoft.WebSolutionsPlatform.Router
                             {
                                 if (subscriptionEvent.Subscribe == true)
                                 {
-                                    SubscriptionDetail subscriptionDetail;
-
-                                    if (subscriptions.TryGetValue(subscriptionEvent.SubscriptionEventType, out subscriptionDetail) == false)
+                                    lock (subscriptionsLock)
                                     {
-                                        lock (subscriptionsLock)
+                                        if (string.IsNullOrEmpty(subscriptionEvent.MethodBody) == true)
                                         {
-                                            if (subscriptions.TryGetValue(subscriptionEvent.SubscriptionEventType, out subscriptionDetail) == false)
-                                            {
-                                                subscriptionDetail = new SubscriptionDetail();
-                                                subscriptionDetail.Routes[element.WspEvent.InRouterName] = DateTime.UtcNow.AddMinutes(subscriptionManagement.ExpirationIncrement);
+                                            RouteDetail routeDetail;
 
-                                                subscriptions[subscriptionEvent.SubscriptionEventType] = subscriptionDetail;
+                                            if (generalSubscriptions.TryGetValue(subscriptionEvent.SubscriptionEventType, out routeDetail) == false)
+                                            {
+                                                routeDetail = new RouteDetail();
+                                                routeDetail.Routes[element.WspEvent.InRouterName] = DateTime.UtcNow.AddMinutes(subscriptionManagement.ExpirationIncrement);
+
+                                                generalSubscriptions[subscriptionEvent.SubscriptionEventType] = routeDetail;
 
                                                 subscriptionEntries.Increment();
 
+                                                FilterSummary filterSummary;
+
+                                                if (filteredSubscriptions.TryGetValue(subscriptionEvent.SubscriptionEventType, out filterSummary) == true)
+                                                {
+                                                    foreach (string filter in filterSummary.Filters.Keys)
+                                                    {
+                                                        if (filterSummary.Filters[filter].UniqueRoutes.Routes.ContainsKey(element.WspEvent.InRouterName) == true)
+                                                        {
+                                                            filterSummary.Filters[filter].GlobalRoutes.Routes[element.WspEvent.InRouterName] =
+                                                                filterSummary.Filters[filter].UniqueRoutes.Routes[element.WspEvent.InRouterName];
+
+                                                            filterSummary.Filters[filter].UniqueRoutes.Routes.Remove(element.WspEvent.InRouterName);
+                                                        }
+                                                    }
+                                                }
                                             }
                                             else
                                             {
-                                                lock (subscriptionDetail.SubscriptionDetailLock)
-                                                {
-                                                    subscriptionDetail.Routes[element.WspEvent.InRouterName] = DateTime.UtcNow.AddMinutes(subscriptionManagement.ExpirationIncrement);
-                                                }
+                                                routeDetail.Routes[element.WspEvent.InRouterName] = DateTime.UtcNow.AddMinutes(subscriptionManagement.ExpirationIncrement);
                                             }
                                         }
-                                    }
-                                    else
-                                    {
-                                        lock (subscriptionDetail.SubscriptionDetailLock)
+                                        else
                                         {
-                                            subscriptionDetail.Routes[element.WspEvent.InRouterName] = DateTime.UtcNow.AddMinutes(subscriptionManagement.ExpirationIncrement);
+                                            FilterSummary filterSummary;
+                                            FilterDetail filterDetail;
+
+                                            if (filteredSubscriptions.TryGetValue(subscriptionEvent.SubscriptionEventType, out filterSummary) == false)
+                                            {
+                                                filterSummary = new FilterSummary();
+                                                filterDetail = new FilterDetail();
+                                                filterSummary.Filters[subscriptionEvent.MethodBody] = filterDetail;
+
+                                                CompilerResults results;
+
+                                                if (WspEventObservable.CompileFilterMethod(subscriptionEvent.MethodBody, subscriptionEvent.UsingLibraries,
+                                                    subscriptionEvent.ReferencedAssemblies, out filterDetail.filterMethod, out results) == false)
+                                                {
+                                                    continue;
+                                                }
+
+                                                filterDetail.subscription = subscriptionEvent;
+
+                                                subscriptionEntries.Increment();
+
+                                                filteredSubscriptions[subscriptionEvent.SubscriptionEventType] = filterSummary;
+                                            }
+                                            else
+                                            {
+                                                if (filterSummary.Filters.TryGetValue(subscriptionEvent.MethodBody, out filterDetail) == false)
+                                                {
+                                                    filterDetail = new FilterDetail();
+
+                                                    CompilerResults results;
+
+                                                    if (WspEventObservable.CompileFilterMethod(subscriptionEvent.MethodBody, subscriptionEvent.UsingLibraries,
+                                                        subscriptionEvent.ReferencedAssemblies, out filterDetail.filterMethod, out results) == false)
+                                                    {
+                                                        continue;
+                                                    }
+
+                                                    filterDetail.subscription = subscriptionEvent;
+
+                                                    subscriptionEntries.Increment();
+
+                                                    filterSummary.Filters[subscriptionEvent.MethodBody] = filterDetail;
+                                                }
+                                            }
+
+                                            if (generalSubscriptions.ContainsKey(subscriptionEvent.SubscriptionEventType) == true)
+                                            {
+                                                filterDetail.GlobalRoutes.Routes[element.WspEvent.InRouterName] =
+                                                    DateTime.UtcNow.AddMinutes(subscriptionManagement.ExpirationIncrement);
+                                            }
+                                            else
+                                            {
+                                                filterDetail.UniqueRoutes.Routes[element.WspEvent.InRouterName] =
+                                                    DateTime.UtcNow.AddMinutes(subscriptionManagement.ExpirationIncrement);
+                                            }
                                         }
                                     }
 
@@ -136,7 +223,7 @@ namespace Microsoft.WebSolutionsPlatform.Router
                             }
                         }
 
-                        if (subscriptions.Count > 0 && DateTime.UtcNow > nextTimeout)
+                        if (subscriptionEntries.RawValue > 0 && DateTime.UtcNow > nextTimeout)
                         {
                             lock (subscriptionsLock)
                             {
@@ -156,40 +243,143 @@ namespace Microsoft.WebSolutionsPlatform.Router
             private static void RemoveExpiredEntries()
             {
                 Dictionary<Guid, List<string>> expiredSubscriptions = new Dictionary<Guid, List<string>>();
+                Dictionary<Guid, Dictionary<string, List<string>>> expiredGlobalFilterSubscriptions = new Dictionary<Guid, Dictionary<string, List<string>>>();
+                Dictionary<Guid, Dictionary<string, List<string>>> expiredUniqueFilterSubscriptions = new Dictionary<Guid, Dictionary<string, List<string>>>();
 
-                foreach (Guid subscriptionEventType in subscriptions.Keys)
+                foreach (Guid subscriptionEventType in generalSubscriptions.Keys)
                 {
-                    lock (subscriptions[subscriptionEventType].SubscriptionDetailLock)
+                    foreach (string inRouterName in generalSubscriptions[subscriptionEventType].Routes.Keys)
                     {
-                        foreach (string inRouterName in subscriptions[subscriptionEventType].Routes.Keys)
+                        if (generalSubscriptions[subscriptionEventType].Routes[inRouterName] <= DateTime.UtcNow)
                         {
-                            if (subscriptions[subscriptionEventType].Routes[inRouterName] <= DateTime.UtcNow)
+                            if (expiredSubscriptions.ContainsKey(subscriptionEventType) == false)
                             {
-                                if (expiredSubscriptions.ContainsKey(subscriptionEventType) == false)
-                                {
-                                    expiredSubscriptions[subscriptionEventType] = new List<string>();
-                                }
-
-                                expiredSubscriptions[subscriptionEventType].Add(inRouterName);
+                                expiredSubscriptions[subscriptionEventType] = new List<string>();
                             }
+
+                            expiredSubscriptions[subscriptionEventType].Add(inRouterName);
                         }
                     }
                 }
 
                 foreach (Guid subscriptionEventType in expiredSubscriptions.Keys)
                 {
-                    lock (subscriptions[subscriptionEventType].SubscriptionDetailLock)
+                    foreach (string InRouterName in expiredSubscriptions[subscriptionEventType])
                     {
-                        foreach (string InRouterName in expiredSubscriptions[subscriptionEventType])
+                        generalSubscriptions[subscriptionEventType].Routes.Remove(InRouterName);
+                    }
+
+                    if (generalSubscriptions[subscriptionEventType].Routes.Count == 0)
+                    {
+                        generalSubscriptions.Remove(subscriptionEventType);
+
+                        subscriptionEntries.Decrement();
+                    }
+                }
+
+                foreach (Guid subscriptionEventType in filteredSubscriptions.Keys)
+                {
+                    foreach (string filter in filteredSubscriptions[subscriptionEventType].Filters.Keys)
+                    {
+                        foreach (string inRouterName in filteredSubscriptions[subscriptionEventType].Filters[filter].GlobalRoutes.Routes.Keys)
                         {
-                            subscriptions[subscriptionEventType].Routes.Remove(InRouterName);
+                            if (filteredSubscriptions[subscriptionEventType].Filters[filter].GlobalRoutes.Routes[inRouterName] <= DateTime.UtcNow)
+                            {
+                                if (expiredGlobalFilterSubscriptions.ContainsKey(subscriptionEventType) == false)
+                                {
+                                    expiredGlobalFilterSubscriptions[subscriptionEventType] = new Dictionary<string, List<string>>();
+                                }
+
+                                if (expiredGlobalFilterSubscriptions[subscriptionEventType].ContainsKey(filter) == false)
+                                {
+                                    expiredGlobalFilterSubscriptions[subscriptionEventType][filter] = new List<string>();
+                                }
+
+                                expiredGlobalFilterSubscriptions[subscriptionEventType][filter].Add(inRouterName);
+                            }
+                            else
+                            {
+                                if (generalSubscriptions.ContainsKey(subscriptionEventType) == true &&
+                                    generalSubscriptions[subscriptionEventType].Routes.ContainsKey(inRouterName) == false)
+                                {
+                                    filteredSubscriptions[subscriptionEventType].Filters[filter].UniqueRoutes.Routes[inRouterName] =
+                                       filteredSubscriptions[subscriptionEventType].Filters[filter].GlobalRoutes.Routes[inRouterName];
+
+                                    filteredSubscriptions[subscriptionEventType].Filters[filter].GlobalRoutes.Routes.Remove(inRouterName);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                foreach (Guid subscriptionEventType in filteredSubscriptions.Keys)
+                {
+                    foreach (string filter in filteredSubscriptions[subscriptionEventType].Filters.Keys)
+                    {
+                        foreach (string inRouterName in filteredSubscriptions[subscriptionEventType].Filters[filter].UniqueRoutes.Routes.Keys)
+                        {
+                            if (filteredSubscriptions[subscriptionEventType].Filters[filter].UniqueRoutes.Routes[inRouterName] <= DateTime.UtcNow)
+                            {
+                                if (expiredUniqueFilterSubscriptions.ContainsKey(subscriptionEventType) == false)
+                                {
+                                    expiredUniqueFilterSubscriptions[subscriptionEventType] = new Dictionary<string, List<string>>();
+                                }
+
+                                if (expiredUniqueFilterSubscriptions[subscriptionEventType].ContainsKey(filter) == false)
+                                {
+                                    expiredUniqueFilterSubscriptions[subscriptionEventType][filter] = new List<string>();
+                                }
+
+                                expiredUniqueFilterSubscriptions[subscriptionEventType][filter].Add(inRouterName);
+                            }
+                        }
+                    }
+                }
+
+                foreach (Guid subscriptionEventType in expiredGlobalFilterSubscriptions.Keys)
+                {
+                    foreach (string filter in expiredGlobalFilterSubscriptions[subscriptionEventType].Keys)
+                    {
+                        foreach (string InRouterName in expiredGlobalFilterSubscriptions[subscriptionEventType][filter])
+                        {
+                            filteredSubscriptions[subscriptionEventType].Filters[filter].GlobalRoutes.Routes.Remove(InRouterName);
                         }
 
-                        if (subscriptions[subscriptionEventType].Routes.Count == 0)
+                        if (filteredSubscriptions[subscriptionEventType].Filters[filter].GlobalRoutes.Routes.Count == 0 &&
+                            filteredSubscriptions[subscriptionEventType].Filters[filter].UniqueRoutes.Routes.Count == 0)
                         {
-                            subscriptions.Remove(subscriptionEventType);
+                            filteredSubscriptions[subscriptionEventType].Filters.Remove(filter);
 
                             subscriptionEntries.Decrement();
+                        }
+
+                        if (filteredSubscriptions[subscriptionEventType].Filters.Count == 0)
+                        {
+                            filteredSubscriptions.Remove(subscriptionEventType);
+                        }
+                    }
+                }
+
+                foreach (Guid subscriptionEventType in expiredUniqueFilterSubscriptions.Keys)
+                {
+                    foreach (string filter in expiredUniqueFilterSubscriptions[subscriptionEventType].Keys)
+                    {
+                        foreach (string InRouterName in expiredUniqueFilterSubscriptions[subscriptionEventType][filter])
+                        {
+                            filteredSubscriptions[subscriptionEventType].Filters[filter].UniqueRoutes.Routes.Remove(InRouterName);
+                        }
+
+                        if (filteredSubscriptions[subscriptionEventType].Filters[filter].GlobalRoutes.Routes.Count == 0 &&
+                            filteredSubscriptions[subscriptionEventType].Filters[filter].UniqueRoutes.Routes.Count == 0)
+                        {
+                            filteredSubscriptions[subscriptionEventType].Filters.Remove(filter);
+
+                            subscriptionEntries.Decrement();
+                        }
+
+                        if (filteredSubscriptions[subscriptionEventType].Filters.Count == 0)
+                        {
+                            filteredSubscriptions.Remove(subscriptionEventType);
                         }
                     }
                 }
@@ -204,11 +394,40 @@ namespace Microsoft.WebSolutionsPlatform.Router
 
                 lock (subscriptionsLock)
                 {
-                    foreach (Guid subscriptionEventType in subscriptions.Keys)
+                    foreach (Guid subscriptionEventType in generalSubscriptions.Keys)
                     {
-                        lock (subscriptions[subscriptionEventType].SubscriptionDetailLock)
+                        foreach (string inRouterName in generalSubscriptions[subscriptionEventType].Routes.Keys)
                         {
-                            foreach (string inRouterName in subscriptions[subscriptionEventType].Routes.Keys)
+                            if (string.Compare(inRouterName, outRouterName, true) != 0)
+                            {
+                                extendedHeaders[(byte)HeaderType.OriginatingRouter] = inRouterName;
+
+                                Subscription subscription = new Subscription();
+
+                                subscription.LocalOnly = false;
+                                subscription.Subscribe = true;
+                                subscription.SubscriptionEventType = subscriptionEventType;
+
+                                WspEvent wspEvent = new WspEvent(Subscription.SubscriptionEvent, extendedHeaders, subscription.Serialize());
+
+                                QueueElement element = new QueueElement();
+
+                                element.WspEvent = wspEvent;
+                                element.Source = EventSource.FromLocal;
+                                element.BodyEvent = subscription;
+
+                                Communicator.socketQueues[outRouterName].Enqueue(element);
+
+                                break;
+                            }
+                        }
+                    }
+
+                    foreach (Guid subscriptionEventType in filteredSubscriptions.Keys)
+                    {
+                        foreach (string filter in filteredSubscriptions[subscriptionEventType].Filters.Keys)
+                        {
+                            foreach (string inRouterName in filteredSubscriptions[subscriptionEventType].Filters[filter].GlobalRoutes.Routes.Keys)
                             {
                                 if (string.Compare(inRouterName, outRouterName, true) != 0)
                                 {
@@ -219,6 +438,38 @@ namespace Microsoft.WebSolutionsPlatform.Router
                                     subscription.LocalOnly = false;
                                     subscription.Subscribe = true;
                                     subscription.SubscriptionEventType = subscriptionEventType;
+                                    subscription.MethodBody = filteredSubscriptions[subscriptionEventType].Filters[filter].subscription.MethodBody;
+                                    subscription.UsingLibraries = filteredSubscriptions[subscriptionEventType].Filters[filter].subscription.UsingLibraries;
+                                    subscription.ReferencedAssemblies = filteredSubscriptions[subscriptionEventType].Filters[filter].subscription.ReferencedAssemblies;
+
+                                    WspEvent wspEvent = new WspEvent(Subscription.SubscriptionEvent, extendedHeaders, subscription.Serialize());
+
+                                    QueueElement element = new QueueElement();
+
+                                    element.WspEvent = wspEvent;
+                                    element.Source = EventSource.FromLocal;
+                                    element.BodyEvent = subscription;
+
+                                    Communicator.socketQueues[outRouterName].Enqueue(element);
+
+                                    break;
+                                }
+                            }
+
+                            foreach (string inRouterName in filteredSubscriptions[subscriptionEventType].Filters[filter].UniqueRoutes.Routes.Keys)
+                            {
+                                if (string.Compare(inRouterName, outRouterName, true) != 0)
+                                {
+                                    extendedHeaders[(byte)HeaderType.OriginatingRouter] = inRouterName;
+
+                                    Subscription subscription = new Subscription();
+
+                                    subscription.LocalOnly = false;
+                                    subscription.Subscribe = true;
+                                    subscription.SubscriptionEventType = subscriptionEventType;
+                                    subscription.MethodBody = filteredSubscriptions[subscriptionEventType].Filters[filter].subscription.MethodBody;
+                                    subscription.UsingLibraries = filteredSubscriptions[subscriptionEventType].Filters[filter].subscription.UsingLibraries;
+                                    subscription.ReferencedAssemblies = filteredSubscriptions[subscriptionEventType].Filters[filter].subscription.ReferencedAssemblies;
 
                                     WspEvent wspEvent = new WspEvent(Subscription.SubscriptionEvent, extendedHeaders, subscription.Serialize());
 

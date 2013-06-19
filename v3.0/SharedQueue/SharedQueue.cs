@@ -3,6 +3,7 @@ using System.Runtime.Serialization;
 using System.Collections.Generic;
 using System.Text;
 using System.Runtime.InteropServices;
+using System.Runtime.ExceptionServices;
 using System.Resources;
 using System.Reflection;
 
@@ -10,16 +11,41 @@ using System.Reflection;
 
 namespace Microsoft.WebSolutionsPlatform.Common
 {
-    enum ReturnCode : int
+    /// <summary>
+    /// The ReturnCode enum defines the return codes when publishing events
+    /// </summary>
+    public enum ReturnCode : int
     {
+        /// <summary>
+        /// Action was successful
+        /// </summary>
         Success = 0,
+        /// <summary>
+        /// Action timed out
+        /// </summary>
         Timeout = -1,
+        /// <summary>
+        /// Queue does not exist. Check to see if WspEventRouter is running.
+        /// </summary>
         QueueNameDoesNotExist = 2,
+        /// <summary>
+        /// Invalid argument was passed
+        /// </summary>
         InvalidArgument = 3,
+        /// <summary>
+        /// There was not sufficient space to publish the event. This indicates the queue is full.
+        /// </summary>
         InsufficientSpace = 5,
+        /// <summary>
+        /// There is not sufficient memory to processing the event
+        /// </summary>
         InsufficientMemory = 1455,
+        /// <summary>
+        /// The event overflowed the buffer
+        /// </summary>
         Overflow = 9999
     }
+
     internal class NativeMethods
     {
         private class x86
@@ -197,23 +223,17 @@ namespace Microsoft.WebSolutionsPlatform.Common
         {
             if (size < 1000)
             {
-                ResourceManager rm = new ResourceManager("WspSharedQueue.WspSharedQueue", Assembly.GetExecutingAssembly());
-
-                throw new ArgumentOutOfRangeException("size", rm.GetString("MinValue"));
+                throw new ArgumentOutOfRangeException("size", "Minimum value is 1000");
             }
 
             if (averageItemSize > (Int32.MaxValue - headerSize))
             {
-                ResourceManager rm = new ResourceManager("WspSharedQueue.WspSharedQueue", Assembly.GetExecutingAssembly());
-
-                throw new ArgumentOutOfRangeException("averageItemSize", rm.GetString("MaxValue") + (Int32.MaxValue - headerSize).ToString());
+                throw new ArgumentOutOfRangeException("averageItemSize", "Maximum value is " + (Int32.MaxValue - headerSize).ToString());
             }
 
             if (averageItemSize > (size - headerSize))
             {
-                ResourceManager rm = new ResourceManager("WspSharedQueue.WspSharedQueue", Assembly.GetExecutingAssembly());
-
-                throw new ArgumentOutOfRangeException("averageItemSize", rm.GetString("NotExceedQueueSize"));
+                throw new ArgumentOutOfRangeException("averageItemSize", "Value must not exceed the queue size");
             }
 
             if (averageItemSize > (UInt32) (int.MaxValue - headerSize))
@@ -233,23 +253,17 @@ namespace Microsoft.WebSolutionsPlatform.Common
             {
                 if (rc == ReturnCode.InvalidArgument)
                 {
-                    ResourceManager rm = new ResourceManager("WspSharedQueue.WspSharedQueue", Assembly.GetExecutingAssembly());
-
-                    throw new ArgumentException(rm.GetString("InvalidArgumentValue"), "name");
+                    throw new ArgumentException("Invalid argument value", "name");
                 }
                 else
                 {
                     if (rc == ReturnCode.InsufficientMemory)
                     {
-                        ResourceManager rm = new ResourceManager("WspSharedQueue.WspSharedQueue", Assembly.GetExecutingAssembly());
-
-                        throw new SharedQueueInsufficientMemoryException(rm.GetString("WrappedInitFailure"));
+                        throw new SharedQueueInsufficientMemoryException("(HRESULT:" + rc.ToString() + ") Insufficient memory to allocate the event queue");
                     }
                     else
                     {
-                        ResourceManager rm = new ResourceManager("WspSharedQueue.WspSharedQueue", Assembly.GetExecutingAssembly());
-
-                        throw new SharedQueueInitializationException(rm.GetString("WrappedHresult") + rc.ToString() + rm.GetString("WrappedInitFailure"));
+                        throw new SharedQueueInitializationException("(HRESULT:" + rc.ToString() + ") SharedQueue failed to initialize");
                     }
                 }
             }
@@ -265,9 +279,7 @@ namespace Microsoft.WebSolutionsPlatform.Common
         {
             if (averageItemSize > UInt32.MaxValue)
             {
-                ResourceManager rm = new ResourceManager("WspSharedQueue.WspSharedQueue", Assembly.GetExecutingAssembly());
-
-                throw new ArgumentOutOfRangeException("averageItemSize", rm.GetString("MaxValue") + int.MaxValue.ToString());
+                throw new ArgumentOutOfRangeException("averageItemSize", "Maximum value is" + int.MaxValue.ToString());
             }
 
             if (averageItemSize > (int.MaxValue - headerSize))
@@ -287,23 +299,17 @@ namespace Microsoft.WebSolutionsPlatform.Common
             {
                 if (rc == ReturnCode.InvalidArgument)
                 {
-                    ResourceManager rm = new ResourceManager("WspSharedQueue.WspSharedQueue", Assembly.GetExecutingAssembly());
-
-                    throw new ArgumentException(rm.GetString("InvalidArgumentValue"), "name");
+                    throw new ArgumentException("Invalid argument value", "name");
                 }
                 else
                 {
                     if (rc == ReturnCode.QueueNameDoesNotExist)
                     {
-                        ResourceManager rm = new ResourceManager("WspSharedQueue.WspSharedQueue", Assembly.GetExecutingAssembly());
-
-                        throw new SharedQueueDoesNotExistException(rm.GetString("NameDoesNotExist"));
+                        throw new SharedQueueDoesNotExistException("Queue name does not exist");
                     }
                     else
                     {
-                        ResourceManager rm = new ResourceManager("WspSharedQueue.WspSharedQueue", Assembly.GetExecutingAssembly());
-
-                        throw new SharedQueueInitializationException(rm.GetString("WrappedHresult") + rc.ToString() + rm.GetString("WrappedInitFailure"));
+                        throw new SharedQueueInitializationException("(HRESULT:" + rc.ToString() + ") SharedQueue failed to initialize");
                     }
                 }
             }
@@ -316,9 +322,7 @@ namespace Microsoft.WebSolutionsPlatform.Common
                 }
                 finally
                 {
-                    ResourceManager rm = new ResourceManager("WspSharedQueue.WspSharedQueue", Assembly.GetExecutingAssembly());
-
-                    throw new ArgumentOutOfRangeException("averageItemSize", rm.GetString("NotExceedQueueSize"));
+                    throw new ArgumentOutOfRangeException("averageItemSize", "Value must not exceed the queue size");
                 }
             }
 
@@ -374,17 +378,7 @@ namespace Microsoft.WebSolutionsPlatform.Common
         {
             ReturnCode rc;
 
-            if (item == null)
-            {
-                ResourceManager rm = new ResourceManager("WspSharedQueue.WspSharedQueue", Assembly.GetExecutingAssembly());
-
-                throw new ArgumentException(rm.GetString("InvalidArgumentValue"), "item");
-            }
-
-            lock (lockObject)
-            {
-                rc = NativeMethods.PutBuffer(item, (uint)item.Length, timeout, ref commBuffer);
-            }
+            Enqueue(item, out rc, timeout);
 
             if (rc == ReturnCode.Success)
             {
@@ -393,23 +387,45 @@ namespace Microsoft.WebSolutionsPlatform.Common
 
             if (rc == ReturnCode.Timeout)
             {
-                ResourceManager rm = new ResourceManager("WspSharedQueue.WspSharedQueue", Assembly.GetExecutingAssembly());
-
-                throw new TimeoutException(rm.GetString("EnqueueTimeout"));
+                throw new TimeoutException("Enqueue timed out");
             }
 
             if (rc == ReturnCode.InsufficientSpace)
             {
-                ResourceManager rm = new ResourceManager("WspSharedQueue.WspSharedQueue", Assembly.GetExecutingAssembly());
-
-                throw new SharedQueueFullException(rm.GetString("QueueFull"));
+                throw new SharedQueueFullException("Queue is full");
             }
 
             if (rc != ReturnCode.Success)
             {
-                ResourceManager rm = new ResourceManager("WspSharedQueue.WspSharedQueue", Assembly.GetExecutingAssembly());
+                throw new SharedQueueException("(HRESULT:" + rc.ToString() + ") Enqueue failed");
+            }
+        }
 
-                throw new SharedQueueException(rm.GetString("WrappedHresult") + rc.ToString() + rm.GetString("WrappedEnqueueFailed"));
+        /// <summary>
+        /// Add an element to the queue.
+        /// </summary>
+        /// <param name="item">Item being added to the queue</param>
+        /// <param name="rc">Return code</param>
+        /// <param name="timeout">Timeout for the operation</param>
+        [CLSCompliant(false)]
+        [HandleProcessCorruptedStateExceptions]
+        public void Enqueue(byte[] item, out ReturnCode rc, UInt32 timeout)
+        {
+            try
+            {
+                if (item == null)
+                {
+                    throw new ArgumentException("Invalid argument value", "item");
+                }
+
+                lock (lockObject)
+                {
+                    rc = NativeMethods.PutBuffer(item, (uint)item.Length, timeout, ref commBuffer);
+                }
+            }
+            catch (Exception e)
+            {
+                throw e;
             }
         }
 
@@ -418,39 +434,45 @@ namespace Microsoft.WebSolutionsPlatform.Common
         /// </summary>
         /// <param name="timeout">Timeout for the operation</param>
         [CLSCompliant(false)]
+        [HandleProcessCorruptedStateExceptions]
         public byte[] Dequeue(UInt32 timeout)
         {
             ReturnCode rc = ReturnCode.Timeout;
             UInt32 bytesRead = 0;
             byte[] returnBuffer;
 
-            rc = NativeMethods.GetBuffer(buffer, bufferLength, timeout, ref bytesRead, ref commBuffer);
-
-            if (rc == ReturnCode.Timeout || bytesRead == 0)
+            try
             {
-                return null;
-            }
-
-            if (rc == ReturnCode.Overflow)
-            {
-                buffer = new byte[bytesRead + headerSize];
-                bufferLength = (UInt32)buffer.Length;
-
                 rc = NativeMethods.GetBuffer(buffer, bufferLength, timeout, ref bytesRead, ref commBuffer);
-            }
 
-            if (rc != ReturnCode.Success)
+                if (rc == ReturnCode.Timeout || bytesRead == 0)
+                {
+                    return null;
+                }
+
+                if (rc == ReturnCode.Overflow)
+                {
+                    buffer = new byte[bytesRead + headerSize];
+                    bufferLength = (UInt32)buffer.Length;
+
+                    rc = NativeMethods.GetBuffer(buffer, bufferLength, timeout, ref bytesRead, ref commBuffer);
+                }
+
+                if (rc != ReturnCode.Success)
+                {
+                    throw new SharedQueueException("(HRESULT:" + rc.ToString() + ") Dequeue failed");
+                }
+
+                returnBuffer = new byte[bytesRead];
+
+                Buffer.BlockCopy(buffer, 0, returnBuffer, 0, (int)bytesRead);
+
+                return returnBuffer;
+            }
+            catch (Exception e)
             {
-                ResourceManager rm = new ResourceManager("WspSharedQueue.WspSharedQueue", Assembly.GetExecutingAssembly());
-
-                throw new SharedQueueException(rm.GetString("WrappedHresult") + rc.ToString() + rm.GetString("WrappedDequeueFailed"));
+                throw e;
             }
-
-            returnBuffer = new byte[bytesRead];
-
-            Buffer.BlockCopy(buffer, 0, returnBuffer, 0, (int)bytesRead);
-
-            return returnBuffer;
         }
     }
 }

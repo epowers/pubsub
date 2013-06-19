@@ -15,6 +15,7 @@ using System.Reflection.Emit;
 using System.Xml.XPath;
 using Microsoft.WebSolutionsPlatform.Event;
 using Microsoft.WebSolutionsPlatform.PubSubManager;
+using Microsoft.WebSolutionsPlatform.Common;
 
 namespace Microsoft.WebSolutionsPlatform.Router
 {
@@ -141,6 +142,7 @@ namespace Microsoft.WebSolutionsPlatform.Router
                 PersistEventInfo eventInfo;
                 string eventFieldTerminator = @",";
                 StreamWriter eventStream;
+                PubSubManager.ReturnCode rc;
 
                 string propName;
                 byte propType;
@@ -193,7 +195,9 @@ namespace Microsoft.WebSolutionsPlatform.Router
                                         eInfo.NextCopyTick = currentTick - 1;
 
                                         eInfo.subscription.Subscribe = false;
-                                        eventPush.OnNext(new WspEvent(Subscription.SubscriptionEvent, null, eInfo.subscription.Serialize()));
+
+                                        WspEvent wspEvent = new WspEvent(Subscription.SubscriptionEvent, null, eInfo.subscription.Serialize());
+                                        eventPush.OnNext(wspEvent, out rc);
                                     }
                                 }
 
@@ -206,7 +210,9 @@ namespace Microsoft.WebSolutionsPlatform.Router
                                 if (eInfo.InUse == true)
                                 {
                                     eInfo.subscription.Subscribe = true;
-                                    eventPush.OnNext(new WspEvent(Subscription.SubscriptionEvent, null, eInfo.subscription.Serialize()));
+
+                                    WspEvent wspEvent = new WspEvent(Subscription.SubscriptionEvent, null, eInfo.subscription.Serialize());
+                                    eventPush.OnNext(wspEvent, out rc);
                                 }
                             }
                         }
@@ -1033,6 +1039,7 @@ namespace Microsoft.WebSolutionsPlatform.Router
             private void SendPersistEvent(PersistFileState fileState, PersistEventInfo eventInfo, string outFileName)
             {
                 PersistFileEvent persistFileEvent;
+                PubSubManager.ReturnCode rc;
 
                 try
                 {
@@ -1080,8 +1087,13 @@ namespace Microsoft.WebSolutionsPlatform.Router
                 {
                     try
                     {
-                        eventPush.OnNext(new WspEvent(PersistFileEvent.EventType, null, persistFileEvent.Serialize()));
-                        break;
+                        WspEvent wspEvent = new WspEvent(PersistFileEvent.EventType, null, persistFileEvent.Serialize());
+                        eventPush.OnNext(wspEvent, out rc);
+
+                        if (rc == PubSubManager.ReturnCode.Success)
+                        {
+                            break;
+                        }
                     }
                     catch
                     {

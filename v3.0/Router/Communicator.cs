@@ -150,7 +150,6 @@ namespace Microsoft.WebSolutionsPlatform.Router
         {
             internal static Thread serverListenThread;
             internal static bool abortParent = false;
-            //internal static SocketInfo parentSocketInfo = new SocketInfo();
             internal static string parentRouterName = string.Empty;
             internal static Thread distributeThread;
 
@@ -1769,6 +1768,8 @@ namespace Microsoft.WebSolutionsPlatform.Router
 
         internal class DistributeHandler : ServiceThread
         {
+            private static Dictionary<string, bool> sentRoutes = new Dictionary<string, bool>();
+
             public DistributeHandler()
             {
             }
@@ -1843,119 +1844,169 @@ namespace Microsoft.WebSolutionsPlatform.Router
 
             private static void DistributeNormalEvents(QueueElement element)
             {
-                SynchronizationQueue<QueueElement> queue;
-                SubscriptionDetail subscriptionDetail;
-                SocketInfo socketInfo;
+                RouteDetail subscriptionDetail;
+                FilterSummary filterSummary;
 
-                if (SubscriptionMgr.subscriptions.TryGetValue(element.WspEvent.EventType, out subscriptionDetail) == true)
+                if (SubscriptionMgr.filteredSubscriptions.TryGetValue(element.WspEvent.EventType, out filterSummary) == false)
                 {
-                    lock (subscriptionDetail.SubscriptionDetailLock)
+                    filterSummary = null;
+                }
+
+                if (SubscriptionMgr.generalSubscriptions.TryGetValue(element.WspEvent.EventType, out subscriptionDetail) == false)
+                {
+                    subscriptionDetail = null;
+                }
+
+                sentRoutes.Clear();
+                
+                if (filterSummary != null || subscriptionDetail != null)
+                {
+                    lock (SubscriptionMgr.subscriptionsLock)
                     {
-                        foreach (string routerName in subscriptionDetail.Routes.Keys)
+                        if (subscriptionDetail != null)
                         {
-                            if (string.IsNullOrEmpty(routerName) == false &&
-                                string.Compare(routerName, Router.LocalRouterName, true) != 0 &&
-                                string.Compare(routerName, element.WspEvent.InRouterName, true) != 0)
+                            foreach (string routerName in subscriptionDetail.Routes.Keys)
                             {
-                                if (Router.hubRole == false)
+                                if (sentRoutes.ContainsKey(routerName) == false)
                                 {
-                                    // forward all if this is a node
+                                    sentRoutes.Add(routerName, true);
+
+                                    DistributeEvent(element, routerName);
                                 }
-                                else
+                            }
+                        }
+
+                        if (filterSummary != null)
+                        {
+                            foreach (string filter in filterSummary.Filters.Keys)
+                            {
+                                if (filterSummary.Filters[filter].UniqueRoutes.Routes.Count > 0)
                                 {
-                                    if (Communicator.commSockets.ContainsKey(routerName) == true)
+                                    if (filterSummary.Filters[filter].filterMethod(element.WspEvent) == true)
                                     {
-                                        socketInfo = Communicator.commSockets[routerName];
-                                    }
-                                    else
-                                    {
-                                        if (Communicator.deadSocketQueues.ContainsKey(routerName) == true)
+                                        foreach (string routerName in filterSummary.Filters[filter].UniqueRoutes.Routes.Keys)
                                         {
-                                            socketInfo = Communicator.deadSocketQueues[routerName];
-                                        }
-                                        else
-                                        {
-                                            continue;
-                                        }
-                                    }
+                                            if (sentRoutes.ContainsKey(routerName) == false)
+                                            {
+                                                sentRoutes.Add(routerName, true);
 
-                                    if (socketInfo.Hub == false)
-                                    {
-                                        // forward to all nodes
-                                    }
-                                    else
-                                    {
-                                        if (element.Source == EventSource.FromLocal || element.Source == EventSource.FromNode)
-                                        {
-                                            if (string.Compare(socketInfo.Group, configSettings.EventRouterSettings.Group, true) == 0)
-                                            {
-                                                // forward to all hubs in group
-                                            }
-                                            else
-                                            {
-                                                if (socketInfo.UseToSend == true)
-                                                {
-                                                    // forward to these peers
-                                                }
-                                                else
-                                                {
-                                                    continue;  // don't forward to these peers
-                                                }
+                                                DistributeEvent(element, routerName);
                                             }
                                         }
-                                        else
-                                        {
-                                            if (string.Compare(socketInfo.Group, configSettings.EventRouterSettings.Group, true) == 0)
-                                            {
-                                                if (element.Source == EventSource.FromPeer)
-                                                {
-                                                    // forward to all hubs in group
-                                                }
-                                                else
-                                                {
-                                                    continue;  // don't forward to other hubs
-                                                }
-                                            }
-                                            else
-                                            {
-                                                continue;  // don't forward to these peers
-                                            }
-                                        }
-                                    }
-                                }
-
-                                if (Communicator.socketQueues.TryGetValue(routerName, out queue) == true)
-                                {
-                                    queue.Enqueue(element);
-
-                                    RefCount refCount;
-
-                                    if (Communicator.serverSendThreads.TryGetValue(routerName, out refCount) == false)
-                                    {
-                                        lock (Communicator.sendThreadQueueLock)
-                                        {
-                                            if (Communicator.serverSendThreads.ContainsKey(routerName) == false)
-                                            {
-                                                refCount = new RefCount();
-                                                Communicator.serverSendThreads[routerName] = refCount;
-                                            }
-                                        }
-                                    }
-
-                                    if (Interlocked.Increment(ref refCount.Count) > 2)
-                                    {
-                                        Interlocked.Decrement(ref refCount.Count);
-                                    }
-                                    else
-                                    {
-                                        ThreadPool.QueueUserWorkItem(new WaitCallback(CommunicationHandler.SendCallback), routerName);
                                     }
                                 }
                             }
                         }
                     }
                 }
+
                 return;
+            }
+
+            private static void DistributeEvent(QueueElement element, string routerName)
+            {
+                SynchronizationQueue<QueueElement> queue;
+                SocketInfo socketInfo;
+
+                if (string.IsNullOrEmpty(routerName) == false &&
+                    string.Compare(routerName, Router.LocalRouterName, true) != 0 &&
+                    string.Compare(routerName, element.WspEvent.InRouterName, true) != 0)
+                {
+                    if (Router.hubRole == false)
+                    {
+                        // forward all if this is a node
+                    }
+                    else
+                    {
+                        if (Communicator.commSockets.ContainsKey(routerName) == true)
+                        {
+                            socketInfo = Communicator.commSockets[routerName];
+                        }
+                        else
+                        {
+                            if (Communicator.deadSocketQueues.ContainsKey(routerName) == true)
+                            {
+                                socketInfo = Communicator.deadSocketQueues[routerName];
+                            }
+                            else
+                            {
+                                return;
+                            }
+                        }
+
+                        if (socketInfo.Hub == false)
+                        {
+                            // forward to all nodes
+                        }
+                        else
+                        {
+                            if (element.Source == EventSource.FromLocal || element.Source == EventSource.FromNode)
+                            {
+                                if (string.Compare(socketInfo.Group, configSettings.EventRouterSettings.Group, true) == 0)
+                                {
+                                    // forward to all hubs in group
+                                }
+                                else
+                                {
+                                    if (socketInfo.UseToSend == true)
+                                    {
+                                        // forward to these peers
+                                    }
+                                    else
+                                    {
+                                        return;  // don't forward to these peers
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                if (string.Compare(socketInfo.Group, configSettings.EventRouterSettings.Group, true) == 0)
+                                {
+                                    if (element.Source == EventSource.FromPeer)
+                                    {
+                                        // forward to all hubs in group
+                                    }
+                                    else
+                                    {
+                                        return;  // don't forward to other hubs
+                                    }
+                                }
+                                else
+                                {
+                                    return;  // don't forward to these peers
+                                }
+                            }
+                        }
+                    }
+
+                    if (Communicator.socketQueues.TryGetValue(routerName, out queue) == true)
+                    {
+                        queue.Enqueue(element);
+
+                        RefCount refCount;
+
+                        if (Communicator.serverSendThreads.TryGetValue(routerName, out refCount) == false)
+                        {
+                            lock (Communicator.sendThreadQueueLock)
+                            {
+                                if (Communicator.serverSendThreads.ContainsKey(routerName) == false)
+                                {
+                                    refCount = new RefCount();
+                                    Communicator.serverSendThreads[routerName] = refCount;
+                                }
+                            }
+                        }
+
+                        if (Interlocked.Increment(ref refCount.Count) > 2)
+                        {
+                            Interlocked.Decrement(ref refCount.Count);
+                        }
+                        else
+                        {
+                            ThreadPool.QueueUserWorkItem(new WaitCallback(CommunicationHandler.SendCallback), routerName);
+                        }
+                    }
+                }
             }
 
             private static void DistributeSpecialEvents(QueueElement element)

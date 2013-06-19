@@ -97,6 +97,51 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
     }
 
     /// <summary>
+    /// The exception is thrown when an error occurs when compiling the method for a filtered subscription. 
+    /// See message.
+    /// </summary>
+    [Serializable()]
+    public class PubSubCompileException : SystemException
+    {
+        /// <summary>
+        /// Base constructor to create a new PubSubCompileException
+        /// </summary>
+        public PubSubCompileException()
+            : base()
+        {
+        }
+
+        /// <summary>
+        /// Base constructor to create a new PubSubCompileException
+        /// </summary>
+        /// <param name="message">The message that describes the error.</param>
+        public PubSubCompileException(string message)
+            : base(message)
+        {
+        }
+
+        /// <summary>
+        /// Base constructor to create a new PubSubCompileException
+        /// </summary>
+        /// <param name="message">The error message that explains the reason for the exception.</param>
+        /// <param name="innerException">The exception that is the cause of the current exception, or a null reference (Nothing in Visual Basic) if no inner exception is specified.</param>
+        public PubSubCompileException(string message, Exception innerException)
+            : base(message, innerException)
+        {
+        }
+
+        /// <summary>
+        /// Base constructor to create a new PubSubCompileException
+        /// </summary>
+        /// <param name="info">The SerializationInfo that holds the serialized object buffer about the exception being thrown.</param>
+        /// <param name="context">The StreamingContext that contains contextual information about the source or destination.</param>
+        protected PubSubCompileException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+        }
+    }
+
+    /// <summary>
     /// The exception that is thrown when there is insufficient memory to instantiate the object.
     /// </summary>
     [Serializable()]

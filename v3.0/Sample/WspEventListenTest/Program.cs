@@ -1,4 +1,5 @@
 using System;
+using System.Linq.Expressions;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading;
@@ -11,9 +12,10 @@ namespace WspEventListenTest
     {
         public static object obj;
         public static int numIterations;
+        public static string filterPattern = string.Empty;
         static DateTime startTime;
 
-        static void Main(/*string[] args*/)
+        static void Main(string[] args)
         {
             WorkerClass wc = new WorkerClass();
             TimeSpan totalTime;
@@ -21,6 +23,11 @@ namespace WspEventListenTest
 
             obj = new object();
             numIterations = 0;
+
+            if (args.Length > 0)
+            {
+                filterPattern = args[0];
+            }
 
             Thread runThread = new Thread(new ThreadStart(wc.Run));
             runThread.Start();
@@ -66,7 +73,7 @@ namespace WspEventListenTest
 
             try
             {
-                sub = new WspEventObservable(webPageEvent.EventType, true);
+                sub = new WspEventObservable(webPageEvent.EventType, false, Program.filterPattern, null, null);
 
                 eventDispose = sub.Subscribe(this);
 

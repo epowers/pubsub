@@ -413,9 +413,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                         continue;
 
                     default:
-                        ResourceManager rm = new ResourceManager("WspEvent.WspEvent", Assembly.GetExecutingAssembly());
-
-                        throw new EventTypeNotSupportedException(rm.GetString("CannotDeserialize"));
+                        throw new EventTypeNotSupportedException("Cannot deserialize type of Value object");
                 }
             }
 		}

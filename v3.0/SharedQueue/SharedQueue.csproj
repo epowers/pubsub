@@ -91,20 +91,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Exceptions.cs" />
-    <Compile Include="WspSharedQueue.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>WspSharedQueue.resx</DependentUpon>
-    </Compile>
     <Compile Include="SharedQueue.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="WspSharedQueue.resx">
-      <SubType>Designer</SubType>
-      <Generator>ResXFileCodeGenerator</Generator>
-      <LastGenOutput>WspSharedQueue.Designer.cs</LastGenOutput>
-    </EmbeddedResource>
+    <Compile Include="SynchronizationQueueGeneric.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="key.snk" />
