@@ -28,13 +28,22 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
         internal Guid id;
         internal IObserver<WspEvent> observer;
         internal SynchronizationQueueGeneric<WspEvent> queue;
+        internal PerformanceCounter eventQueueCounter;
         internal Thread observerThread;
 
         internal SubscriptionObserver(IObserver<WspEvent> observer)
         {
             this.id = Guid.NewGuid();
             this.observer = observer;
-            this.queue = new SynchronizationQueueGeneric<WspEvent>();
+
+            eventQueueCounter = new PerformanceCounter();
+            eventQueueCounter.InstanceLifetime = PerformanceCounterInstanceLifetime.Process;
+            eventQueueCounter.CategoryName = "WspEventRouterApplication";
+            eventQueueCounter.CounterName = "SubscriptionQueueSize";
+            eventQueueCounter.InstanceName = "PID" + Process.GetCurrentProcess().Id.ToString() + ":" + this.id.ToString();
+            eventQueueCounter.ReadOnly = false;
+
+            this.queue = new SynchronizationQueueGeneric<WspEvent>(eventQueueCounter, Guid.Empty);
 
             this.observerThread = new Thread(Start);
             observerThread.Start();
@@ -102,9 +111,9 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
 
         private static SubscriptionManager wspSubscriptionManager = null;
 
-        private static Dictionary<Guid, List<SubscriptionObserver>> observables = new Dictionary<Guid,List<SubscriptionObserver>>();
+        private static Dictionary<Guid, List<SubscriptionObserver>> observables = new Dictionary<Guid, List<SubscriptionObserver>>();
 
-        internal static Dictionary<Guid, List<WspEventObservable>> eventObservables = new Dictionary<Guid,List<WspEventObservable>>();
+        internal static Dictionary<Guid, List<WspEventObservable>> eventObservables = new Dictionary<Guid, List<WspEventObservable>>();
 
         private Guid id;
         private Guid eventType;
@@ -191,7 +200,7 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
             eventQueueCounter.InstanceName = "PID" + Process.GetCurrentProcess().Id.ToString() + ":" + eventType.ToString() + ":" + Guid.NewGuid().ToString().GetHashCode().ToString();
             eventQueueCounter.ReadOnly = false;
 
-            this.queue = new SynchronizationQueueGeneric<WspEvent>(eventQueueCounter);
+            this.queue = new SynchronizationQueueGeneric<WspEvent>(eventQueueCounter, eventType);
 
             observableThread = new Thread(ObservableThread);
             observableThread.Start();
@@ -260,7 +269,7 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
                                 {
                                     for (int i = 0; i < observers.Count; i++)
                                     {
-                                        observers[i].queue.Enqueue(wspEvent);
+                                        observers[i].queue.Enqueue(wspEvent, wspEvent.SerializedEvent.Length);
                                     }
                                 }
                             }
@@ -275,7 +284,7 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
                                     {
                                         for (int i = 0; i < observers.Count; i++)
                                         {
-                                            observers[i].queue.Enqueue(wspEvents[x]);
+                                            observers[i].queue.Enqueue(wspEvents[x], wspEvents[x].SerializedEvent.Length);
                                         }
                                     }
                                 }
@@ -507,7 +516,7 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
         /// <param name="subscriptionObserver">Observer to be disposed</param>
         private void Dispose(SubscriptionObserver subscriptionObserver)
         {
-            lock(lockObj)
+            lock (lockObj)
             {
                 List<SubscriptionObserver> observers;
 
@@ -553,7 +562,8 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
 
                 if (observables.Count == 0 && wspSubscriptionThread != null)
                 {
-                    wspSubscriptionThread.Abort();
+                    wspSubscriptionManager.StopListening = true;
+                    wspSubscriptionThread.Join(30000);
                     wspSubscriptionThread = null;
 
                     wspSubscriptionManager = null;
@@ -569,6 +579,8 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
     {
         private bool disposed;
 
+        internal bool StopListening = false;
+
         private static UInt32 defaultEventTimeout = 10000;
         private static uint subscriptionRefreshIncrement = 3; // in minutes
 
@@ -581,8 +593,6 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
         private SharedQueue eventQueue;
 
         private Dictionary<Guid, Dictionary<string, Subscription>> subscriptions;
-
-        private Thread listenThread;
 
         private UInt32 timeout;
         /// <summary>
@@ -690,8 +700,6 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
                 {
                     lock (lockObject)
                     {
-                        this.StopListening();
-
                         foreach (Dictionary<string, Subscription> subs in subscriptions.Values)
                         {
                             foreach (Subscription sub in subs.Values)
@@ -823,25 +831,6 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
         }
 
         /// <summary>
-        /// Stops the thread listening to events
-        /// </summary>
-        public void StopListening()
-        {
-            if (listenThread != null)
-            {
-                try
-                {
-                    listenThread.Abort();
-                }
-                catch
-                {
-                }
-
-                listenThread = null;
-            }
-        }
-
-        /// <summary>
         /// Dequeues events from shared memory
         /// </summary>
         internal void Listener()
@@ -856,7 +845,7 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
 
                 byte[] buffer = null;
 
-                while (true)
+                while (StopListening == false)
                 {
                     try
                     {
@@ -881,7 +870,7 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
                             {
                                 for (int i = 0; i < observables.Count; i++)
                                 {
-                                    observables[i].queue.Enqueue(wspEvent);
+                                    observables[i].queue.Enqueue(wspEvent, wspEvent.SerializedEvent.Length);
                                 }
                             }
                         }
