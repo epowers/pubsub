@@ -236,7 +236,7 @@ namespace Microsoft.WebSolutionsPlatform.Common
                 throw new ArgumentOutOfRangeException("averageItemSize", "Value must not exceed the queue size");
             }
 
-            if (averageItemSize > (UInt32) (int.MaxValue - headerSize))
+            if (averageItemSize > (UInt32)(int.MaxValue - headerSize))
             {
                 buffer = new byte[int.MaxValue];
             }
@@ -340,7 +340,7 @@ namespace Microsoft.WebSolutionsPlatform.Common
         /// Dispose the SharedQueue object to release the unmanaged resources.
         /// </summary>
         /// <param name="disposing"></param>
-        protected virtual void Dispose(bool disposing) 
+        protected virtual void Dispose(bool disposing)
         {
             if (!disposed)
             {
@@ -469,9 +469,9 @@ namespace Microsoft.WebSolutionsPlatform.Common
 
                 return returnBuffer;
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                throw e;
+                throw;
             }
         }
     }

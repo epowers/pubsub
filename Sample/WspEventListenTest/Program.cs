@@ -3,6 +3,7 @@ using System.Linq.Expressions;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading;
+using System.Security.Cryptography;
 using Microsoft.WebSolutionsPlatform.Event;
 using Microsoft.WebSolutionsPlatform.PubSubManager;
 
@@ -46,7 +47,7 @@ namespace WspEventListenTest
                     numIterations = 0;
                 }
 
-                Console.WriteLine((iterations / totalTime.TotalSeconds).ToString() + 
+                Console.WriteLine((iterations / totalTime.TotalSeconds).ToString() +
                     " events per second  --  Number of iterations = " + iterations.ToString());
             }
 
@@ -63,6 +64,7 @@ namespace WspEventListenTest
     class WorkerClass : IObserver<WspEvent>
     {
         WspEventObservable sub;
+        MD5 md5Hasher = MD5.Create();
 
         internal void Run()
         {
@@ -107,6 +109,24 @@ namespace WspEventListenTest
         public void OnNext(WspEvent wspEvent)
         {
             WebpageEvent localEvent;
+            byte[] headerHash;
+            byte[] bodyHash;
+
+            if (wspEvent.Headers.ContainsKey(101))
+            {
+                headerHash = Convert.FromBase64String(wspEvent.Headers[101]);
+                bodyHash = md5Hasher.ComputeHash(wspEvent.Body);
+
+                for (int i = 0; i < headerHash.Length; i++)
+                {
+                    if (headerHash[i] != bodyHash[i])
+                    {
+                        Console.WriteLine("Error: Hash codes don't match");
+
+                        break;
+                    }
+                }
+            }
 
             localEvent = new WebpageEvent(wspEvent.Body);
 

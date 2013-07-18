@@ -4,93 +4,94 @@ using System.Text;
 using System.Net;
 using System.Web;
 using System.Threading;
+using System.Security.Cryptography;
 using Microsoft.WebSolutionsPlatform.PubSubManager;
 using Microsoft.WebSolutionsPlatform.Event;
 
 namespace WspEventServiceTest
 {
-	class Program
-	{
-		static int numIterations;
-		static DateTime startTime;
-		static List<Thread> workerThreads = new List<Thread>();
+    class Program
+    {
+        static int numIterations;
+        static DateTime startTime;
+        static List<Thread> workerThreads = new List<Thread>();
         static string filterString = string.Empty;
-        
-		static void Main( string[] args )
-		{
-			int numThreads;
-			bool processingComplete = false;
 
-			startTime = DateTime.Now;
+        static void Main(string[] args)
+        {
+            int numThreads;
+            bool processingComplete = false;
 
-			if(args.Length == 0)
-			{
-				numIterations = 1000;
-				numThreads = 1;
-			}
-			else
-			{
-				numIterations = Convert.ToInt32(args[0]);
+            startTime = DateTime.Now;
 
-				if(args.Length == 1)
-				{
-					numThreads = 1;
-				}
-				else
-				{
-					numThreads = Convert.ToInt32(args[1]);
-				}
-			}
+            if (args.Length == 0)
+            {
+                numIterations = 1000;
+                numThreads = 1;
+            }
+            else
+            {
+                numIterations = Convert.ToInt32(args[0]);
 
-			for(int i = 0; i < numThreads; i++)
-			{
-				WorkerClass wc = new WorkerClass();
+                if (args.Length == 1)
+                {
+                    numThreads = 1;
+                }
+                else
+                {
+                    numThreads = Convert.ToInt32(args[1]);
+                }
+            }
 
-				Thread t = new Thread(new ThreadStart(wc.SendEvents));
-				t.Name = i.ToString();
-				workerThreads.Add(t);
-			}
+            for (int i = 0; i < numThreads; i++)
+            {
+                WorkerClass wc = new WorkerClass();
 
-			for(int i = 0; i < numThreads; i++)
-			{
-				workerThreads[i].Start();
-			}
+                Thread t = new Thread(new ThreadStart(wc.SendEvents));
+                t.Name = i.ToString();
+                workerThreads.Add(t);
+            }
 
-			while(processingComplete == false)
-			{
-				Thread.Sleep(1000);
+            for (int i = 0; i < numThreads; i++)
+            {
+                workerThreads[i].Start();
+            }
 
-				processingComplete = true;
+            while (processingComplete == false)
+            {
+                Thread.Sleep(1000);
 
-				for(int i = 0; i < numThreads; i++)
-				{
-					if(workerThreads[i].IsAlive == true)
-						processingComplete = false;
-				}
-			}
+                processingComplete = true;
 
-			DateTime stopTime = DateTime.Now;
-			TimeSpan totalTime = new TimeSpan(stopTime.Ticks - startTime.Ticks);
+                for (int i = 0; i < numThreads; i++)
+                {
+                    if (workerThreads[i].IsAlive == true)
+                        processingComplete = false;
+                }
+            }
 
-			Console.WriteLine(" ");
+            DateTime stopTime = DateTime.Now;
+            TimeSpan totalTime = new TimeSpan(stopTime.Ticks - startTime.Ticks);
 
-			Console.WriteLine("Overall time was: " + totalTime.TotalSeconds.ToString() + " seconds");
-			Console.WriteLine(((numIterations * numThreads) / totalTime.TotalSeconds).ToString() + " events per second");
-		}
+            Console.WriteLine(" ");
 
-		class WorkerClass
-		{
+            Console.WriteLine("Overall time was: " + totalTime.TotalSeconds.ToString() + " seconds");
+            Console.WriteLine(((numIterations * numThreads) / totalTime.TotalSeconds).ToString() + " events per second");
+        }
+
+        class WorkerClass
+        {
             private WspEventPublish eventPush;
 
-			public void SendEvents()
-			{
+            public void SendEvents()
+            {
                 ReturnCode rc;
 
                 try
                 {
                     eventPush = new WspEventPublish();
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
                     Console.WriteLine(e.Message);
                     return;
@@ -98,49 +99,51 @@ namespace WspEventServiceTest
 
                 WebpageEvent localEvent = new WebpageEvent();
 
-				localEvent.ActiveXControls = true;
-				localEvent.AnonymousId = Guid.NewGuid();
-				localEvent.Aol = true;
-				localEvent.BackgroundSounds = true;
-				localEvent.Beta = false;
-				localEvent.Browser = @"IE 6.0";
-				localEvent.Cdf = false;
-				localEvent.ClrVersion = new Version(@"1.2.3.4");
-				localEvent.Cookies = true;
-				localEvent.Crawler = false;
-				localEvent.EcmaScriptVersion = new Version(@"1.2.3.4");
-				localEvent.Ext = string.Empty;
-				localEvent.Frames = true;
-				localEvent.HostDomain = @"microsoft";
-				localEvent.JavaApplets = true;
-				localEvent.LogicalUri = new Uri(@"http://www.microsoft.com");
-				localEvent.MajorVersion = 1;
-				localEvent.MinorVersion = 2.3;
-				localEvent.MSDomVersion = new Version(@"1.2.3.4");
-				localEvent.Platform = @"Windows XP";
-				localEvent.RequestType = @"Page Request";
-				localEvent.Source = @"source";
-				localEvent.SourceServer = @"sourceserver";
-				localEvent.StatusCode = 0;
-				localEvent.SubDirectory = @"eventcollection";
-				localEvent.Tables = true;
-				localEvent.Type = @"type";
-				localEvent.UriHash = new System.Security.Cryptography.MD5CryptoServiceProvider();
-				localEvent.UriHash.Initialize();
-				localEvent.UriQuery = new Uri(@"http://www.microsoft.com/test");
-				localEvent.UriStem = new Uri(@"http://www.microsoft.com");
-				localEvent.UrlReferrer = new Uri(@"http://www.microsoft.com");
-				localEvent.UrlReferrerDomain = @"microsoft.com";
-				localEvent.UserAgent = @"useragent kasgfig;lkartpoiwhtlnvoaing;oakng;aih;akng;lna;kn";
-				localEvent.UserHostAddress = new IPAddress(0x2414188f);
-				localEvent.VBScript = true;
-				localEvent.Version = @"1.2.3.4";
-				localEvent.VirtualRoot = @"http://www.microsoft.com/test";
-				localEvent.W3CDomVersion = new Version(@"1.2.3.4");
-				localEvent.Win16 = false;
-				localEvent.Win32 = true;
+                localEvent.ActiveXControls = true;
+                localEvent.AnonymousId = Guid.NewGuid();
+                localEvent.Aol = true;
+                localEvent.BackgroundSounds = true;
+                localEvent.Beta = false;
+                localEvent.Browser = @"IE 6.0";
+                localEvent.Cdf = false;
+                localEvent.ClrVersion = new Version(@"1.2.3.4");
+                localEvent.Cookies = true;
+                localEvent.Crawler = false;
+                localEvent.EcmaScriptVersion = new Version(@"1.2.3.4");
+                localEvent.Ext = string.Empty;
+                localEvent.Frames = true;
+                localEvent.HostDomain = @"microsoft";
+                localEvent.JavaApplets = true;
+                localEvent.LogicalUri = new Uri(@"http://www.microsoft.com");
+                localEvent.MajorVersion = 1;
+                localEvent.MinorVersion = 2.3;
+                localEvent.MSDomVersion = new Version(@"1.2.3.4");
+                localEvent.Platform = @"Windows XP";
+                localEvent.RequestType = @"Page Request";
+                localEvent.Source = @"source";
+                localEvent.SourceServer = @"sourceserver";
+                localEvent.StatusCode = 0;
+                localEvent.SubDirectory = @"eventcollection";
+                localEvent.Tables = true;
+                localEvent.Type = @"type";
+                localEvent.UriHash = new System.Security.Cryptography.MD5CryptoServiceProvider();
+                localEvent.UriHash.Initialize();
+                localEvent.UriQuery = new Uri(@"http://www.microsoft.com/test");
+                localEvent.UriStem = new Uri(@"http://www.microsoft.com");
+                localEvent.UrlReferrer = new Uri(@"http://www.microsoft.com");
+                localEvent.UrlReferrerDomain = @"microsoft.com";
+                localEvent.UserAgent = @"useragent kasgfig;lkartpoiwhtlnvoaing;oakng;aih;akng;lna;kn";
+                localEvent.UserHostAddress = new IPAddress(0x2414188f);
+                localEvent.VBScript = true;
+                localEvent.Version = @"1.2.3.4";
+                localEvent.VirtualRoot = @"http://www.microsoft.com/test";
+                localEvent.W3CDomVersion = new Version(@"1.2.3.4");
+                localEvent.Win16 = false;
+                localEvent.Win32 = true;
 
                 Dictionary<byte, string> pb = new Dictionary<byte, string>();
+
+                MD5 md5Hasher = MD5.Create();
 
                 Random rdm = new Random(10000);
 
@@ -148,16 +151,24 @@ namespace WspEventServiceTest
                 {
                     for (int i = 0; i < numIterations; i++)
                     {
-                        pb[100] = "test" + rdm.Next(10000).ToString();
+                        byte[] body = localEvent.Serialize();
+                        byte[] bodyHash = md5Hasher.ComputeHash(body);
 
-                        WspEvent wspEvent = new WspEvent(localEvent.EventType, pb, localEvent.Serialize());
+                        pb[100] = "test" + rdm.Next(10000).ToString();
+                        pb[101] = Convert.ToBase64String(bodyHash);
+
+                        WspEvent wspEvent = new WspEvent(localEvent.EventType, pb, body);
                         eventPush.OnNext(wspEvent, out rc);
+
+                        // Verifying that serialization/deserialization work
+                        byte[] serializedEvent = wspEvent.SerializedEvent;
+                        WspEvent dupEvent = new WspEvent(serializedEvent);
+                        WebpageEvent dupWebPageEvent = new WebpageEvent(dupEvent.Body);
 
                         if (rc != ReturnCode.Success)
                         {
-
                             Thread.Sleep(0);
-                            //Console.WriteLine("Item: " + i.ToString() + @"    Exception: " + e.Message);
+                            Console.WriteLine("Item: " + i.ToString() + @"    Return Code: " + rc.ToString());
                             i--;
                         }
                     }
@@ -177,6 +188,6 @@ namespace WspEventServiceTest
                 localEvent.UriHash.Clear();
                 localEvent.UriHash = null;
             }
-		}
-	}
+        }
+    }
 }

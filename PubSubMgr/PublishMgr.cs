@@ -113,9 +113,13 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
         /// <param name="rc">Return code</param>
         public void OnNext(WspEvent wspEvent, out ReturnCode rc)
         {
+            ThreadPriority threadPriority;
             WspEvent[] wspEvents = null;
 
             rc = ReturnCode.Success;
+
+            threadPriority = Thread.CurrentThread.Priority;
+            Thread.CurrentThread.Priority = ThreadPriority.Lowest;
 
             if (Interceptor.publishInterceptor != null)
             {
@@ -142,6 +146,8 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
                     pubMgr.Publish(wspEvents[i].SerializedEvent, out rc);
                 }
             }
+
+            Thread.CurrentThread.Priority = threadPriority;
         }
 
         /// <summary>
@@ -150,7 +156,11 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
         /// <param name="wspEvent">The WspEvent being published</param>
         public void OnNext(WspEvent wspEvent)
         {
+            ThreadPriority threadPriority;
             WspEvent[] wspEvents = null;
+
+            threadPriority = Thread.CurrentThread.Priority;
+            Thread.CurrentThread.Priority = ThreadPriority.Lowest;
 
             if (Interceptor.publishInterceptor != null)
             {
@@ -177,6 +187,8 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
                     pubMgr.Publish(wspEvents[i].SerializedEvent);
                 }
             }
+
+            Thread.CurrentThread.Priority = threadPriority;
         }
 
         /// <summary>
@@ -352,7 +364,7 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
 
             rc = ReturnCode.InvalidArgument;
 
-            for(int tries = 0; tries <= retryAttempts; tries++)
+            for (int tries = 0; tries <= retryAttempts; tries++)
             {
                 eventQueue.Enqueue(serializedEvent, out rcCommon, timeout);
 
@@ -379,7 +391,7 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
         /// Dispose the object
         /// </summary>
         /// <param name="disposing">True if disposing</param>
-        protected virtual void Dispose(bool disposing) 
+        protected virtual void Dispose(bool disposing)
         {
             if (!disposed)
             {

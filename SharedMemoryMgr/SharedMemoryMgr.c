@@ -204,11 +204,11 @@ extern INT32 __cdecl JoinMemoryMgr(LPCTSTR SharedMemoryNameIn, PCOMMBUFFER *Comm
 	}
 
 	iSize = strlen(GLOBALPREPEND) + strlen(SharedMemoryNameIn) + 1;
-	lpSharedMemoryName = malloc(iSize);
+	lpSharedMemoryName = (LPCTSTR)malloc(iSize);
 	strcpy_s((char*)lpSharedMemoryName, iSize, GLOBALPREPEND);
 	strcat_s((char*)lpSharedMemoryName, iSize, SharedMemoryNameIn);
 
-	CommBuffer = malloc(sizeof(COMMBUFFER));
+	CommBuffer = (PCOMMBUFFER)malloc(sizeof(COMMBUFFER));
 
 	InitEvent(CommBuffer);
 
@@ -324,7 +324,7 @@ extern INT32 __cdecl JoinMemoryMgr(LPCTSTR SharedMemoryNameIn, PCOMMBUFFER *Comm
 
 	LeaveCriticalSection(&critSec);
 
-	CommBuffer->dwNextReadOffset = CommBuffer->gpBuf->dwNextReadOffset;
+	CommBuffer->dwNextReadOffset = CommBuffer->gpBuf->dwNextWriteOffset;
 
 	free((char*)lpSharedMemoryName);
 
@@ -487,7 +487,7 @@ extern INT32 __cdecl GetBuffer(LPCSTR pEventBuffer, DWORD dwEventBufferLength, D
 		}
 		else
 		{
-			CommBuffer->dwNextReadOffset = CommBuffer->gpBuf->dwNextReadOffset;
+			CommBuffer->dwNextReadOffset = CommBuffer->gpBuf->dwNextWriteOffset;
 		}
 	}
 
