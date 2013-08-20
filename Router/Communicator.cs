@@ -403,6 +403,22 @@ namespace Microsoft.WebSolutionsPlatform.Router
 
                 foreach (string peerGroupName in peers.Keys)
                 {
+                    bool alreadyConnectedToGroup = false;
+
+                    foreach (SocketInfo s in commSockets.Values)
+                    {
+                        if (string.Compare(peerGroupName, s.Group, true) == 0 && s.UseToSend == true)
+                        {
+                            alreadyConnectedToGroup = true;
+                            break;
+                        }
+                    }
+
+                    if (alreadyConnectedToGroup == true)
+                    {
+                        continue;
+                    }
+
                     if (commSockets.TryGetValue(peers[peerGroupName], out socketInfo) == true)
                     {
                         if (socketInfo.UseToSend == false)
@@ -1502,7 +1518,7 @@ namespace Microsoft.WebSolutionsPlatform.Router
 
                             element.WspEvent = wspEvent;
 
-                            for(int tries = 0; tries < 10; tries++)
+                            for (int tries = 0; tries < 10; tries++)
                             {
                                 try
                                 {
@@ -1858,7 +1874,7 @@ namespace Microsoft.WebSolutionsPlatform.Router
                 }
 
                 sentRoutes.Clear();
-                
+
                 if (filterSummary != null || subscriptionDetail != null)
                 {
                     lock (SubscriptionMgr.subscriptionsLock)
