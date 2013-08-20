@@ -57,7 +57,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
         /// </summary>
         public WspBuffer(byte[] bufferIn)
         {
-            buffer = (byte[]) bufferIn.Clone();
+            buffer = (byte[])bufferIn.Clone();
         }
 
         /// <summary>
@@ -80,7 +80,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
             {
                 int newLength = buffer.Length;
 
-                while( newLength < (position + length) )
+                while (newLength < (position + length))
                 {
                     if ((int.MaxValue / 2) > newLength)
                     {
@@ -393,7 +393,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
         [CLSCompliantAttribute(false)]
         public void Write(SByte value)
         {
-            AppendByte((byte) value);
+            AppendByte((byte)value);
         }
 
         /// <summary>
@@ -402,6 +402,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
         /// <param name="value">Value object to be written</param>
         public void Write(DateTime value)
         {
+            Write((byte)(value.Kind));
             Write(value.Ticks);
         }
 
@@ -588,12 +589,12 @@ namespace Microsoft.WebSolutionsPlatform.Event
             Guid guidType = Guid.Empty;
             Uri uriType = new Uri("http://localhost");
             IPAddress ipAddressType = new IPAddress(0);
-            Dictionary<string, string> stringDictionaryType = new Dictionary<string,string>();
-            Dictionary<string, object> objectDictionaryType = new Dictionary<string,object>();
+            Dictionary<string, string> stringDictionaryType = new Dictionary<string, string>();
+            Dictionary<string, object> objectDictionaryType = new Dictionary<string, object>();
             List<string> stringListType = new List<string>();
             List<object> objectListType = new List<object>();
 
-           lock(lockObj)
+            lock (lockObj)
             {
                 if (propTypes == null)
                 {
@@ -753,7 +754,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
             do
             {
-                if(GetByte(out byteOut) == false)
+                if (GetByte(out byteOut) == false)
                 {
                     value = null;
                     return false;
@@ -912,6 +913,12 @@ namespace Microsoft.WebSolutionsPlatform.Event
         public bool Read(out DateTime value)
         {
             Int64 dateTimeOut;
+            DateTimeKind dateTimeKind;
+            byte kind;
+
+            Read(out kind);
+
+            dateTimeKind = (DateTimeKind)kind;
 
             if (Read(out dateTimeOut) == false)
             {
@@ -919,7 +926,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                 return false;
             }
 
-            value = new DateTime(dateTimeOut);
+            value = new DateTime(dateTimeOut, dateTimeKind);
 
             return true;
         }
@@ -1068,7 +1075,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
             rc = GetByte(out byteOut);
 
-            value = (SByte) byteOut;
+            value = (SByte)byteOut;
 
             return rc;
         }
@@ -1507,7 +1514,7 @@ namespace Microsoft.WebSolutionsPlatform.Event
                     break;
             }
 
-            if(rc == false)
+            if (rc == false)
             {
                 return false;
             }
@@ -1756,10 +1763,12 @@ namespace Microsoft.WebSolutionsPlatform.Event
 
             if (value == null)
             {
-                Write(((long)0).ToString());
+                Write((byte)DateTimeKind.Unspecified);
+                Write((long)0);
             }
             else
             {
+                Write((byte)(value.Kind));
                 Write(value);
             }
         }
