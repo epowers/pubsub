@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Net;
 using System.Threading;
+using System.Diagnostics;
 using System.Resources;
 using System.Reflection;
 using System.Runtime.Serialization;
@@ -54,6 +55,7 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
     {
         private static object lockObj = new object();
         private static PublishManager pubMgr = null;
+        private static long expectedMaxLatency;  // This is in ticks
 
         /// <summary>
         /// Constructor
@@ -67,6 +69,8 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
                     if (pubMgr == null)
                     {
                         pubMgr = new PublishManager();
+
+                        expectedMaxLatency = (long)((pubMgr.RetryAttempts * pubMgr.Timeout) + (pubMgr.RetryAttempts * pubMgr.RetryPause)) * 10000L;
                     }
                 }
             }
@@ -86,6 +90,8 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
                     if (pubMgr == null)
                     {
                         pubMgr = new PublishManager(timeout);
+
+                        expectedMaxLatency = (long)((pubMgr.RetryAttempts * pubMgr.Timeout) + (pubMgr.RetryAttempts * pubMgr.RetryPause)) * 10000L;
                     }
                 }
             }
@@ -115,6 +121,9 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
         {
             ThreadPriority threadPriority;
             WspEvent[] wspEvents = null;
+            long beginTick = DateTime.Now.Ticks;
+            long interceptorTicks;
+            long totalTicks;
 
             rc = ReturnCode.Success;
 
@@ -135,6 +144,8 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
                 }
             }
 
+            interceptorTicks = DateTime.Now.Ticks - beginTick;
+
             if (wspEvents == null || wspEvents.Length == 0)
             {
                 pubMgr.Publish(wspEvent.SerializedEvent, out rc);
@@ -145,6 +156,26 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
                 {
                     pubMgr.Publish(wspEvents[i].SerializedEvent, out rc);
                 }
+            }
+
+            totalTicks = DateTime.Now.Ticks - beginTick;
+
+            if (totalTicks > expectedMaxLatency)
+            {
+                StackTrace st = new StackTrace(true);
+                StringBuilder sb = new StringBuilder();
+                sb.Append("\nEventType = ");
+                sb.Append(wspEvent.EventType.ToString());
+                sb.Append("\nProcessID = ");
+                sb.Append(Process.GetCurrentProcess().Id.ToString());
+                sb.Append("\nManagedThreadID = ");
+                sb.Append(Thread.CurrentThread.ManagedThreadId.ToString());
+                sb.Append("\nAppDomain = ");
+                sb.Append(AppDomain.CurrentDomain.ApplicationIdentity.FullName);
+                sb.Append("\nStackTrace = ");
+                sb.Append(st.ToString());
+
+                EventLog.WriteEntry("WspEventRouter", "Event publish time threshold exceeded: " + sb.ToString(), EventLogEntryType.Warning);
             }
 
             Thread.CurrentThread.Priority = threadPriority;
@@ -158,6 +189,9 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
         {
             ThreadPriority threadPriority;
             WspEvent[] wspEvents = null;
+            long beginTick = DateTime.Now.Ticks;
+            long interceptorTicks;
+            long totalTicks;
 
             threadPriority = Thread.CurrentThread.Priority;
             Thread.CurrentThread.Priority = ThreadPriority.Lowest;
@@ -176,6 +210,8 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
                 }
             }
 
+            interceptorTicks = DateTime.Now.Ticks - beginTick;
+
             if (wspEvents == null || wspEvents.Length == 0)
             {
                 pubMgr.Publish(wspEvent.SerializedEvent);
@@ -186,6 +222,26 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
                 {
                     pubMgr.Publish(wspEvents[i].SerializedEvent);
                 }
+            }
+
+            totalTicks = DateTime.Now.Ticks - beginTick;
+
+            if (totalTicks > expectedMaxLatency)
+            {
+                StackTrace st = new StackTrace(true);
+                StringBuilder sb = new StringBuilder();
+                sb.Append("\nEventType = ");
+                sb.Append(wspEvent.EventType.ToString());
+                sb.Append("\nProcessID = ");
+                sb.Append(Process.GetCurrentProcess().Id.ToString());
+                sb.Append("\nManagedThreadID = ");
+                sb.Append(Thread.CurrentThread.ManagedThreadId.ToString());
+                sb.Append("\nAppDomain = ");
+                sb.Append(AppDomain.CurrentDomain.ApplicationIdentity.FullName);
+                sb.Append("\nStackTrace = ");
+                sb.Append(st.ToString());
+
+                EventLog.WriteEntry("WspEventRouter", "Event publish threshold exceeded for: " + sb.ToString(), EventLogEntryType.Warning);
             }
 
             Thread.CurrentThread.Priority = threadPriority;
@@ -213,11 +269,11 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
 
         private bool disposed = false;
 
-        private int retryAttempts;
+        private UInt32 retryAttempts;
         /// <summary>
         /// Number of times to retry a failed enqueue request before returning a fail to the application
         /// </summary>
-        internal int RetryAttempts
+        internal UInt32 RetryAttempts
         {
             get
             {
@@ -229,11 +285,11 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
             }
         }
 
-        private int retryPause;
+        private UInt32 retryPause;
         /// <summary>
         /// Number of milliseconds to wait before retrying an enqueue request
         /// </summary>
-        internal int RetryPause
+        internal UInt32 RetryPause
         {
             get
             {
@@ -247,7 +303,7 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
 
         private UInt32 timeout;
         /// <summary>
-        /// Timeout for publishing events
+        /// Number of milliseconds of timeout for publishing events
         /// </summary>
         internal UInt32 Timeout
         {
@@ -292,8 +348,8 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
         internal PublishManager(UInt32 timeout)
         {
             this.timeout = timeout;
-            this.retryAttempts = 3;
-            this.retryPause = 1000;
+            this.retryAttempts = 3u;
+            this.retryPause = 1000u;
 
             try
             {
@@ -375,7 +431,7 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
                     return;
                 }
 
-                Thread.Sleep(retryPause);
+                Thread.Sleep((int)retryPause);
             }
         }
 
