@@ -97,7 +97,7 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
     /// <summary>
     /// This class is used to subscribe to events using Rx
     /// </summary>
-    public class WspEventObservable : IObservable<WspEvent>
+    public class WspEventObservable : IObservable<WspEvent>, IDisposable
     {
         private static Thread wspSubscriptionThread = null;
 
@@ -123,7 +123,7 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
         private List<string> referencedAssemblies;
         private WspFilterMethod filterMethod;
         internal SynchronizationQueueGeneric<WspEvent> queue;
-        internal PerformanceCounter eventQueueCounter;
+        internal PerformanceCounter eventQueueCounter = null;
         internal Thread observableThread = null;
 
         /// <summary>
@@ -214,6 +214,30 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
                     wspSubscriptionThread.Start();
                 }
             }
+        }
+
+        /// <summary>
+        /// The Dispose needs to be called in order to remove the associated perf counter resources
+        /// </summary>
+        public void Dispose()
+        {
+            try
+            {
+                if (this.eventQueueCounter != null)
+                {
+                    this.eventQueueCounter.RemoveInstance();
+                    this.eventQueueCounter = null;
+                }
+            }
+            catch
+            {
+                // Intentionally left blank
+            }
+        }
+
+        ~WspEventObservable()
+        {
+            Dispose();
         }
 
         private void ObservableThread()
@@ -522,6 +546,16 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
 
                 if (observables.TryGetValue(this.id, out observers) == true)
                 {
+                    for (int i = 0; i < observers.Count; i++)
+                    {
+                        if (subscriptionObserver.id == observers[i].id)
+                        {
+                            observers.RemoveAt(i);
+
+                            break;
+                        }
+                    }
+
                     if (observers.Count == 0)
                     {
                         observables.Remove(this.id);
@@ -545,6 +579,8 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
                                 eventObservables.Remove(this.eventType);
                             }
                         }
+
+                        this.Dispose();
                     }
 
                     wspSubscriptionManager.RemoveSubscription(eventType, localOnly, methodBody, usingLibraries, referencedAssemblies);
@@ -555,6 +591,7 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
                 try
                 {
                     subscriptionObserver.observerThread.Abort();
+                    subscriptionObserver.eventQueueCounter.RemoveInstance();
                 }
                 catch
                 {
