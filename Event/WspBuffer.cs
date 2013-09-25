@@ -1768,7 +1768,6 @@ namespace Microsoft.WebSolutionsPlatform.Event
             }
             else
             {
-                Write((byte)(value.Kind));
                 Write(value);
             }
         }
