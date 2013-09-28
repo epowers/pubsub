@@ -235,6 +235,9 @@ namespace Microsoft.WebSolutionsPlatform.PubSubManager
             }
         }
 
+        /// <summary>
+        /// Destructor
+        /// </summary>
         ~WspEventObservable()
         {
             Dispose();
