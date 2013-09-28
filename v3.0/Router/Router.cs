@@ -165,12 +165,12 @@ namespace Microsoft.WebSolutionsPlatform.Router
             }
         }
 
-        private static string localRouterName = string.Empty;
+        private static string localRouterName = null;
         internal static string LocalRouterName
         {
             get
             {
-                if (localRouterName.Length == 0)
+                if (string.IsNullOrEmpty(localRouterName) == true)
                 {
                     char[] splitChar = { '.' };
 
@@ -190,6 +190,12 @@ namespace Microsoft.WebSolutionsPlatform.Router
                 }
 
                 return localRouterName;
+            }
+
+            set
+            {
+                localRouterName = value;
+                routerNameEncodedPriv = null;
             }
         }
 

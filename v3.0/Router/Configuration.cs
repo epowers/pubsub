@@ -875,7 +875,9 @@ namespace Microsoft.WebSolutionsPlatform.Router
                     {
                         Dictionary<string, Hub> hubs = GetHubList(newConfigSettings, newConfigSettings.EventRouterSettings.Group);
 
-                        if(hubs.ContainsKey(Router.LocalRouterName) == false)
+                        UpdateLocalRouterName(hubs);
+
+                        if (hubs.ContainsKey(Router.LocalRouterName) == false)
                         {
                             newConfigSettings.EventRouterSettings.Role = "node";
                             EventLog.WriteEntry("WspEventRouter", "Role has been changed to Node since name was not found in Hub list", EventLogEntryType.Error);
@@ -904,6 +906,35 @@ namespace Microsoft.WebSolutionsPlatform.Router
                 }
             }
 
+            internal static void UpdateLocalRouterName(Dictionary<string, Hub> hubs)
+            {
+                IPAddress[] ipLocal = Dns.GetHostAddresses(string.Empty);
+                string fqName = Dns.GetHostEntry(Dns.GetHostName()).HostName;
+
+                foreach (Hub hub in hubs.Values)
+                {
+                    if (string.Compare(hub.Name, LocalRouterName, true) == 0)
+                    {
+                        return;
+                    }
+
+                    if (string.Compare(hub.Name, fqName, true) == 0)
+                    {
+                        LocalRouterName = hub.Name;
+                        return;
+                    }
+
+                    for (int i = 0; i < ipLocal.Length; i++)
+                    {
+                        if (string.Compare(hub.Name, ipLocal[i].ToString(), true) == 0)
+                        {
+                            LocalRouterName = hub.Name;
+                            return;
+                        }
+                    }
+                }
+            }
+
             internal static Dictionary<string, Hub> GetHubList(ConfigSettings configSettings, string groupNameIn)
             {
                 Group currGroup = null;
@@ -915,7 +946,7 @@ namespace Microsoft.WebSolutionsPlatform.Router
                     {
                         if (string.IsNullOrEmpty(currGroup.UseGroup) == false)
                         {
-                            groupName = currGroup.UseGroup;
+                            groupName = currGroup.UseGroup.ToLower();
                             currGroup = null;
                             continue;
                         }
@@ -1229,11 +1260,11 @@ namespace Microsoft.WebSolutionsPlatform.Router
                         Group group = new Group();
                         XPathNodeIterator child;
 
-                        configValueIn = iterator.Current.GetAttribute(@"name", String.Empty);
+                        configValueIn = iterator.Current.GetAttribute(@"name", String.Empty).ToLower();
                         if (configValueIn.Length != 0)
                             group.Name = configValueIn;
 
-                        configValueIn = iterator.Current.GetAttribute(@"useGroup", String.Empty);
+                        configValueIn = iterator.Current.GetAttribute(@"useGroup", String.Empty).ToLower();
                         if (configValueIn.Length != 0)
                             group.UseGroup = configValueIn;
 
@@ -1243,9 +1274,13 @@ namespace Microsoft.WebSolutionsPlatform.Router
                         {
                             Hub hub = new Hub();
 
-                            configValueIn = child.Current.GetAttribute(@"name", String.Empty);
-                            if (configValueIn.Length != 0)
+                            configValueIn = child.Current.GetAttribute(@"name", String.Empty).ToLower();
+                            if (string.IsNullOrEmpty(configValueIn) == false)
                             {
+                                hub.Name = configValueIn;
+
+                                group.Hubs.Add(hub.Name, hub);
+
                                 try
                                 {
                                     IPHostEntry hostEntry = Dns.GetHostEntry(configValueIn);
@@ -1253,16 +1288,6 @@ namespace Microsoft.WebSolutionsPlatform.Router
                                     if (string.IsNullOrEmpty(hostEntry.HostName) == true)
                                     {
                                         EventLog.WriteEntry("WspEventRouter", "Hub entry [" + configValueIn + "] cannot be resolved by DNS", EventLogEntryType.Error);
-                                    }
-                                    else
-                                    {
-                                        char[] splitChar = { '.' };
-
-                                        string[] temp = hostEntry.HostName.ToLower().Split(splitChar, 2);
-
-                                        hub.Name = temp[0];
-
-                                        group.Hubs.Add(hub.Name, hub);
                                     }
                                 }
                                 catch (Exception e)
