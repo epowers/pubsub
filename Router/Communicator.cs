@@ -1836,15 +1836,21 @@ namespace Microsoft.WebSolutionsPlatform.Router
 
                         if (elementRetrieved == true)
                         {
-                            if (element.WspEvent.EventType == Subscription.SubscriptionEvent ||
-                                element.WspEvent.EventType == configSettings.EventRouterSettings.MgmtGuid ||
-                                element.WspEvent.EventType == configSettings.EventRouterSettings.CmdGuid)
+                            if (element.WspEvent.EventType == Subscription.SubscriptionEvent)
                             {
-                                DistributeSpecialEvents(element);
+                                DistributeSubscriptionEvent(element);
                             }
                             else
                             {
-                                DistributeNormalEvents(element);
+                                if (element.WspEvent.EventType == configSettings.EventRouterSettings.MgmtGuid ||
+                                    element.WspEvent.EventType == configSettings.EventRouterSettings.CmdGuid)
+                                {
+                                    DistributeCmdMgmtEvents(element);
+                                }
+                                else
+                                {
+                                    DistributeNormalEvents(element);
+                                }
                             }
                         }
                     }
@@ -1913,6 +1919,19 @@ namespace Microsoft.WebSolutionsPlatform.Router
                                 }
                             }
                         }
+                    }
+                }
+
+                return;
+            }
+
+            private static void DistributeCmdMgmtEvents(QueueElement element)
+            {
+                lock (Communicator.socketQueuesLock)
+                {
+                    foreach (string routerName in Communicator.socketQueues.Keys)
+                    {
+                        DistributeEvent(element, routerName);
                     }
                 }
 
@@ -2025,7 +2044,7 @@ namespace Microsoft.WebSolutionsPlatform.Router
                 }
             }
 
-            private static void DistributeSpecialEvents(QueueElement element)
+            private static void DistributeSubscriptionEvent(QueueElement element)
             {
                 SynchronizationQueue<QueueElement> queue;
                 SocketInfo socketInfo;
