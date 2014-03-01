@@ -469,10 +469,10 @@ extern INT32 __cdecl GetBuffer(LPCSTR pEventBuffer, DWORD dwEventBufferLength, D
 
 				if(CommBuffer->bSharedMemoryOwner == TRUE)
 				{
+					*pEventStartLocation = ALREADYREAD;
+
 					CommBuffer->gpBuf->dwNextReadOffset = CommBuffer->dwNextReadOffset;
 					CommBuffer->gpBuf->iLastEventNumRead = CommBuffer->iLastEventNumRead;
-
-					*pEventStartLocation = ALREADYREAD;
 				}
 
 				return SUCCESS;
@@ -506,10 +506,10 @@ extern INT32 __cdecl GetBuffer(LPCSTR pEventBuffer, DWORD dwEventBufferLength, D
 
 				if(CommBuffer->bSharedMemoryOwner == TRUE)
 				{
+					*pEventStartLocation = ALREADYREAD;
+
 					CommBuffer->gpBuf->dwNextReadOffset = CommBuffer->dwNextReadOffset;
 					CommBuffer->gpBuf->iLastEventNumRead = CommBuffer->iLastEventNumRead;
-
-					*pEventStartLocation = ALREADYREAD;
 				}
 
 				return SUCCESS;
